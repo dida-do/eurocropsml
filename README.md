@@ -18,7 +18,7 @@ For EuroCropsML we acquired and aggregated data for the following countries:
 | Latvia       | 431,143 | 103 |
 | Portugal     | 99,634 | 79 |
 
-| ![Spatial distribution of labels within Estland and Latvia.](docs/_static/labels_spatial_distribution_EE_LV_nuts3.png){height=300px} | ![Spatial distribution of labels within Portugal.](docs/_static/labels_spatial_distribution_portugal_nuts3.png){height=300px} |
+| [![Spatial distribution of labels within Estland and Latvia.](docs/_static/labels_spatial_distribution_EE_LV_nuts3_300.png)](docs/_static/labels_spatial_distribution_EE_LV_nuts3.png) | [![Spatial distribution of labels within Portugal.](docs/_static/labels_spatial_distribution_portugal_nuts3_300.png)](docs/_static/labels_spatial_distribution_portugal_nuts3.png) |
 | - | - |
 
 The distribution of class labels differs substantially between the regions of Estonia, Latvia, and Portugal.
@@ -27,7 +27,7 @@ Therefore, this dataset is particularly suited to explore transfer-learning meth
 
 The data acquisition, aggregation, and pre-processing steps are schematically illustrated below. A more detailed description is given in the [dataset section](https://eurocropsml.readthedocs.io/en/latest/dataset.html) of our documentation.
 
-![Data Acquisition Pipeline.](docs/_static/acquisition-pipeline.jpg){height=300px}
+[![Data Acquisition Pipeline.](docs/_static/acquisition-pipeline_300.jpg)](docs/_static/acquisition-pipeline.jpg)
 <!-- teaser-end -->
 
 ## Getting Started
@@ -83,7 +83,7 @@ The goal of the project is to investigate methods that rely on the approach of p
 
 The ready-to-use EuroCopsML dataset is developed for the purpose of improving and benchmarking few-shot crop type classification methods.
 
-EuroCropsML is based on [version 9](https://zenodo.org/records/10118572) of [EuroCrops](https://github.com/maja601/EuroCrops), an open-source collection of remote sensing reference data for agriculture from countries of the European Union.
+EuroCropsML is based on [Version 9](https://zenodo.org/records/10118572) of [EuroCrops](https://github.com/maja601/EuroCrops), an open-source collection of remote sensing reference data for agriculture from countries of the European Union.
 <!-- project-background-end -->
 
 <!-- further-info-begin -->

@@ -73,7 +73,7 @@ master_doc = "index"
 
 # General information about the project.
 project = "eurocropsml"
-author = "Joana Reuss"
+author = "Joana Reuss, Jan Macdonald"
 copyright = f"2024, {author}"
 
 # The version info for the project you're documenting, acts as replacement for
@@ -160,7 +160,7 @@ htmlhelp_basename = "eurocropsml-doc"
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = [("index", "eurocropsml", "EuroCropsML Documentation", ["Joana Reuss"], 1)]
+man_pages = [("index", "eurocropsml", "EuroCropsML Documentation", ["Joana Reuss", "Jan Macdonald"], 1)]
 
 
 # -- Options for Texinfo output -------------------------------------------
@@ -173,7 +173,7 @@ texinfo_documents = [
         "index",
         "eurocropsml",
         "EuroCropsML Documentation",
-        "Joana Reuss",
+        "Joana Reuss, Jan Macdonald",
         "eurocropsml",
         "Preprocessed EuroCrops dataset to benchmark few-shot crop type classification.",
         "Miscellaneous",

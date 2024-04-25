@@ -27,7 +27,7 @@ However, since we are only relying on the median pixel value and not on individu
 We provide all scripts that are necessary to perform the above steps. 
 
 :::{note}
-The scripts could be adapted accordingly in order to get similar data for other countries present in EuroCrops, as long as you have access to the necessary `.SAFE`-files. Please create a {gitref}`separate configuration file<eurocropsml/configs/acquisition/cfg>` for this.
+The scripts could be adapted accordingly in order to get similar data for other countries present in EuroCrops, as long as you have access to the necessary `.SAFE`-files. Please create a {gitref}`separate configuration file<eurocropsml/configs/acquisition/cfg/>` for this.
 The {any}`config module<eurocropsml.acquisition.config>` already contains the necessary information for the other available EuroCrops countries. Please refer to the [official EuroCrops reference dataset](https://zenodo.org/records/10118572) for more reference data.
 :::
 
@@ -45,7 +45,7 @@ $ eurocropsml-cli acquisition eurocrops --help
 The {gitref}`default<eurocropsml/configs/acquisition/config.yaml>` configuration collects data for Portugal. 
 
 :::{note}
-If you want to get the data for another country, please first create a new {gitref}`configuration file<eurocropsml/configs/acquisition/cfg>`. You can then simply replace the default configuration with the one you created.
+If you want to get the data for another country, please first create a new {gitref}`configuration file<eurocropsml/configs/acquisition/cfg/>`. You can then simply replace the default configuration with the one you created.
 
 For example:
 ```console
