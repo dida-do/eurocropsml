@@ -1,0 +1,63 @@
+name: Build and maybe upload package to TestPyPI / PyPI
+
+on:
+  push:
+    branches: ["main"]
+    tags: ["*"]
+  pull_request:
+    branches: ["main"]
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  build:
+    name: build and verify package
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: run build and verify
+        uses: hynek/build-and-inspect-python-package@v2
+
+  release-test-pypi:
+    name: publish dev versions to test.pypi.org
+    runs-on: ubuntu-latest
+    if: github.repository_owner == "dida-do" && github.event_name == "push" && github.ref == "refs/heads/main"
+    environment: 
+      name: testpypi
+      url: https://test.pypi.org/p/eurocropsml
+    needs: build
+    steps:
+      - name: load the build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: Packages
+          path: dist
+      - name: upload to TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy
+
+  # release-pypi:
+  #   name: publish released versions to pypi.org
+  #   runs-on: ubuntu-latest
+  #   if: github.repository_owner == "dida-do" && github.event.action == "published"
+  #   environment: 
+  #     name: pypi
+  #     url: https://pypi.org/p/eurocropsml
+  #   needs: build
+  #   steps:
+  #     - name: load the build artifacts
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         name: Packages
+  #         path: dist
+  #     - name: upload to PyPI
+  #       uses: pypa/gh-action-pypi-publish@release/v1
