@@ -1,0 +1,3 @@
+code.literal:not(a code.literal) {
+    color: var(--color-foreground-primary);
+}
