@@ -68,8 +68,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: coverage-data-${{ matrix.python-version }}
-          path: .coverage*
+          path: .coverage.*
           if-no-files-found: ignore
+          overwrite: true
       
   coverage:
     name: combining test coverages
