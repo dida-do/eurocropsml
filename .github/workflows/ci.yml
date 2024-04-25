@@ -54,6 +54,7 @@ jobs:
           cache: pip
           
       - name: prepare tox
+        shell: bash
         run: |
           PYTHON_VERSION=${{ matrix.python-version }}
           PYTHON_VERSION=py${PYTHON_VERSION//./}
