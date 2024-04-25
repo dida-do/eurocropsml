@@ -1,0 +1,149 @@
+[build-system]
+requires = [
+    "hatchling",
+    "hatch-vcs",
+    "hatch-fancy-pypi-readme>=23.2.0",
+    "hatch-requirements-txt",
+]
+build-backend = "hatchling.build"
+
+[project]
+name = "eurocropsml"
+authors = [
+    { name = "Joana Reuss", email = "joana.reuss@tum.de" },
+    { name = "Jan Macdonald", email = "jan.macdonald@dida.do" },
+]
+maintainers = [
+    { name = "Joana Reuss", email = "joana.reuss@tum.de" },
+    { name = "Jan Macdonald", email = "jan.macdonald@dida.do" },
+]
+license = "MIT"
+description = "EuroCropsML is a ready-to-use benchmark dataset for few-shot crop type classification using Sentinel-2 imagery."
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Typing :: Typed",
+]
+dynamic = ["version", "readme", "dependencies", "optional-dependencies"]
+
+[project.urls]
+Documentation = "https://eurocropsml.readthedocs.io/en/latest/"
+Changelog = "https://github.com/dida-do/eurocropsml/blob/main/CHANGELOG.md"
+GitHub = "https://github.com/dida-do/eurocropsml"
+
+[project.scripts]
+eurocropsml-cli = "eurocropsml.cli:cli"
+
+[tool.hatch.version]
+source = "vcs"
+raw-options = { local_scheme = "no-local-version" }
+
+[tool.hatch.metadata.hooks.requirements_txt]
+files = ["requirements/requirements.in"]
+
+[tool.hatch.metadata.hooks.requirements_txt.optional-dependencies]
+tests = ["requirements/requirements-tests.in"]
+docs = ["requirements/requirements-docs.in"]
+dev = [
+    "requirements/requirements-tests.in",
+    "requirements/requirements-docs.in",
+    "requirements/requirements-dev.in",
+]
+
+[tool.hatch.metadata.hooks.fancy-pypi-readme]
+content-type = "text/markdown"
+
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.fragments]]
+path = "README.md"
+start-after = "<!-- teaser-begin -->"
+
+[tool.black]
+target-version = ['py310']
+line-length = 100
+
+[tool.flake8]
+extend-ignore = [
+    # Allow whitespace before ':' (incompatible with black)
+    "E203",
+
+    # Allow missing docstrings in
+    # magic methods
+    "D105",
+    # __init__
+    "D107",
+
+    # Allow newline after docstring
+    "D202",
+
+    # Disable too opiniated style checks
+    "D401",
+    "E731",
+    # Allow mentioning implicit Exceptions
+    "DAR402",
+    # Allow 'TODO' as keyword
+    "T101",
+]
+max-line-length = 100
+
+per-file-ignores = [
+    "test_*:D,B011",
+    "eurocropsml/acquisition/cli.py:B008",
+    "eurocropsml/dataset/preprocess.py:B008",
+    "eurocropsml/dataset/cli.py:B008",
+    "__init__.py:D100",
+    # the following sub-packages/modules will not have a separate
+    # package-/module-level API documentation page, so their
+    # __init__.py docstrings are not needed
+    "eurocropsml/__init__.py:D104",
+    "eurocropsml/configs/__init__.py:D104",
+    "eurocropsml/configs/**/__init__.py:D104",
+    "tests/__init__.py:D104",
+    "tests/**/__init__.py:D104",
+]
+
+# darglint docstring options
+docstring_style = "google"
+# Don't check docstrings without param/raises/return fields.
+strictness = "long"
+
+[tool.isort]
+profile = "black"
+
+[tool.mypy]
+plugins = ["pydantic.mypy"]
+show_error_codes = true
+ignore_missing_imports = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+warn_unused_ignores = true
+warn_return_any = true
+warn_unreachable = true
+
+[tool.pytest.ini_options]
+addopts = ["-ra", "--strict-markers", "--strict-config"]
+xfail_strict = true
+testpaths = "tests"
+filterwarnings = ["once::Warning"]
+
+[tool.coverage.run]
+parallel = true
+branch = true
+source_pkgs = ["eurocropsml"]
+
+[tool.coverage.paths]
+source = ["eurocropsml", ".tox/py*/**/site-packages"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+
+[tool.interrogate]
+omit-covered-files = true
+verbose = 2
+fail-under = 100
+whitelist-regex = ["test_.*"]
+
+[tool.check-wheel-contents]
+toplevel = ["eurocropsml"]
