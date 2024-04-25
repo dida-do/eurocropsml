@@ -59,6 +59,12 @@ content-type = "text/markdown"
 path = "README.md"
 start-after = "<!-- teaser-begin -->"
 
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.substitutions]]
+# convert relative links to absolute links on PyPI
+# literal TOML strings (single quotes) need no escaping of backslashes.
+pattern = '\[(.+?)\]\(((?!https?://)\S+?)\)'
+replacement = '[\1](https://github.com/dida-do/eurocropsml/tree/main\g<2>)'
+
 [tool.black]
 target-version = ['py310']
 line-length = 100
