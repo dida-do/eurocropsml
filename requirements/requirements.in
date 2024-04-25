@@ -1,0 +1,15 @@
+geopandas
+hydra-core
+mmap_ninja
+numpy
+pyarrow
+pydantic
+pydantic-settings
+pyogrio
+rasterio
+requests
+scikit-learn
+# Updating the torch version might require changes to the Cuda Version in the Makefile as well
+torch==2.2.0
+typer[all]
+types-requests
