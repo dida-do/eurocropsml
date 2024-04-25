@@ -3,14 +3,14 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
     tags: ["*"]
   workflow_dispatch:
 
 jobs:
   lint:
     name: linting
-    
+
     runs-on: ubuntu-latest
 
     steps:
@@ -30,7 +30,7 @@ jobs:
 
   test:
     name: testing on ${{ matrix.os }} - ${{ matrix.python-version }}
-    
+
     strategy:
       matrix:
         os:
@@ -40,19 +40,19 @@ jobs:
           - "3.10"
           - "3.11"
           - "3.12"
-          
+
     runs-on: ${{ matrix.os }}
 
     steps:
       - name: checkout
         uses: actions/checkout@v4
-      
+
       - name: prepare python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
-          
+
       - name: prepare tox
         shell: bash
         run: |
@@ -60,29 +60,30 @@ jobs:
           PYTHON_VERSION=py${PYTHON_VERSION//./}
           echo TOX_PYTHON=$PYTHON_VERSION >>$GITHUB_ENV
           python -Im pip install tox tox-ignore-env-name-mismatch
-          
+
       - name: run tox
         run: python -Im tox run -e ${{ env.TOX_PYTHON }}-test
-        
+
       - name: store artefacts
         uses: actions/upload-artifact@v4
+        if: ${{ matrix-os }} == 'ubuntu-latest'
         with:
-          name: coverage-data-${{ matrix.os }}-${{ matrix.python-version }}
+          name: coverage-data-${{ matrix.python-version }}
           path: .coverage.*
           if-no-files-found: ignore
           overwrite: true
-      
+
   coverage:
     name: combining test coverages
-    
+
     runs-on: ubuntu-latest
-    
+
     needs: test
 
     steps:
       - name: checkout
         uses: actions/checkout@v4
-      
+
       - name: prepare python
         uses: actions/setup-python@v5
         with:
@@ -100,10 +101,10 @@ jobs:
           python -Im pip install coverage[toml]
           python -Im coverage combine
           python -Im coverage report --format=markdown >> $GITHUB_STEP_SUMMARY
-          
+
   docs:
     name: build documentation
-    
+
     runs-on: ubuntu-latest
 
     steps:
@@ -119,7 +120,7 @@ jobs:
       - name: run docs building
         run: |
           python -Im pip install tox tox-ignore-env-name-mismatch
-          python -Im tox run -e docs   
+          python -Im tox run -e docs
 
   # ensure everything required passed
   required-checks-pass:
