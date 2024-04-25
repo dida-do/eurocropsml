@@ -29,7 +29,7 @@ jobs:
   release-test-pypi:
     name: publish dev versions to test.pypi.org
     runs-on: ubuntu-latest
-    if: github.repository_owner == "dida-do" && github.event_name == "push" && github.ref == "refs/heads/main"
+    if: github.repository_owner == 'dida-do' && github.event_name == 'push' && github.ref == 'refs/heads/main'
     environment: 
       name: testpypi
       url: https://test.pypi.org/p/eurocropsml
@@ -48,7 +48,7 @@ jobs:
   # release-pypi:
   #   name: publish released versions to pypi.org
   #   runs-on: ubuntu-latest
-  #   if: github.repository_owner == "dida-do" && github.event.action == "published"
+  #   if: github.repository_owner == 'dida-do' && github.event.action == 'published'
   #   environment: 
   #     name: pypi
   #     url: https://pypi.org/p/eurocropsml
