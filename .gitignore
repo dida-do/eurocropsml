@@ -25,6 +25,7 @@ docs/_build/*
 !*.ini
 !*.sh
 !*.yml
+!*.yaml
 !*.jpg
 !*.png
 
