@@ -40,7 +40,7 @@ $ eurocropsml-cli datasets eurocrops download
 ```
 :::
 
-Alternatively, the dataset can also be manually downloaded from our [Zenodo repository](https://zenodo.org/records/10683255).
+Alternatively, the dataset can also be manually downloaded from our [Zenodo repository](https://zenodo.org/doi/10.5281/zenodo.10629609).
 
 ---
 
