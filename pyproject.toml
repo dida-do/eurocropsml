@@ -60,8 +60,14 @@ path = "README.md"
 start-after = "<!-- teaser-begin -->"
 
 [[tool.hatch.metadata.hooks.fancy-pypi-readme.substitutions]]
+# make relative image links absolute
 pattern = '!\[(.+?)\]\(((?!https?://)\S+?)\)'
 replacement = '![\g<1>](https://raw.githubusercontent.com/dida-do/eurocropsml/main/\g<2>)'
+
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.substitutions]]
+# make relative non-image links absolute
+pattern = '(?<!!)\[(.+?)\]\(((?!https?://)\S+?)\)'
+replacement = '![\g<1>](https://github.com/dida-do/eurocropsml/tree/main/\g<2>)'
 
 [tool.black]
 target-version = ['py310']
