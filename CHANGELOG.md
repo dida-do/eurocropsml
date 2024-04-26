@@ -10,6 +10,6 @@ Changes from previous releases are listed below.
 
 *No changes yet.*
 
-## 0.1.0 (YYYY-MM-DD)
+## 0.1.0 (2024-04-26)
 
 Initial release.
