@@ -9,7 +9,6 @@ pyogrio
 rasterio
 requests
 scikit-learn
-# Updating the torch version might require changes to the Cuda Version in the Makefile as well
-torch==2.2.0
+torch>=2.0
 typer[all]
 types-requests

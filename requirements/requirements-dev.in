@@ -1,2 +1,4 @@
+# Updating the torch version might require changes to the Cuda Version in the Makefile as well
+torch==2.2.0
 tox
 tox-ignore-env-name-mismatch
