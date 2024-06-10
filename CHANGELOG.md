@@ -8,9 +8,12 @@ Changes from previous releases are listed below.
 
 ## Upcoming Release
 
-<!-- *No changes yet.* -->
+*No changes yet.*
+
+## 0.2.0 (2024-06-10)
+
 - Relax the torch version requirement to `torch>=2.0` instead of `torch==2.2.0` _(see #1 and #2)_
 
 ## 0.1.0 (2024-04-26)
 
-Initial release.
+- Initial release
