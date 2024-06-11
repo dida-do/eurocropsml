@@ -3,7 +3,6 @@ myst-parser
 sphinx
 sphinx-copybutton
 sphinx-design
-sphinx-gitref>=0.4.1
 sphinx-tippy
 sphinxcontrib-mermaid
 typer-cli
