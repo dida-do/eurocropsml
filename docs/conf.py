@@ -110,7 +110,7 @@ add_module_names = False
 html_theme = "furo"
 html_theme_options = {
     "sidebar_hide_name": False,
-    "top_of_page_button": None,
+    "top_of_page_buttons": [],
 }
 html_css_files = [
     "custom.css",

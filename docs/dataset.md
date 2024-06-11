@@ -27,7 +27,7 @@ However, since we are only relying on the median pixel value and not on individu
 We provide all scripts that are necessary to perform the above steps. 
 
 :::{note}
-The scripts could be adapted accordingly in order to get similar data for other countries present in EuroCrops, as long as you have access to the necessary `.SAFE`-files. Please create a {gitref}`separate configuration file<eurocropsml/configs/acquisition/cfg/>` for this.
+The scripts could be adapted accordingly in order to get similar data for other countries present in EuroCrops, as long as you have access to the necessary `.SAFE`-files. Please create a separate configuration file similar to, e.g., the {gitref}`configuration file for Estonia<eurocropsml/configs/acquisition/cfg/estonia.yaml>` for this.
 The {any}`config module<eurocropsml.acquisition.config>` already contains the necessary information for the other available EuroCrops countries. Please refer to the [official EuroCrops reference dataset](https://zenodo.org/records/10118572) for more reference data.
 :::
 
@@ -45,7 +45,7 @@ $ eurocropsml-cli acquisition eurocrops --help
 The {gitref}`default<eurocropsml/configs/acquisition/config.yaml>` configuration collects data for Portugal. 
 
 :::{note}
-If you want to get the data for another country, please first create a new {gitref}`configuration file<eurocropsml/configs/acquisition/cfg/>`. You can then simply replace the default configuration with the one you created.
+If you want to get the data for another country, please first create a new acquisition configuration similar to one of the provided example configurations, e.g., the {gitref}`configuration file for Estonia<eurocropsml/configs/acquisition/cfg/estonia.yaml>`. You can then simply replace the default configuration with the one you created.
 
 For example:
 ```console
@@ -69,4 +69,4 @@ During preprocessing, each data point is saved separately as an `.npz`-file alon
 Additionally, we perform a cloud removal step following the scene classification approach of the [Level-2A Algorithm](https://sentinels.copernicus.eu/web/sentinel/technical-guides/sentinel-2-msi/level-2a/algorithm-overview). To detect clouds, we rely on the brightness thresholds of the red band (B4). If the median reflectance of the band is lower than the T1 threshold (0.07), we consider it as cloud-free and assign a cloud probability of 0%. If it is higher than the T2 threshold (0.25), it is considered cloudy and is assigned a cloud probability of 100%. Similarly, we assign probabilities between 0 and 100% and remove all observations with a cloud probability greater than 50%. The removal of the cloudy observations can be turned off in the preprocess config.
 
 ### Further Notes
-Please note that when creating training/validation splits for machine learning algorithms, there is an option for downsampling the class `pasture_meadow_grassland_grass` during the pre-training phase of a transfer-learning scenario to the median frequency of all other classes. The downsampling can be turned off in the {gitref}`split-config<eurocropsml/configs/dataset/split>` by removing the `meadow_class` parameter.
+Please note that when creating training/validation splits for machine learning algorithms, there is an option for downsampling the class `pasture_meadow_grassland_grass` during the pre-training phase of a transfer-learning scenario to the median frequency of all other classes. The downsampling can be turned off in the {gitref}`split-config<eurocropsml/configs/dataset/split/default.yaml>` by removing the `meadow_class` parameter.
