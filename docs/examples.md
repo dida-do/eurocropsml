@@ -5,7 +5,7 @@ It is recommended to read the introductory {doc}`starting` section of our docume
 
 ## Customizing the download directory
 
-By default the `eurocropsml-cli` will download data into a local directory named `data` as specified in the {gitref}`eurocropsml/settings.py`.
+By default, the `eurocropsml-cli` will download data into a local directory named `data` as specified in the {gitref}`eurocropsml/settings.py`.
 This configured directory path is **relative** to the `eurocropsml` package installation directory.
 This works well, if you obtained `eurocropsml` by cloning the git repository for local development.
 But it might not be the desired behavior if you installed `eurocropsml` via `pip` as a dependency in another project.
@@ -18,8 +18,6 @@ The relevant environment variable for the data directory is `EUROCROPS_DATA_DIR`
 $ export EUROCROPS_DATA_DIR=<absolute-path-to-data-directory>
 
 $ eurocropsml-cli datasets eurocrops download
-$ eurocropsml-cli datasets eurocrops build-splits split=default
-$ eurocropsml-cli datasets eurocrops build-splits split=portugal
 ```
 
 ## Customizing additional directories
@@ -38,4 +36,10 @@ There are three environment variables that can set custom directory paths for th
 ## Obtaining data for different countries
 
 The ready-to-use EuroCropsML dataset provides preprocessed data for Estonia, Latvia, and Portugal.
-Using the `eurocropsml` package and `eurocropsml-cli` you can use the same processing-pipeline steps also to obtain analogously preprocessed data for other countries (provided there is access to SHAPE files etc.)
+Using the `eurocropsml` package and `eurocropsml-cli` you can use the same processing-pipeline steps also to obtain analogously preprocessed data for other countries. (provided there is access to SHAPE files etc.)
+
+The `eurocropsml-cli` will, by default, assume that the Sentinel-2 data is located inside a directory called `/eodata`. However, if the directory where the Sentinel-2 is stored is named differently, the `eodata_dir` argument can be utilized in order to change the parent folder of the `.SAFE`-filepaths returned by the EOLab Finder.
+
+```console
+$ eurocropsml-cli acquisition eurocrops get-data +cfg.eodata_dir="personal_eodata_dir"
+```
