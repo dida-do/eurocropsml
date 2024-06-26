@@ -1,9 +1,8 @@
-furo
+furo>=2024.05.06
 myst-parser
 sphinx
 sphinx-copybutton
 sphinx-design
-sphinx-gitref
 sphinx-tippy
 sphinxcontrib-mermaid
 typer-cli

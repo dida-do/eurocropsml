@@ -8,7 +8,12 @@ Changes from previous releases are listed below.
 
 ## Upcoming Release
 
-*No changes yet.*
+<!-- *No changes yet.* -->
+
+- Make documentation building compatible with version `2024.05.06` of `furo` theme for `sphinx` _(see #3 and #4)_
+- Remove `sphinx-gitref` dependency for documentation building _(see #3 and #4)_
+- Auto generate CLI reference documentation during builds instead of checking it into the repository (_see #3 and #4)_
+- Update CI workflow for documentation building to report errors instead of warning _(see #3 and #4)_
 
 ## 0.2.0 (2024-06-10)
 
