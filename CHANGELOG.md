@@ -8,7 +8,7 @@ Changes from previous releases are listed below.
 
 ## Upcoming Release
 
-*No changes yet.*
+- Remove acquisition.analysis module (redundant) _(see #5)_
 
 ## 0.2.0 (2024-06-10)
 
