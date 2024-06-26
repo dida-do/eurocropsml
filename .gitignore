@@ -33,8 +33,9 @@ docs/_build/*
 !.gitignore
 !LICENSE
 
-# Ignore API documentation files, they are auto-generated
+# Ignore API and CLI documentation files, they are auto-generated
 docs/api/*
+docs/cli.md
 
 # Allow configuration files
 !eurocropsml/configs/**/*.yaml

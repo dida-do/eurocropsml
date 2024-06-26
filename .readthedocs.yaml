@@ -4,6 +4,9 @@ build:
   os: ubuntu-22.04
   tools:
     python: "3.10"
+  jobs:
+    pre_build:
+      - typer eurocropsml/cli.py utils docs --name eurocropsml-cli --output docs/cli.md
 
 sphinx:
   configuration: docs/conf.py
