@@ -1,7 +1,7 @@
 # License and Credits
 
 *eurocropsml* is licensed under the [MIT](https://choosealicense.com/licenses/mit/) license.
-The full license text can be also found in the {gitref}`source code repository<LICENSE>`.
+The full license text can be also found in the [source code repository](https://github.com/dida-do/eurocropsml/blob/main/LICENSE).
 
 ```{include} ../README.md
 :start-after: 'project-background-begin -->'
