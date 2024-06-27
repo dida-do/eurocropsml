@@ -8,7 +8,7 @@ Changes from previous releases are listed below.
 
 ## Upcoming Release
 
-- Add splits to split config: 20, 100, 200, 500, "all"
+- Add splits to split config: 20, 100, 200, 500, "all" _(see #6)_
 
 ## 0.2.0 (2024-06-10)
 
