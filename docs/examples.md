@@ -5,7 +5,7 @@ It is recommended to read the introductory {doc}`starting` section of our docume
 
 ## Customizing the download directory
 
-By default the `eurocropsml-cli` will download data into a local directory named `data` as specified in the {gitref}`eurocropsml/settings.py`.
+By default the `eurocropsml-cli` will download data into a local directory named `data` as specified in the global settings file `eurocropsml/settings.py`.
 This configured directory path is **relative** to the `eurocropsml` package installation directory.
 This works well, if you obtained `eurocropsml` by cloning the git repository for local development.
 But it might not be the desired behavior if you installed `eurocropsml` via `pip` as a dependency in another project.

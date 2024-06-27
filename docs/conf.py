@@ -26,7 +26,6 @@ extensions = [
     "myst_parser",
     "sphinx_copybutton",
     "sphinx_design",
-    "sphinx_gitref",
     "sphinx_tippy",
     "sphinx.ext.napoleon",
     "sphinx.ext.autosummary",
@@ -61,9 +60,6 @@ copybutton_exclude = '.linenos, .gp'
 # Configure sphinx-tippy tooltips
 tippy_skip_anchor_classes = ("headerlink", "sd-stretched-link", "sd-rounded-pill")
 tippy_anchor_parent_selector = "div.content"  # for Furo theme
-
-# Configure sphinx-gitref
-gitref_remote_url = "https://github.com/dida-do/eurocropsml"
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
@@ -110,7 +106,7 @@ add_module_names = False
 html_theme = "furo"
 html_theme_options = {
     "sidebar_hide_name": False,
-    "top_of_page_button": None,
+    "top_of_page_buttons": [],
 }
 html_css_files = [
     "custom.css",
