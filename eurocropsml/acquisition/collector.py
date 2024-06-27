@@ -50,7 +50,7 @@ def _eolab_finder(
     request_url = """https://finder.eo-lab.org/resto-creodias/api/collections/Sentinel2/search.json\
 ?maxRecords={8}&startDate={0}-{1}-01T00%3A00%3A00Z&completionDate={2}-{3}-{4}T23%3A59%3A59Z&cloudCo\
 ver=%5B0%2C{5}%5D&productType=S2MSI{6}&sortParam=startDate&sortOrder=descending&\
-status=all&geometry={7}""".format(
+status=all&geometry={7}&status=ONLINE""".format(
         year,
         months_list[0],
         year,
