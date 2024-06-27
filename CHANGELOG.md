@@ -8,6 +8,7 @@ Changes from previous releases are listed below.
 
 ## Upcoming Release
 - Add `eodata_dir` argument to make Sentinel-2 directory customizable (default is `eodata`) _(see #7)_
+- Add splits to split config: 20, 100, 200, 500, "all" _(see #6)_
 - Remove `acquisition.analysis module` (redundant) _(see #5)_
 - Make documentation building compatible with version `2024.05.06` of `furo` theme for `sphinx` _(see #3 and #4)_
 - Remove `sphinx-gitref` dependency for documentation building _(see #3 and #4)_
