@@ -35,7 +35,7 @@ There are three environment variables that can set custom directory paths for th
 ## Obtaining data for different countries
 
 The ready-to-use EuroCropsML dataset provides preprocessed data for Estonia, Latvia, and Portugal.
-Using the `eurocropsml` package and `eurocropsml-cli` you can use the same processing-pipeline steps also to obtain analogously preprocessed data for other countries. In order to do so, the please make sure to download and unzip the necessary [meta](https://ec.europa.eu/eurostat/de/web/gisco/geodata/reference-data/administrative-units-statistical-units/nuts) and [vector data](https://zenodo.org/records/10118572) to into your `EUROCROPS_DATA_DIR` directory:
+Using the `eurocropsml` package and `eurocropsml-cli` you can use the same processing-pipeline steps also to obtain analogously preprocessed data for other countries. In order to do so, please make sure to download and unzip the necessary [meta](https://ec.europa.eu/eurostat/de/web/gisco/geodata/reference-data/administrative-units-statistical-units/nuts) and [vector data](https://zenodo.org/records/10118572) to into your `EUROCROPS_DATA_DIR` directory:
 ```console
 └── data/
     ├── meta_data/
