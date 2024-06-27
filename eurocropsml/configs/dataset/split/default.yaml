@@ -6,6 +6,11 @@ num_samples:
     - 1
     - 5
     - 10
+    - 20
+    - 100
+    - 200
+    - 500
+    - "all"
   validation: 1000
   test: "all"
 
