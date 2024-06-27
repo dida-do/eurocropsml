@@ -64,6 +64,7 @@ def build_dataset(
         country_output_dir.joinpath("collector"),
         shape_dir,
         shape_dir_clean,
+        config.eodata_dir,
         config.workers,
     )
     logger.info("Finished step 1: Acquiring list of necessary SAFE-files.")
