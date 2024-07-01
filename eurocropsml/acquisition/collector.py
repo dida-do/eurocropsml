@@ -370,7 +370,7 @@ def _get_tiles(
     safe_file: str = tile["S3Path"]  # product Identifier
     cloudcover = _get_dict_value_by_name(tile["Attributes"], "cloudCover")
     endingdate = _get_dict_value_by_name(tile["Attributes"], "endingDateTime")
-    
+
     if eodata_dir is not None:
         safe_file = safe_file.replace("eodata", eodata_dir)
     try:
@@ -397,5 +397,5 @@ def _get_tiles(
             " shapely Polygon correctly. This .SAFE-file is being skipped."
         )
         request = None
-        
+
     return request
