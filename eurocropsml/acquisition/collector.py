@@ -64,7 +64,7 @@ ntDate/Start asc&$top={7}""".format(
         geom_polygon,
         products_per_request,
     )
-    print(request_url)
+
     response_text = requests.get(request_url).text
 
     return cast(dict, json.loads(response_text))
