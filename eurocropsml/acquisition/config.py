@@ -34,7 +34,7 @@ class CollectorConfig(BaseModel):
         "11",
         "12",
     ]
-    max_requested_products: int = 2000
+    max_requested_products: int = 1000
     country_code: str | None = None
     id: str = ""
     file_names: str | None = None
@@ -54,9 +54,9 @@ class CollectorConfig(BaseModel):
             logger.info("Maximum cloud cover set to 100.")
             self.max_cloud_cover = 100
 
-        if self.max_requested_products > 2000:
-            logger.info("Maximum requested products set to 2000.")
-            self.max_requested_products = 2000
+        if self.max_requested_products > 1000:
+            logger.info("Maximum requested products set to 1000.")
+            self.max_requested_products = 1000
 
         eurocrops_config: EuroCropsCountryConfig = EuroCropsCountryConfig()
 
@@ -78,11 +78,14 @@ class CollectorConfig(BaseModel):
             self.country_code = file_code[0]
             self.id = id
             if len(file_code) == 2:
+                # some countries have an additional EuroCrops identifier (e.g. EC21)
                 self.file_names = f"{file_code[0]}_{self.year}_{file_code[1]}"
             else:
                 self.file_names = (
                     f"{file_code[0]}_{self.year}"  # for Germany Brandenburg and Czechia
                 )
+            if self.country == "Spain NA":
+                self.file_names = f"{file_code[0]}_2020_{file_code[1]}"
             self.polygon = eurocrops_config.polygon[self.country]
             self.parcel_id_name = eurocrops_config.parcel_ids[self.country]
 
