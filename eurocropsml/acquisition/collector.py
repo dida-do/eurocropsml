@@ -368,8 +368,19 @@ def _get_tiles(
 ) -> list | None:
     """Getting information from raster .SAFE-files."""
     safe_file: str = tile["S3Path"]  # product Identifier
-    cloudcover = _get_dict_value_by_name(tile["Attributes"], "cloudCover")
-    endingdate = _get_dict_value_by_name(tile["Attributes"], "endingDateTime")
+    cloudcover: float | None = cast(
+        float, _get_dict_value_by_name(tile["Attributes"], "cloudCover")
+    )
+    endingdate: str | None = cast(
+        str, _get_dict_value_by_name(tile["Attributes"], "endingDateTime")
+    )
+
+    if endingdate is None:
+        logger.warning("Wasn't able to obtain observation date. This .SAFE-file is being skipped.")
+        return None
+
+    if cloudcover is None:
+        cloudcover = 0.0
 
     if eodata_dir is not None:
         safe_file = safe_file.replace("eodata", eodata_dir)

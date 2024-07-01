@@ -1,0 +1,13 @@
+raw_data_dir: "raw_data"
+output_dir: "output_data"
+local_dir: "safe_files"
+country_config:
+  country: "Spain NA"
+  year: 2021
+  months: [1,12]
+  processing_level: "L1C"
+  max_requested_products: 2000
+workers: 16
+chunk_size: 20
+multiplier: 20
+  

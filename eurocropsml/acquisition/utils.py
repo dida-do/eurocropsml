@@ -108,10 +108,14 @@ def _merge_clipper(
     logger.info("Saved final clipped file.")
 
 
-def _get_dict_value_by_name(attributes_list: list[dict[str, Any]], attribute: str) -> Any | None:
+def _get_dict_value_by_name(
+    attributes_list: list[dict[str, Any]], attribute: str
+) -> str | float | None:
+    val: str | float
     for item in attributes_list:
         if item["Name"] == attribute:
-            return item["Value"]
+            val = item["Value"]
+            return val
     logger.info(f"Wasn't able to find a {attribute} value. Returning None")
     return None
 
