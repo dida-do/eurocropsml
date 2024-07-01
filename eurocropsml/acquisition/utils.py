@@ -2,6 +2,7 @@
 
 import logging
 from pathlib import Path
+from typing import Any
 
 import geopandas as gpd
 import numpy as np
@@ -105,3 +106,19 @@ def _merge_clipper(
 
     full_df.to_parquet(output_dir.joinpath("clipped.parquet"))
     logger.info("Saved final clipped file.")
+
+
+def _get_dict_value_by_name(
+    attributes_list: list[dict[str, Any]], attribute: str
+) -> str | float | None:
+    val: str | float
+    for item in attributes_list:
+        if item["Name"] == attribute:
+            val = item["Value"]
+            return val
+    logger.info(f"Wasn't able to find a {attribute} value. Returning None")
+    return None
+
+
+def _load_pkg(file: Path) -> pd.DataFrame:
+    return pd.read_pickle(file)

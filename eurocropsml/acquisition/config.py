@@ -34,7 +34,7 @@ class CollectorConfig(BaseModel):
         "11",
         "12",
     ]
-    max_requested_products: int = 2000
+    max_requested_products: int = 1000
     country_code: str | None = None
     id: str = ""
     file_names: str | None = None
@@ -54,9 +54,9 @@ class CollectorConfig(BaseModel):
             logger.info("Maximum cloud cover set to 100.")
             self.max_cloud_cover = 100
 
-        if self.max_requested_products > 2000:
-            logger.info("Maximum requested products set to 2000.")
-            self.max_requested_products = 2000
+        if self.max_requested_products > 1000:
+            logger.info("Maximum requested products set to 1000.")
+            self.max_requested_products = 1000
 
         eurocrops_config: EuroCropsCountryConfig = EuroCropsCountryConfig()
 
