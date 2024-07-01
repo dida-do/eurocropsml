@@ -5,7 +5,7 @@
 # Copyright: Copyright 2022, Technical University of Munich
 # Email: david.gackstetter@tum.de
 #####################################################################
-# Script majorly revised by Joana Reuss
+# Script majorly revised for EuroCrops by Joana Reuss
 # Copyright: Copyright 20223, Technical University of Munich
 # Email: joana.reuss@tum.de
 #####################################################################
@@ -75,6 +75,7 @@ def acquire_s2_tiles(
     output_dir: Path,
     shape_dir: Path,
     shape_dir_clean: Path,
+    eodata_dir: str | None,
     workers: int,
     batch_size: int = 10000,
 ) -> None:
@@ -86,6 +87,8 @@ def acquire_s2_tiles(
         output_dir: Directory path where intermediate results will be stored.
         shape_dir: File path of EuroCrops shapefile.
         shape_dir_clean: Directory where the cleaned shapefile will be stored.
+        eodata_dir: Directory where Sentinel-2 data is stored.
+            If None, `eodata` is used since this will be returned by the API call.
         workers: Maximum number of workers used for multiprocessing.
         batch_size: Batch size used for multiprocessed merging of SAFE-files and parcels.
 
@@ -99,6 +102,7 @@ def acquire_s2_tiles(
         "country_code": config.country_code,
         "shape_dir": shape_dir,
         "shape_dir_clean": shape_dir_clean,
+        "eodata_dir": eodata_dir,
         "parcel_id_name": config.parcel_id_name,
         "months": config.months,
         "geom_polygon": config.polygon,
@@ -119,6 +123,7 @@ def _downloader(
     country_code: str,
     shape_dir: Path,
     shape_dir_clean: Path,
+    eodata_dir: str | None,
     parcel_id_name: str,
     months: list[int],
     geom_polygon: str,
@@ -202,9 +207,10 @@ def _downloader(
         # creating GeoDataFrame from .SAFE-files
         results: list[list] = []
         with mp_orig.Pool(processes=max_workers) as p:
-            func = partial(_get_tiles)
+            func = partial(_get_tiles, eodata_dir)
             process_iter = p.imap(func, products, chunksize=1000)
             ti = tqdm(total=len(products), desc="Processing requested SAFE files.")
+
             for result in process_iter:
                 if result is not None:
                     results.append(result)
@@ -357,12 +363,16 @@ def _process_batch(args: tuple[int, int, gpd.GeoDataFrame, gpd.GeoDataFrame, Pat
 
 
 def _get_tiles(
+    eodata_dir: str | None,
     tile: dict,
 ) -> list | None:
     """Getting information from raster .SAFE-files."""
     safe_file: str = tile["S3Path"]  # product Identifier
     cloudcover = _get_dict_value_by_name(tile["Attributes"], "cloudCover")
     endingdate = _get_dict_value_by_name(tile["Attributes"], "endingDateTime")
+    
+    if eodata_dir is not None:
+        safe_file = safe_file.replace("eodata", eodata_dir)
     try:
         granule_path = Path(safe_file).joinpath("GRANULE")
         folder: list = list(granule_path.iterdir())
@@ -387,5 +397,5 @@ def _get_tiles(
             " shapely Polygon correctly. This .SAFE-file is being skipped."
         )
         request = None
-
+        
     return request

@@ -95,6 +95,7 @@ class AcquisitionConfig(BaseModel):
 
     raw_data_dir: Path
     output_dir: Path
+    eodata_dir: str | None = None
     local_dir: Path | None = None
     country_config: CollectorConfig
     workers: int
