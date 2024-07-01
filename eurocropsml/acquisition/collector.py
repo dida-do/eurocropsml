@@ -50,11 +50,11 @@ def _eolab_finder(
 
     request_url = """https://datahub.creodias.eu/odata/v1/Products?$filter=(Attributes/OData.CSC.D\
 oubleAttribute/any(i0:i0/Name eq 'cloudCover' and i0/Value le {0}) and (ContentDate/Start ge {1}-\
-{2}-01T00:00:00.000Z and ContentDate/Start le {1}-{3}-{4}T23:59:59.999Z) and (OData.CSC.Intersects\
-(Footprint=geography'SRID=4326;{6}')) and (((((Collection/Name eq 'SENTINEL-2') and not contains(N\
-ame, '_N0500') and (((Attributes/Odata.CSC.StringAttribute/any(i0:i0/Name eq 'productType' and i0/\
-Value eq 'S2MSI{5}')))))))))&$expand=Attributes&$expand=Assets&$orderby=ContentDate/Start asc&$top\
-={7}""".format(
+{2}-01T00:00:00.000Z and ContentDate/Start le {1}-{3}-{4}T23:59:59.999Z) and (Online eq true) and \
+(OData.CSC.Intersects(Footprint=geography'SRID=4326;{6}')) and (((((Collection/Name eq 'SENTINEL-2\
+') and not contains(Name, '_N0500') and (((Attributes/Odata.CSC.StringAttribute/any(i0:i0/Name eq \
+'productType' and i0/Value eq 'S2MSI{5}')))))))))&$expand=Attributes&$expand=Assets&$orderby=Conte\
+ntDate/Start asc&$top={7}""".format(
         max_cloud_cover,
         year,
         months_list[0],
@@ -64,7 +64,7 @@ Value eq 'S2MSI{5}')))))))))&$expand=Attributes&$expand=Assets&$orderby=ContentD
         geom_polygon,
         products_per_request,
     )
-
+    print(request_url)
     response_text = requests.get(request_url).text
 
     return cast(dict, json.loads(response_text))
