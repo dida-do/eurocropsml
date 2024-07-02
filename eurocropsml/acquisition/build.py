@@ -46,7 +46,6 @@ def build_dataset(
         "meta_data",
         "vector_data",
         f"{shapefile_dir}_clean",
-        f"{ct_config.file_names}.shp",
     )
 
     shape_dir_clean.mkdir(exist_ok=True, parents=True)
