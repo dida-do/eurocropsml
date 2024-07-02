@@ -1,6 +1,7 @@
 """Adding NUTS region information to dataset."""
 
 import logging
+import sys
 from pathlib import Path
 from typing import cast
 
@@ -9,6 +10,7 @@ import pandas as pd
 import pyogrio
 
 from eurocropsml.acquisition.config import CollectorConfig
+from eurocropsml.acquisition.utils import _nuts_region_downloader
 
 logger = logging.getLogger(__name__)
 
@@ -22,9 +24,6 @@ def add_nuts_regions(
 ) -> None:
     """Get NUTS regions for parcels.
 
-    NUTS regions are obtained from
-    https://ec.europa.eu/eurostat/de/web/gisco/geodata/reference-data/administrative-units-statistical-units/nuts
-
     Args:
         config: Country-specific configuration for acquiring EuroCrops reflectance data.
         output_dir: Directory path where intermediate results will be stored.
@@ -36,6 +35,10 @@ def add_nuts_regions(
         ValueError: If NUTS-files are not available.
 
     """
+    url: str = (
+        "https://ec.europa.eu/eurostat/de/web/gisco/geodata/"
+        "statistical-units/territorial-units-statistics"
+    )
 
     label_dir = final_output_dir.joinpath("labels")
     geom_dir = final_output_dir.joinpath("geometries")
@@ -53,26 +56,29 @@ def add_nuts_regions(
         crs: str = str(shapefile.crs).split(":")[-1]
 
         # get nuts regions
-        if not nuts_dir.exists() or len(list((nuts_dir.iterdir()))) == 0:
-            raise ValueError(
-                f"{nuts_dir} does not exist or is empty. "
-                "Please first download the NUTS region files."
-            )
-        try:
-            nuts_region_filename = f"NUTS_RG_01M_{config.year}_{crs}"
-            nuts_regions_file = nuts_dir.joinpath(
-                nuts_region_filename, f"{nuts_region_filename}.shp"
-            )
+        nuts_region_filename = f"NUTS_RG_01M_{config.year}_{crs}.geojson"
+        nuts_regions_file = nuts_dir.joinpath(nuts_region_filename)
+        if not nuts_dir.exists() or len(list((nuts_dir.iterdir()))) <= 3:
+            nuts_dir.mkdir(exist_ok=True, parents=True)
+            _nuts_region_downloader(url, nuts_dir, crs, config.year)
 
+        if len(list((nuts_dir.iterdir()))) == 0:
+            logger.info(
+                "There are no NUTS region files available."
+                f" Please download them manually from {url}."
+            )
+            sys.exit()
+        try:
             nuts: gpd.GeoDataFrame = pyogrio.read_dataframe(nuts_regions_file)
 
         except Exception:
-            crs = "4326"
+            available_crs: list[str] = []
+            for file in nuts_dir.iterdir():
+                available_crs.append(file.stem.split("_")[-1])
+            crs = available_crs[0]
             shapefile = shapefile.to_crs(crs)
-            nuts_region_filename = f"NUTS_RG_01M_{config.year}_{crs}"
-            nuts_regions_file = nuts_dir.joinpath(
-                nuts_region_filename, f"{nuts_region_filename}.shp"
-            )
+            nuts_region_filename = f"NUTS_RG_01M_{config.year}_{crs}.geojson"
+            nuts_regions_file = nuts_dir.joinpath(nuts_region_filename)
 
             nuts = pyogrio.read_dataframe(nuts_regions_file)
 
