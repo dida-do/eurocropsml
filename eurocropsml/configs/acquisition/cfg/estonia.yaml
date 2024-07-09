@@ -6,7 +6,7 @@ country_config:
   year: 2021
   months: [1,12]
   processing_level: "L1C"
-  max_requested_products: 2000
+  max_requested_products: 1000
 workers: 16
 chunk_size: 20
 multiplier: 20
