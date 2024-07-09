@@ -78,11 +78,14 @@ class CollectorConfig(BaseModel):
             self.country_code = file_code[0]
             self.id = id
             if len(file_code) == 2:
+                # some countries have an additional EuroCrops identifier (e.g. EC21)
                 self.file_names = f"{file_code[0]}_{self.year}_{file_code[1]}"
             else:
                 self.file_names = (
                     f"{file_code[0]}_{self.year}"  # for Germany Brandenburg and Czechia
                 )
+            if self.country == "Spain NA":
+                self.file_names = f"{file_code[0]}_2020_{file_code[1]}"
             self.polygon = eurocrops_config.polygon[self.country]
             self.parcel_id_name = eurocrops_config.parcel_ids[self.country]
 
