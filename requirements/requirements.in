@@ -12,5 +12,5 @@ scikit-learn
 torch>=2.0
 typer[all]
 types-requests
-selenium
 beautifulsoup4
+selenium
