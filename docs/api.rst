@@ -9,14 +9,14 @@ API Reference
 
         package(eurocropsml) --> subpackage1(eurocropsml.acquisition) & subpackage2(eurocropsml.dataset)
 
-The API reference gives an overview over all public modules, classes, and functions within in the `eurocropsml` package.
+The API reference gives an overview over all public modules, classes, and functions within in the $\texttt{eurocropsml}$ package.
 It is organized as two main sub-packages:
 The first focuses on acquiring the raw data.
 The second is used for building ready-to-use machine learning datasets from the obtained raw data.
 
 The usage of individual sub-packages and modules within our data processing is illustrated below.
 
-.. image:: _static/acquisition-pipeline.jpg
+.. image:: _static/acquisition-pipeline.png
    :height: 300px
    :alt: Data Acquisition Pipeline.
    :align: center
