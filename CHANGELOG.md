@@ -9,6 +9,7 @@ Changes from previous releases are listed below.
 ## Upcoming Release
 - Implement automatic downloading for Eurostat GISCO NUTS files _(see #15)_
 - Update Eurostat GISCO NUTS files URL _(see #15)_
+- Adjust `shape_dir` for Spain and `shapefile_dir_clean` in general _(see #16)_
 - Add `eodata_dir` argument to make Sentinel-2 directory customizable (default is `eodata`) _(see #7)_
 - Add splits to split config: 20, 100, 200, 500, "all" _(see #6)_
 - Remove `acquisition.analysis module` (redundant) _(see #5)_
