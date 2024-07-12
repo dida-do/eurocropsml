@@ -73,7 +73,7 @@ Please first make sure to download and unzip the necessary [vector data](https:/
 :::
 
 ### Adjusting multiprocessing parameters
-Each country config contains a number of parameters that are utilized for multiprocessing, which may be adjusted in accordance with the available resources. It should be noted that the limitations pertain, in particular, to the clipping module {any}`<eurocropsml.acquisition.clipper>`.
+Each country config contains a number of parameters that are utilized for multiprocessing, which may be adjusted in accordance with the available resources. It should be noted that the limitations pertain, in particular, to the {any}`clipping module<eurocropsml.acquisition.clipper>`.
 - `workers` (default 16, used in multiple modules): Maximum number of parallel workers used for multiprocessing. This is contingent upon the vailability of central processing units (CPUs). In the event that this exceeds the number of CPUs, the parallel workers will be set to the number of CPUs. However, in instances where the random-access memory (RAM) capacity is insufficient—such as when constructing the argument list prior to clipping—this value can be reduced within the configuration parameters. It is essential to note that this adjustment may result in a slowing of the process. Therefore, it is recommended to only reduce the number of parallel workers when absolutely necessary.
 
 The following two parameters are exclusively used during the clipping process. In the event that the available RAM is insufficient, they can be lowered. It is important to note that this will impede the clipping process, and thus, we again only advise reducing them if absolutely necessary.
