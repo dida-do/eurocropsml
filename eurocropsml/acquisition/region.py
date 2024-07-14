@@ -43,6 +43,10 @@ def add_nuts_regions(
     label_dir = final_output_dir.joinpath("labels")
     geom_dir = final_output_dir.joinpath("geometries")
 
+    country_code: str = cast(str, config.country_code)
+    if len(country_code) > 2:
+        country_code = country_code[:2]
+
     if not (
         label_dir.joinpath(f"{config.country}_labels.parquet").exists()
         and final_output_dir.joinpath(f"{config.country}.parquet").exists()

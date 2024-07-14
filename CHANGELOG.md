@@ -7,6 +7,7 @@ Changes for the upcoming release can be found (and will be added on merging feat
 Changes from previous releases are listed below.
 
 ## Upcoming Release
+- Fix country code for region module _(see #22)_
 - Implement automatic downloading for Eurostat GISCO NUTS files _(see #15)_
 - Update Eurostat GISCO NUTS files URL _(see #15)_
 - Adjust `shape_dir` for Spain and `shapefile_dir_clean` in general _(see #16)_
