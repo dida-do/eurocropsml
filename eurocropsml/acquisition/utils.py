@@ -177,8 +177,8 @@ def _nuts_region_downloader(url: str, download_dir: Path, crs: str, year: int) -
     chrome_options: Options = Options()
     chrome_options.add_argument("--headless")  # Run Chrome in headless mode
 
-    timeout: int = 120  # Timeout after 60 seconds
-    polling_interval: int = 5  # Check every 1 second
+    timeout: int = 120  # Timeout after 120 seconds
+    polling_interval: int = 5  # Check every 5 second
     file_count = 0
 
     chrome_prefs = {
