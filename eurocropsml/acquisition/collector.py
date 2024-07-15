@@ -30,6 +30,7 @@ from shapely.geometry.polygon import Polygon
 from tqdm import tqdm
 
 from eurocropsml.acquisition.config import CollectorConfig
+from eurocropsml.acquisition.utils import _get_dict_value_by_name, _load_pkg
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -47,16 +48,18 @@ def _eolab_finder(
     _, num_days = calendar.monthrange(year, months[1])
     months_list: list[str] = ["0{0}".format(m) if m < 10 else "{0}".format(m) for m in months]
 
-    request_url = """https://finder.eo-lab.org/resto-creodias/api/collections/Sentinel2/search.json\
-?maxRecords={8}&startDate={0}-{1}-01T00%3A00%3A00Z&completionDate={2}-{3}-{4}T23%3A59%3A59Z&cloudCo\
-ver=%5B0%2C{5}%5D&productType=S2MSI{6}&sortParam=startDate&sortOrder=descending&\
-status=all&geometry={7}""".format(
+    request_url = """https://datahub.creodias.eu/odata/v1/Products?$filter=(Attributes/OData.CSC.D\
+oubleAttribute/any(i0:i0/Name eq 'cloudCover' and i0/Value le {0}) and (ContentDate/Start ge {1}-\
+{2}-01T00:00:00.000Z and ContentDate/Start le {1}-{3}-{4}T23:59:59.999Z) and (Online eq true) and \
+(OData.CSC.Intersects(Footprint=geography'SRID=4326;{6}')) and (((((Collection/Name eq 'SENTINEL-2\
+') and not contains(Name, '_N0500') and (((Attributes/Odata.CSC.StringAttribute/any(i0:i0/Name eq \
+'productType' and i0/Value eq 'S2MSI{5}')))))))))&$expand=Attributes&$expand=Assets&$orderby=Conte\
+ntDate/Start asc&$top={7}""".format(
+        max_cloud_cover,
         year,
         months_list[0],
-        year,
         months_list[1],
         num_days,
-        max_cloud_cover,
         processing_level[1:],
         geom_polygon,
         products_per_request,
@@ -137,7 +140,7 @@ def _downloader(
 
     if not eofinder_request.exists():
         # if not eofinder_request_new.exists():
-        logger.info("Requesting list of .SAFE-files from EO-Lab...")
+        logger.info("Requesting list of .SAFE-files from Creodias...")
         # Request all sentinel tiles from eo-lab API based
         # on given geometry (e.g. national boerders) and transform to dataframe
         run_loop: bool = True
@@ -158,7 +161,7 @@ def _downloader(
 
         # Extra loop in case that available products exceed number of maximum requests
         # These requestes are executed on a monthly basis.
-        if len(requests["features"]) == max_requested_products:
+        if len(requests["value"]) == max_requested_products:
             logger.info("Too many requested product. Executing monthly requests.")
             all_months: list = list(range(months[0], months[1] + 1))
             for idx, month in enumerate(all_months):
@@ -177,16 +180,16 @@ def _downloader(
                         logger.info(f"API-request for {calendar.month_name[month]} was successful!")
 
                         if idx == 0:
-                            accum_requests = requests_monthly["features"]
+                            accum_requests = requests_monthly["value"]
                         else:
-                            accum_requests = accum_requests + requests_monthly["features"]
+                            accum_requests = accum_requests + requests_monthly["value"]
 
                     except ConnectionError:
                         time.sleep(2000)
                 run_loop = True
 
             requests = {}
-            requests["features"] = accum_requests
+            requests["value"] = accum_requests
 
         with open(eofinder_request, "w") as outfile:
             json.dump(requests, outfile)
@@ -195,16 +198,19 @@ def _downloader(
         with open(eofinder_request) as outfile:
             requests = json.load(outfile)
 
+    products = requests["value"]
+
     request_files = output_dir.joinpath("requests", "request_safe_files.pkg")
-    max_workers = min(mp_orig.cpu_count(), max(1, min(len(requests["features"]), workers)))
+    max_workers = min(mp_orig.cpu_count(), max(1, min(len(products), workers)))
 
     if not request_files.exists():
         # creating GeoDataFrame from .SAFE-files
         results: list[list] = []
         with mp_orig.Pool(processes=max_workers) as p:
-            func = partial(_get_tiles, processing_level, eodata_dir)
-            process_iter = p.imap(func, requests["features"], chunksize=1000)
-            ti = tqdm(total=len(requests["features"]), desc="Processing requested SAFE files.")
+            func = partial(_get_tiles, eodata_dir)
+            process_iter = p.imap(func, products, chunksize=1000)
+            ti = tqdm(total=len(products), desc="Processing requested SAFE files.")
+
             for result in process_iter:
                 if result is not None:
                     results.append(result)
@@ -345,10 +351,6 @@ def _downloader(
         logger.info(f"Finished merging .SAFE-files and parcels for {country} for {year}.")
 
 
-def _load_pkg(file: Path) -> pd.DataFrame:
-    return pd.read_pickle(file)
-
-
 def _process_batch(args: tuple[int, int, gpd.GeoDataFrame, gpd.GeoDataFrame, Path]) -> None:
     """Checking for intersections between raster tiles and parcel polygons."""
     i, batch_size, parcel_df, request_df, parcel_path = args
@@ -361,41 +363,50 @@ def _process_batch(args: tuple[int, int, gpd.GeoDataFrame, gpd.GeoDataFrame, Pat
 
 
 def _get_tiles(
-    processing_level: str,
     eodata_dir: str | None,
     tile: dict,
 ) -> list | None:
     """Getting information from raster .SAFE-files."""
-    safe_file: str = tile["properties"]["productIdentifier"]
+    safe_file: str = tile["S3Path"]  # product Identifier
+    cloudcover: float | None = cast(
+        float, _get_dict_value_by_name(tile["Attributes"], "cloudCover")
+    )
+    endingdate: str | None = cast(
+        str, _get_dict_value_by_name(tile["Attributes"], "endingDateTime")
+    )
+
+    if endingdate is None:
+        logger.warning("Wasn't able to obtain observation date. This .SAFE-file is being skipped.")
+        return None
+
+    if cloudcover is None:
+        cloudcover = 0.0
 
     if eodata_dir is not None:
         safe_file = safe_file.replace("eodata", eodata_dir)
-    if f"{processing_level}_N0500" not in safe_file:
-        try:
-            granule_path = Path(safe_file).joinpath("GRANULE")
-            folder: list = list(granule_path.iterdir())
-            tree = ElementTree.parse(folder[0].joinpath("MTD_TL.xml"))
-            root = tree.getroot()
-            spatial_ref_element: ElementTree.Element = cast(
-                ElementTree.Element, root.find(".//HORIZONTAL_CS_NAME")
-            )
-            gcs: str = cast(str, spatial_ref_element.text)
-            gcs = gcs.split(" ")[0]
-            crs: int = cast(int, CRS.from_string(gcs).to_epsg())
-            request: list | None = [
-                Polygon(tile["geometry"]["coordinates"][0]),
-                safe_file,
-                tile["properties"]["completionDate"],
-                tile["properties"]["cloudCover"],
-                int(crs),
-            ]
-        except ValueError:
-            logger.warning(
-                f"The geometry of {safe_file} could not be transformed into a"
-                " shapely Polygon correctly. This .SAFE-file is being skipped."
-            )
-            request = None
-    else:
+    try:
+        granule_path = Path(safe_file).joinpath("GRANULE")
+        folder: list = list(granule_path.iterdir())
+        tree = ElementTree.parse(folder[0].joinpath("MTD_TL.xml"))
+        root = tree.getroot()
+        spatial_ref_element: ElementTree.Element = cast(
+            ElementTree.Element, root.find(".//HORIZONTAL_CS_NAME")
+        )
+        gcs: str = cast(str, spatial_ref_element.text)
+        gcs = gcs.split(" ")[0]
+        crs: int = cast(int, CRS.from_string(gcs).to_epsg())
+        request: list | None = [
+            Polygon(tile["GeoFootprint"]["coordinates"][0]),
+            safe_file,
+            endingdate,
+            cloudcover,
+            int(crs),
+        ]
+    except ValueError:
+        logger.warning(
+            f"The geometry of {safe_file} could not be transformed into a"
+            " shapely Polygon correctly. This .SAFE-file is being skipped."
+        )
         request = None
 
     return request

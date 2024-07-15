@@ -4,6 +4,7 @@ import logging
 import sys
 import time
 from pathlib import Path
+from typing import Any
 
 import bs4
 import geopandas as gpd
@@ -264,3 +265,17 @@ def _nuts_region_downloader(url: str, download_dir: Path, crs: str, year: int) -
                 f"Only {file_count} files could be downloaded. Please check which ones are"
                 " missing and download the remaining ones manually from {url}."
             )
+def _get_dict_value_by_name(
+    attributes_list: list[dict[str, Any]], attribute: str
+) -> str | float | None:
+    val: str | float
+    for item in attributes_list:
+        if item["Name"] == attribute:
+            val = item["Value"]
+            return val
+    logger.info(f"Wasn't able to find a {attribute} value. Returning None")
+    return None
+
+
+def _load_pkg(file: Path) -> pd.DataFrame:
+    return pd.read_pickle(file)
