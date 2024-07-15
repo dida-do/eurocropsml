@@ -265,6 +265,8 @@ def _nuts_region_downloader(url: str, download_dir: Path, crs: str, year: int) -
                 f"Only {file_count} files could be downloaded. Please check which ones are"
                 " missing and download the remaining ones manually from {url}."
             )
+
+
 def _get_dict_value_by_name(
     attributes_list: list[dict[str, Any]], attribute: str
 ) -> str | float | None:
