@@ -157,9 +157,7 @@ def get_class_ids_to_names(raw_data_dir: Path) -> dict[str, str]:
 
 
 def _find_padding(array: np.ndarray) -> bool:
-    if np.array_equal(array, np.array([0] * len(array))):
-        return False
-    return True
+    return not np.array_equal(array, np.array([0] * len(array)))
 
 
 def _filter_padding(data: np.ndarray, dates: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
