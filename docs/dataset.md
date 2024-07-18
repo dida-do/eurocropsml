@@ -56,7 +56,7 @@ $ eurocropsml-cli --help
 $ eurocropsml-cli acquisition eurocrops --help
 ```
 
-The default configuration `eurocropsml/configs/acquisition/config.yaml` collects data for Portugal. For the $\texttt{EuroCropsML}$ ROI countries Estonia, Latvia, and Portugal, there are predefined configuration files available in the `eurocropsml/configs/acquisition/cfg` that can be selected. For example, to collect data for Estonia:
+The default configuration `eurocropsml/configs/acquisition/config.yaml` collects data for Portugal. For the $\texttt{EuroCropsML}$ ROI countries Estonia, Latvia, and Portugal, there are predefined configuration files available in the `eurocropsml/configs/acquisition/cfg` directory that can be selected. For example, to collect data for Estonia:
 ```console
 $ eurocropsml-cli acquisition eurocrops get-data cfg=estonia
 ``` 
