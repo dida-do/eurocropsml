@@ -15,12 +15,12 @@
 
 <!-- teaser-begin -->
 
-$\texttt{EuroCropsML}$ is a pre-processed and ready-to-use machine learning dataset for crop type classification of agricultural parcels in Europe.
+`EuroCropsML` is a pre-processed and ready-to-use machine learning dataset for crop type classification of agricultural parcels in Europe.
 It consists of a total of **706,683** multi-class labeled data points with a total of **176** distinct classes.
 Each data point contains an annual time series of per parcel median pixel values of Sentinel-2 L1C reflectance data for the year 2021.
-The dataset is based on [Version 9](https://zenodo.org/records/10118572) of [$\texttt{EuroCrops}$](https://github.com/maja601/EuroCrops), an open-source collection of remote sensing reference data.
+The dataset is based on [Version 9](https://zenodo.org/records/10118572) of [`EuroCrops`](https://github.com/maja601/EuroCrops), an open-source collection of remote sensing reference data.
 
-For $\texttt{EuroCropsML}$, we acquired and aggregated data for the following countries:
+For `EuroCropsML`, we acquired and aggregated data for the following countries:
 
 | Country      | Total number of datapoints  | Number of distinct classes | 
 |--------------|--------------------| -------------------------- |
@@ -42,7 +42,7 @@ The data acquisition, aggregation, and pre-processing steps are schematically il
 
 ## Getting Started
 
-$\texttt{eurocropsml}$ is a Python package [hosted on PyPI](https://pypi.org/project/eurocropsml/).
+`eurocropsml` is a Python package [hosted on PyPI](https://pypi.org/project/eurocropsml/).
 
 ### Installation
 The recommended installation method is [pip](https://pip.pypa.io/en/stable/)-installing into a virtual environment:
@@ -52,14 +52,14 @@ $ python -Im pip install eurocropsml
 ```
 
 ### Usage Guide
-The quickest way to interact with the $\texttt{eurocropsml}$ package and get started is to use the $\texttt{EuroCropsML}$ dataset is via the provided command-line interface (CLI).
+The quickest way to interact with the `eurocropsml` package and get started is to use the `EuroCropsML` dataset is via the provided command-line interface (CLI).
 
 For example, to **get help** on available commands and options, use
 ```console
 $ eurocropsml-cli --help
 ```
 
-To **show** the currently used (default) **configuration** for the $\texttt{eurocropsml}$ dataset CLI, use
+To **show** the currently used (default) **configuration** for the `eurocropsml` dataset CLI, use
 ```console
 $ eurocropsml-cli datasets eurocrops config
 ```
@@ -77,28 +77,28 @@ For a complete example use-case demonstrating the ready-to-use EuroCropsML datas
 
 ## Project Information
 
-The $\texttt{eurocropsml}$ code repository is released under the [MIT License](LICENSE).
+The `eurocropsml` code repository is released under the [MIT License](LICENSE).
 Its documentation lives at [Read the Docs](https://eurocropsml.readthedocs.io/en/latest/), the code on [GitHub](https://github.com/dida-do/eurocropsml) and the latest release can by found on [PyPI](https://pypi.org/project/eurocropsml/).
 It is tested on Python 3.10+.
 
-If you would like to contribute to $\texttt{eurocropsml}$ you are most welcome. We have written a [short guide](CONTRIBUTING.md) to help you get started.
+If you would like to contribute to `eurocropsml` you are most welcome. We have written a [short guide](CONTRIBUTING.md) to help you get started.
 
 ### Background
 
 <!-- project-background-begin -->
-The EuroCropsML dataset and associated $\texttt{eurocropsml}$ code repository are provided and developed as part of the joint [PretrainAppEO](https://www.asg.ed.tum.de/en/lmf/pretrainappeo/) research project by the chair of [Remote Sensing Technology](https://www.asg.ed.tum.de/en/lmf/home/) at Technical University Munich and [dida](https://dida.do/).
+The EuroCropsML dataset and associated `eurocropsml` code repository are provided and developed as part of the joint [PretrainAppEO](https://www.asg.ed.tum.de/en/lmf/pretrainappeo/) research project by the chair of [Remote Sensing Technology](https://www.asg.ed.tum.de/en/lmf/home/) at Technical University Munich and [dida](https://dida.do/).
 <!-- project-background-middle -->
 
 The goal of the project is to investigate methods that rely on the approach of pre-training and fine-tuning machine learning models in order to improve generalizability for various standard applications in Earth observation and remote sensing.
 
 The ready-to-use EuroCopsML dataset is developed for the purpose of improving and benchmarking few-shot crop type classification methods.
 
-$\texttt{EuroCropsML}$ is based on [Version 9](https://zenodo.org/records/10118572) of [$\texttt{EuroCrops}$](https://github.com/maja601/EuroCrops), an open-source collection of remote sensing reference data for agriculture from countries of the European Union.
+`EuroCropsML` is based on [Version 9](https://zenodo.org/records/10118572) of [`EuroCrops`](https://github.com/maja601/EuroCrops), an open-source collection of remote sensing reference data for agriculture from countries of the European Union.
 <!-- project-background-end -->
 
 <!-- further-info-begin -->
 ## Citation
-If you use the $\texttt{EuroCropsML}$ dataset or $\texttt{eurocropsml}$ code repository in your research, please cite our project as follows:
+If you use the `EuroCropsML` dataset or `eurocropsml` code repository in your research, please cite our project as follows:
 
 **Plain text**
 ```text
