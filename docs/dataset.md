@@ -19,11 +19,11 @@ In order to obtain the observation data for a given country and year, the follow
 
 2.  Clipping of satellite data and calculation of median pixel values.
 
-    2.1 {any}`Polygon clipping<eurocropsml.acquisition.clipper>`: Clip parcels from the `.SAFE` files to obtain time series of corresponding reflectance data. As the dataset is intended to be used for crop type classification, we aggregated the collected pixel values. For every parcel and each available time step observation, we calculated the median pixel value for each of the 13 spectral bands of the Sentinel-2 raster tiles, as also done in the [tiny EuroCrops dataset](https://arxiv.org/abs/2106.08151). 
+    {any}`Polygon clipping<eurocropsml.acquisition.clipper>`: Clip parcels from the `.SAFE` files to obtain time series of corresponding reflectance data. As the dataset is intended to be used for crop type classification, we aggregated the collected pixel values. For every parcel and each available time step observation, we calculated the median pixel value for each of the 13 spectral bands of the Sentinel-2 raster tiles, as also done in the [tiny EuroCrops dataset](https://arxiv.org/abs/2106.08151). 
 
 3.  Regional mapping: To enhance the precision of geographical data and facilitate the effective partitioning of the dataset, we utilized the [Eurostat GISCO database](https://ec.europa.eu/eurostat/de/web/gisco/geodata/statistical-units/territorial-units-statistics) to link the $\texttt{EuroCrops}$ parcels with their corresponding NUTS region. 
 
-    3.1 {any}`NUTS regions<eurocropsml.acquisition.region>`: Add NUTS1-NUTS3 regions. The shapefiles for the NUTS-regions have been obtained from [eurostat](https://ec.europa.eu/eurostat/de/web/gisco/geodata/statistical-units/territorial-units-statistics).
+    {any}`NUTS regions<eurocropsml.acquisition.region>`: Add NUTS1-NUTS3 regions. The shapefiles for the NUTS-regions have been obtained from [eurostat](https://ec.europa.eu/eurostat/de/web/gisco/geodata/statistical-units/territorial-units-statistics).
 
 
 :::{note}
