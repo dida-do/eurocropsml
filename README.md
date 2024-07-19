@@ -28,8 +28,8 @@ For `EuroCropsML`, we acquired and aggregated data for the following countries:
 | Latvia       | 431,143 | 103 |
 | Portugal     | 99,634 | 79 |
 
-![Spatial distribution of labels within Estland and Latvia.](docs/_static/labels_spatial_distribution_EE_LV_nuts3_500.png)
-![Spatial distribution of labels within Portugal.](docs/_static/labels_spatial_distribution_PT_nuts3_500.png)
+![Spatial distribution of labels within Estland and Latvia.](docs/_static/labels_spatial_distribution_EE_LV_nuts3_340.png)
+![Spatial distribution of labels within Portugal.](docs/_static/labels_spatial_distribution_PT_nuts3_340.png)
 
 The distribution of class labels differs substantially between the regions of Estonia, Latvia, and Portugal.
 This makes  transferring knowledge gained in one region to another region quite challenging, especially if only few labeled data points are available.
