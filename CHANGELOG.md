@@ -7,6 +7,9 @@ Changes for the upcoming release can be found (and will be added on merging feat
 Changes from previous releases are listed below.
 
 ## Upcoming Release
+- Fix country code for region module _(see #22)_
+- Implement automatic downloading for Eurostat GISCO NUTS files _(see #15)_
+- Update Eurostat GISCO NUTS files URL _(see #15)_
 - Replace EOLab Finder with EOLab Data Explorer _(see #9)_
 - Adjust `shape_dir` for Spain and `shapefile_dir_clean` in general _(see #16)_
 - Add `eodata_dir` argument to make Sentinel-2 directory customizable (default is `eodata`) _(see #7)_

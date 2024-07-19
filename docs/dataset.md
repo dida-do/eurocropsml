@@ -7,7 +7,6 @@
 ```
 
 ## Data Acquisition
-
 In order to obtain the observation data for a given country and year, the following steps were caried out:
 1. Collection of relevant Sentinel-2 tiles: Alignment of [$\texttt{EuroCrops}$](https://github.com/maja601/EuroCrops) [version 9](https://zenodo.org/records/8229128) reference data with Sentinel-2 raster data files.
 
@@ -24,7 +23,6 @@ In order to obtain the observation data for a given country and year, the follow
 3.  Regional mapping: To enhance the precision of geographical data and facilitate the effective partitioning of the dataset, we utilized the [Eurostat GISCO database](https://ec.europa.eu/eurostat/de/web/gisco/geodata/statistical-units/territorial-units-statistics) to link the $\texttt{EuroCrops}$ parcels with their corresponding NUTS region. 
 
     {any}`NUTS regions<eurocropsml.acquisition.region>`: Add NUTS1-NUTS3 regions. The shapefiles for the NUTS-regions have been obtained from [Eurostat](https://ec.europa.eu/eurostat/de/web/gisco/geodata/statistical-units/territorial-units-statistics).
-
 
 :::{note}
 During step one, some parcels that lie at the intersection of two or multiple raster tiles, are first assigned to all of them.

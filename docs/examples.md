@@ -42,7 +42,6 @@ The `eurocropsml-cli` will, by default, assume that the Sentinel-2 data is locat
 
 ```console
 $ eurocropsml-cli acquisition eurocrops get-data +cfg.eodata_dir="personal_eodata_dir"
-```
 
 ## Customizing the acquisition pipeline
 ### Obtaining data for different countries
