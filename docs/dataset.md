@@ -13,7 +13,7 @@ In order to receive the reflectance data, the following steps were taken separat
 2. {any}`.SAFE-files collection<eurocropsml.acquisition.collector>`: Join parcels and `.SAFE`-files by their geometries.
 3. {any}`Band image path collection<eurocropsml.acquisition.copier>`: Move all necessary `.SAFE`-files to a local directory to fasten up polygon clipping. Collect the individual band image paths of each `.SAFE`-file.
 4. {any}`Polygon clipping<eurocropsml.acquisition.clipper>`: Clip parcels from the `.SAFE`-files to obtain time series of corresponding reflectance data. As the dataset is intended to be used for crop type classification, we calculate the median pixel value for each Sentinel-2 band, as also done in the [tiny EuroCrops dataset](https://arxiv.org/abs/2106.08151).
-5. {any}`NUTS regions<eurocropsml.acquisition.region>`: Add NUTS1-NUTS3 regions. The shapefiles for the NUTS-regions have been obtained from [eurostat](https://ec.europa.eu/eurostat/de/web/gisco/geodata/reference-data/administrative-units-statistical-units/nuts).
+5. {any}`NUTS regions<eurocropsml.acquisition.region>`: Add NUTS1-NUTS3 regions. The shapefiles for the NUTS-regions have been obtained from [eurostat](https://ec.europa.eu/eurostat/de/web/gisco/geodata/statistical-units/territorial-units-statistics).
 
 :::{note}
 During step one, some parcels that lie at the intersection of two or multiple raster tiles, are assigned to all of them.
