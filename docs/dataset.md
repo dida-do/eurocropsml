@@ -23,7 +23,7 @@ In order to obtain the observation data for a given country and year, the follow
 
 3.  Regional mapping: To enhance the precision of geographical data and facilitate the effective partitioning of the dataset, we utilized the [Eurostat GISCO database](https://ec.europa.eu/eurostat/de/web/gisco/geodata/statistical-units/territorial-units-statistics) to link the $\texttt{EuroCrops}$ parcels with their corresponding NUTS region. 
 
-    {any}`NUTS regions<eurocropsml.acquisition.region>`: Add NUTS1-NUTS3 regions. The shapefiles for the NUTS-regions have been obtained from [eurostat](https://ec.europa.eu/eurostat/de/web/gisco/geodata/statistical-units/territorial-units-statistics).
+    {any}`NUTS regions<eurocropsml.acquisition.region>`: Add NUTS1-NUTS3 regions. The shapefiles for the NUTS-regions have been obtained from [Eurostat](https://ec.europa.eu/eurostat/de/web/gisco/geodata/statistical-units/territorial-units-statistics).
 
 
 :::{note}
@@ -62,7 +62,7 @@ $ eurocropsml-cli acquisition eurocrops get-data cfg=estonia
 ``` 
 
 :::{note}
-If you want to get the data for another country, please first create a new acquisition configuration in the directory `eurocropsml/configs/acquisition/cfg`. You can then simply replace the default configuration with the one you created (${\textit{cf{.}}\,}$ {doc}`Examples<examples>`).
+If you want to get the data for another country, please first create a new acquisition configuration in the directory `eurocropsml/configs/acquisition/cfg`. You can then simply replace the default configuration with the one you created (${\textit{cf.}\,}$ {doc}`Examples<examples>`).
 :::
 
 ## Data Preprocessing
@@ -78,9 +78,9 @@ $ eurocropsml-cli datasets eurocrops --help
 During preprocessing, each data point is saved separately as a $\texttt{NumPy}$ `.npz` file along with metadata such as the spatial coordinates of the centroid of the parcel and the timestamp of each observation. The `.npz` files use the naming convention `<NUTS3-region>_<parcelID>_<EC_hcat_c>.npz`, where `EC_hcat_c` is the [$\texttt{EuroCrops}$ HCAT crop class code](https://arxiv.org/abs/2106.08151).
 
 ### Cloud Removal
-Additionally, we perform a cloud removal step following the scene classification approach of the [Level-2A Algorithm](https://sentinels.copernicus.eu/web/sentinel/technical-guides/sentinel-2-msi/level-2a/algorithm-overview) (${\textit{cf{.}}\,}$ also [Level-2a Algorithm Theoretical Basis Document](https://step.esa.int/thirdparties/sen2cor/2.10.0/docs/S2-PDGS-MPC-L2A-ATBD-V2.10.0.pdf)). To detect clouds, we rely on the brightness thresholds of the red band (B4). If the median reflectance of the band is lower than the threshold $t_1=0.07$, we consider it as cloud-free and assign a cloud probability of 0%. If it is higher than the threshold $t_2=0.25$, it is considered cloudy and is assigned a cloud probability of 100%. Similarly, we linearly interpolate values between the aforementioned thresholds and assign probabilities between 0% and 100%. Consequently, all observations with a cloud probability greater than 50% are removed. The removal of the cloudy observations as well as the individual thresholds can be adjusted in the preprocess config (${\textit{cf{.}}\,}$ {doc}`Examples<examples>`).
+Additionally, we perform a cloud removal step following the scene classification approach of the [Level-2A Algorithm](https://sentinels.copernicus.eu/web/sentinel/technical-guides/sentinel-2-msi/level-2a/algorithm-overview) (${\textit{cf.}\,}$ also [Level-2a Algorithm Theoretical Basis Document](https://step.esa.int/thirdparties/sen2cor/2.10.0/docs/S2-PDGS-MPC-L2A-ATBD-V2.10.0.pdf)). To detect clouds, we rely on the brightness thresholds of the red band (B4). If the median reflectance of the band is lower than the threshold $t_1=0.07$, we consider it as cloud-free and assign a cloud probability of 0%. If it is higher than the threshold $t_2=0.25$, it is considered cloudy and is assigned a cloud probability of 100%. Similarly, we linearly interpolate values between the aforementioned thresholds and assign probabilities between 0% and 100%. Consequently, all observations with a cloud probability greater than 50% are removed. The removal of the cloudy observations as well as the individual thresholds can be adjusted in the preprocess config (${\textit{cf.}\,}$ {doc}`Examples<examples>`).
 
 ### Further Notes
-Please note that when creating training/validation splits for machine learning algorithms, there is an option for downsampling the class ${\texttt{\small pasture\_meadow\_grassland\_grass}}$ during the pre-training phase of a transfer-learning scenario to the median frequency of all other classes. The downsampling can be turned off by removing the `meadow_class` parameter from the respective split configurations in the directory `eurocropsml/configs/dataset/split`. 
+Please note that when creating training/validation splits for machine learning algorithms, there is an option for downsampling the class ${\texttt{pasture_meadow_grassland_grass}}$ during the pre-training phase of a transfer-learning scenario to the median frequency of all other classes. The downsampling can be turned off by removing the `meadow_class` parameter from the respective split configurations in the directory `eurocropsml/configs/dataset/split`. 
 
 

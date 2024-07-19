@@ -88,7 +88,7 @@ The pre-processing settings depend on the configuration file that is located wit
 $ eurocropsml-cli datasets eurocrops <COMMAND> preprocess.filter_clouds=false
 ``` 
 To adjust the lower and upper thresholds $t_1$ and $t_2$ which determine whether an observation is classified as cloudy or non-cloudy, the user can customize the values.
-For example, to set the lower bound to \num{0.04} and the upper bound to \num{0.2}:
+For example, to set the lower bound to $0.04$ and the upper bound to $0.2$:
 ```console
 $ eurocropsml-cli datasets eurocrops <COMMAND> preprocess.band4_t1=0.04 preprocess.band4_t2=0.2
 ``` 
@@ -107,7 +107,7 @@ The $\texttt{EuroCropsML}$ dataset allows users to customize options for various
 | `data_dir` | Folder inside the data directory where pre-processed data is stored. | 
 | `random_seed` | Random seed used for generating training-testing-splits and further random numbers. |
 | `num_samples` | Number of samples per class used for the fine-tuning subsets. The default will create the shots currently present on [Zenodo](https://zenodo.org/doi/10.5281/zenodo.10629609) for the training set. It will samples 1000 samples for validation and keep all available data from the test set. |
-| `meadow_class` | Class that represents the ${\texttt{\small pasture\_meadow\_grassland\_grass}}$ class. If provided, then this class will be downsampled to the median frequency of all other classes for the pre-training dataset since it represents an imbalanced majority class. |
+| `meadow_class` | Class that represents the ${\texttt{pasture_meadow_grassland_grass}}$ class. If provided, then this class will be downsampled to the median frequency of all other classes for the pre-training dataset since it represents an imbalanced majority class. |
 | `pretrain_classes` | Classes that make up the pre-train dataset. |
 | `finetune_classes` | Classes that make up the pre-train dataset. |
 | `pretrain_regions` | Regions that make up the pre-train dataset. |
@@ -120,6 +120,6 @@ The valid values for the class configurations are the HCAT class labels as used 
 
 | __Parameter__ | __Use Case__ |
 | ------------- | ------------- |
-| `region` | The data set is divided into pre-training and fine-tuning subsets based on NUTS regions, with three scenarios:<br>- __Complete Class Overlap:__ All classes between regions overlap, allowing fine-tuning of pre-trained models.<br>- __Partial Class Overlap:__ Some classes overlap between regions, so overlapping classes appear in both pre-training and fine-tuning sets (${\textit{cf{.}}\,}$ [$\texttt{EuroCropsML}$](https://zenodo.org/doi/10.5281/zenodo.10629609)).<br>- __No Class Overlap:__ No classes overlap between regions, requiring the classifier to adapt to new classes during fine-tuning. |
+| `region` | The data set is divided into pre-training and fine-tuning subsets based on NUTS regions, with three scenarios:<br>- __Complete Class Overlap:__ All classes between regions overlap, allowing fine-tuning of pre-trained models.<br>- __Partial Class Overlap:__ Some classes overlap between regions, so overlapping classes appear in both pre-training and fine-tuning sets (${\textit{cf.}\,}$ [$\texttt{EuroCropsML}$](https://zenodo.org/doi/10.5281/zenodo.10629609)).<br>- __No Class Overlap:__ No classes overlap between regions, requiring the classifier to adapt to new classes during fine-tuning. |
 | `regionclass` | The dataset is divided into pre-train and fine-tune subsets by NUTS regions and subsequently by classes. This setting can be used when classes overlap (partially) between regions, but the pre-train and fine-tune sets should contain different regions and classes. | 
 | `class` | The pre-training and fine-tuning subsets are based solely on classes, focusing on knowledge transfer between different sets of classes, not regions.<br>There are two scenarios:<br>- __Partial Overlap:__ Overlapping classes appear in both pre-training and fine-tuning datasets.<br>- __No Overlap:__ The classifier must adapt to entirely new classes during fine-tuning |
