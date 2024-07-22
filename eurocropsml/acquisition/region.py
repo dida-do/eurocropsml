@@ -162,7 +162,6 @@ def add_nuts_regions(
         geometry_df.to_file(
             geom_dir.joinpath(f"{config.country}.geojson"),
             driver="GeoJSON",
-            crs=shapefile.crs,
         )
 
     else:
