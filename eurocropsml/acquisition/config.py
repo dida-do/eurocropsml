@@ -72,7 +72,7 @@ class CollectorConfig(BaseModel):
                     f"Year {self.year} not available."
                     f"Please select one of the following {country_years}"
                 )
-            id: str = cast(str, eurocrops_countries[self.country]["ID"])
+            id: str = cast(str, eurocrops_countries[self.country]["ID"])  # noqa: A001
             file_code: str = cast(str, eurocrops_countries[self.country]["file"])
 
             self.country_code = file_code[0]

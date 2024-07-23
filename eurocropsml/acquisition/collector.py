@@ -79,8 +79,7 @@ def acquire_s2_tiles(
     workers: int,
     batch_size: int = 10000,
 ) -> None:
-    """
-    Function to acquire Sentinel 2 tiles.
+    """Function to acquire Sentinel 2 tiles.
 
     Args:
         config: Country-specific configuration for acquiring EuroCrops reflectance data.

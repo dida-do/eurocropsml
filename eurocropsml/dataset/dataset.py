@@ -114,8 +114,10 @@ class EuroCropsDataset(Dataset[LabelledData]):
                                 1,
                                 data[idx : idx + count],
                             )
-                        except ValueError:
-                            raise ValueError("Band 4 cannot be excluded if date_type is 'months'")
+                        except ValueError as err:
+                            raise ValueError(
+                                "Band 4 cannot be excluded if date_type is 'months'"
+                            ) from err
                         month_data[month] = data[idx + np.argmin(cloud_probs)]
                 arrays_dict["data"], arrays_dict["dates"] = month_data, np.arange(12)
         return arrays_dict
