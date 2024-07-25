@@ -24,36 +24,26 @@ def build_dataset(
     output_dir = config.output_dir
     local_dir = config.local_dir
 
-    config.country_config.post_init()
+    vector_data_dir = Settings().data_dir.joinpath(
+        "meta_data",
+        "vector_data",
+    )
+
+    config.country_config.post_init(vector_data_dir)
     ct_config = config.country_config
 
     country = ct_config.country
 
-    if country == "Portugal":
-        shapefile_dir = f"{ct_config.country_code}"
-    elif country == "Spain NA":
-        shapefile_dir = f"{ct_config.country_code}_2020"
-    else:
-        shapefile_dir = f"{ct_config.country_code}_{str(ct_config.year)}"
-    shape_dir: Path = Settings().data_dir.joinpath(
-        "meta_data",
-        "vector_data",
-        shapefile_dir,
-        f"{ct_config.id}",
-        f"{ct_config.file_names}.shp",
-    )
-    shape_dir_clean: Path = Settings().data_dir.joinpath(
-        "meta_data",
-        "vector_data",
-        f"{shapefile_dir}_clean",
+    shape_dir_clean: Path = vector_data_dir.joinpath(
+        f"{cast(Path, ct_config.shapefile_folder).name}_clean",
     )
 
     shape_dir_clean.mkdir(exist_ok=True, parents=True)
-    shape_dir_clean = shape_dir_clean.joinpath(f"{ct_config.file_names}.shp")
+    shape_dir_clean = shape_dir_clean.joinpath(f"{cast(Path, ct_config.shapefile).name}")
 
     nuts_dir = Settings().data_dir.joinpath("meta_data", "NUTS")
 
-    country_output_dir: Path = output_dir.joinpath(country)
+    country_output_dir: Path = output_dir.joinpath(country.replace(" ", "_"))
     country_output_dir.mkdir(exist_ok=True, parents=True)
 
     logger.info(f"Processing year {ct_config.year} for {country}.")
@@ -61,7 +51,7 @@ def build_dataset(
     collector.acquire_s2_tiles(
         ct_config,
         country_output_dir.joinpath("collector"),
-        shape_dir,
+        cast(Path, ct_config.shapefile),
         shape_dir_clean,
         config.eodata_dir,
         config.workers,

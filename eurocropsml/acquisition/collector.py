@@ -120,7 +120,6 @@ def acquire_s2_tiles(
 def _downloader(
     year: int,
     country: str,
-    country_code: str,
     shape_dir: Path,
     shape_dir_clean: Path,
     eodata_dir: str | None,
@@ -256,10 +255,6 @@ def _downloader(
         if not shape_dir_clean.exists():
             # Cleaning up country's shapefile
             # Load in SHP-File
-            if not shape_dir.exists():
-                raise ValueError(
-                    f"{shape_dir} does not exist. Please download the shapefile first."
-                )
             shapefile: gpd.GeoDataFrame = pyogrio.read_dataframe(shape_dir)
             if "EC_NUTS3" in shapefile.columns.tolist():
                 shapefile.drop(["EC_NUTS3"], axis=1)

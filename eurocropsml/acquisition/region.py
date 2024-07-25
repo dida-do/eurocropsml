@@ -43,10 +43,6 @@ def add_nuts_regions(
     label_dir = final_output_dir.joinpath("labels")
     geom_dir = final_output_dir.joinpath("geometries")
 
-    country_code: str = cast(str, config.country_code)
-    if len(country_code) > 2:
-        country_code = country_code[:2]
-
     if not (
         label_dir.joinpath(f"{config.country}_labels.parquet").exists()
         and final_output_dir.joinpath(f"{config.country}.parquet").exists()
@@ -124,6 +120,7 @@ def add_nuts_regions(
         # add nuts region to final reflectance dataframe
         full_df: pd.DataFrame = pd.read_parquet(output_dir.joinpath("clipper", "clipped.parquet"))
 
+        shapefile[parcel_id_name] = shapefile[parcel_id_name].astype(str)
         joined_final = pd.merge(full_df, shapefile, on=parcel_id_name, how="left")
 
         # reorder columns
@@ -156,11 +153,16 @@ def add_nuts_regions(
         label_dir.mkdir(exist_ok=True, parents=True)
         geom_dir.mkdir(exist_ok=True, parents=True)
 
-        classes_df.to_parquet(label_dir.joinpath(f"{config.country}_labels.parquet"), index=False)
+        classes_df.to_parquet(
+            label_dir.joinpath(f"{config.ec_filename}_{config.year}_labels.parquet"), index=False
+        )
 
-        joined_final.to_parquet(final_output_dir.joinpath(f"{config.country}.parquet"), index=False)
+        joined_final.to_parquet(
+            final_output_dir.joinpath(f"{config.ec_filename}_{config.year}.parquet"), index=False
+        )
+
         geometry_df.to_file(
-            geom_dir.joinpath(f"{config.country}.geojson"),
+            geom_dir.joinpath(f"{config.ec_filename}_{config.year}.geojson"),
             driver="GeoJSON",
         )
 
