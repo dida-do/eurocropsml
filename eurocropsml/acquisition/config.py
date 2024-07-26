@@ -96,7 +96,10 @@ class CollectorConfig(BaseModel):
                 # check if zip-file exists
                 zip_file = [item for item in vector_data_dir.glob("*.zip") if item.stem == filename]
                 if len(zip_file) == 1:
-                    _unzip_file(zip_file[0], zip_file[0].parent)
+                    unzip_folder = zip_file[0].parent
+                    if self.country_code == "PT":
+                        unzip_folder = unzip_folder.joinpath(zip_file[0].stem)
+                    _unzip_file(zip_file[0], unzip_folder)
                     shapefile_folder_list = [
                         item
                         for item in vector_data_dir.iterdir()
@@ -122,6 +125,7 @@ class CollectorConfig(BaseModel):
                             0
                         ],
                     )
+                    break
 
             self.polygon = eurocrops_config.polygon[self.country]
             self.parcel_id_name = eurocrops_config.parcel_ids[self.country]
