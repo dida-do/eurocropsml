@@ -120,7 +120,7 @@ def add_nuts_regions(
         # add nuts region to final reflectance dataframe
         full_df: pd.DataFrame = pd.read_parquet(output_dir.joinpath("clipper", "clipped.parquet"))
 
-        shapefile[parcel_id_name] = shapefile[parcel_id_name].astype(str)
+        shapefile[parcel_id_name] = shapefile[parcel_id_name].astype(int)
         joined_final = pd.merge(full_df, shapefile, on=parcel_id_name, how="left")
 
         # reorder columns

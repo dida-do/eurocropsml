@@ -182,7 +182,7 @@ def _process_raster_parallel(
     try:
         # all parcel ids that match product Identifier
         parcel_ids = list(filtered_images[parcel_id_name])
-        parcel_ids = [str(id) for id in parcel_ids]
+        parcel_ids = [int(id) for id in parcel_ids]
         # observation date
         product_date = str(filtered_images["completionDate"].unique()[0])
 
@@ -242,7 +242,7 @@ def clipping(
     save_files = multiplier * chunk_size
     file_counts += 1
 
-    polygon_df[config.parcel_id_name] = polygon_df[config.parcel_id_name].astype(str)
+    polygon_df[config.parcel_id_name] = polygon_df[config.parcel_id_name].astype(int)
     func = partial(_process_raster_parallel, polygon_df, cast(str, config.parcel_id_name))
 
     polygon_df = polygon_df.drop(["geometry"], axis=1)
