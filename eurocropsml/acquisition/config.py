@@ -104,7 +104,7 @@ class CollectorConfig(BaseModel):
                     ]
                 else:
                     raise ValueError(
-                        "Vector data does not exist."
+                        "Vector data does not exist. "
                         f"Please first download the EuroCrops reference data {filename}.zip."
                     )
 
