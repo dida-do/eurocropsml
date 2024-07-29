@@ -7,6 +7,7 @@ from typing import Literal, cast
 from pydantic import BaseModel, field_validator
 
 from eurocropsml.settings import Settings
+from eurocropsml.utils import _unzip_file
 
 logger = logging.getLogger(__name__)
 
@@ -36,12 +37,13 @@ class CollectorConfig(BaseModel):
     ]
     max_requested_products: int = 1000
     country_code: str | None = None
-    id: str = ""
-    file_names: str | None = None
+    ec_filename: str | None = None
+    shapefile_folder: Path | None = None
+    shapefile: Path | None = None
     polygon: str | None = None
     parcel_id_name: str | None = None
 
-    def post_init(self) -> None:
+    def post_init(self, vector_data_dir: Path) -> None:
         """Make dynamic config based on initialized params."""
         if len(self.months) != 2 or not (1 <= self.months[0] <= self.months[1] <= 12):
             logger.info(
@@ -62,30 +64,69 @@ class CollectorConfig(BaseModel):
 
         if self.country not in eurocrops_config.countries:
             raise ValueError(
-                f"{self.country} is not a valid country." "Please select one of the following "
+                f"{self.country} is not a valid country. "
+                f"Please use one of the following {', '.join(eurocrops_config.countries.keys())}"
             )
         else:
             eurocrops_countries = eurocrops_config.countries
             country_years: set[int] = set(cast(list, eurocrops_countries[self.country]["years"]))
             if self.year not in country_years:
                 raise ValueError(
-                    f"Year {self.year} not available."
-                    f"Please select one of the following {country_years}"
+                    f"Year {self.year} not available. Please select one of the following: "
+                    f"{', '.join(str(item) for item in country_years)}."
                 )
-            id: str = cast(str, eurocrops_countries[self.country]["ID"])
-            file_code: str = cast(str, eurocrops_countries[self.country]["file"])
+            self.country_code = cast(str, eurocrops_countries[self.country]["country_code"])
+            self.ec_filename = cast(str, eurocrops_countries[self.country]["ec_zipfolder"])
 
-            self.country_code = file_code[0]
-            self.id = id
-            if len(file_code) == 2:
-                # some countries have an additional EuroCrops identifier (e.g. EC21)
-                self.file_names = f"{file_code[0]}_{self.year}_{file_code[1]}"
+            if self.country_code == "ES" and self.year == 2021:
+                filename = f"{self.ec_filename}_2020"
+            elif self.country_code == "PT" and self.year == 2021:
+                filename = self.ec_filename
             else:
-                self.file_names = (
-                    f"{file_code[0]}_{self.year}"  # for Germany Brandenburg and Czechia
-                )
-            if self.country == "Spain NA":
-                self.file_names = f"{file_code[0]}_2020_{file_code[1]}"
+                filename = f"{self.ec_filename}_{self.year}"
+
+            # check if folder exists
+            shapefile_folder_list = [
+                item
+                for item in vector_data_dir.iterdir()
+                if item.is_dir() and item.name == filename
+            ]
+
+            if shapefile_folder_list == []:
+                # check if zip-file exists
+                zip_file = [item for item in vector_data_dir.glob("*.zip") if item.stem == filename]
+                if len(zip_file) == 1:
+                    unzip_folder = zip_file[0].parent
+                    if self.country_code == "PT":
+                        unzip_folder = unzip_folder.joinpath(zip_file[0].stem)
+                    _unzip_file(zip_file[0], unzip_folder)
+                    shapefile_folder_list = [
+                        item
+                        for item in vector_data_dir.iterdir()
+                        if item.is_dir() and item.name == filename
+                    ]
+                else:
+                    raise ValueError(
+                        "Vector data does not exist. "
+                        f"Please first download the EuroCrops reference data {filename}.zip."
+                    )
+
+            self.shapefile_folder = cast(Path, shapefile_folder_list[0])
+            # there should at max be one folder
+            for file in self.shapefile_folder.iterdir():
+                if file.is_dir():
+                    self.shapefile = cast(
+                        Path, [file for file in file.iterdir() if file.suffix == ".shp"][0]
+                    )
+                else:
+                    self.shapefile = cast(
+                        Path,
+                        [file for file in self.shapefile_folder.iterdir() if file.suffix == ".shp"][
+                            0
+                        ],
+                    )
+                    break
+
             self.polygon = eurocrops_config.polygon[self.country]
             self.parcel_id_name = eurocrops_config.parcel_ids[self.country]
 
@@ -122,24 +163,24 @@ class EuroCropsCountryConfig(BaseModel):
     """Configuration for EuroCrops vector data."""
 
     countries: dict[str, dict[str, str | list[str] | list[int]]] = {
-        "Austria": {"ID": "", "file": ["AT", "EC21"], "years": [2021]},
-        "Czechia": {"ID": "", "file": ["CZ"], "years": [2023]},
-        "Belgium": {"ID": "", "file": ["BE_VLG", "EC21"], "years": [2021]},
-        "Croatia": {"ID": "HR", "file": ["HR", "EC21"], "years": [2020]},
-        "Denmark": {"ID": "", "file": ["DK", "EC21"], "years": [2019]},
-        "Estonia": {"ID": "", "file": ["EE", "EC21"], "years": [2021]},
-        "France": {"ID": "", "file": ["FR", "EC21"], "years": [2018]},
-        "Germany LS": {"ID": "", "file": ["DE_LS", "EC21"], "years": [2021]},
-        "Germany NRW": {"ID": "", "file": ["DE_NRW", "EC21"], "years": [2021]},
-        "Germany BB": {"ID": "", "file": ["DE_BB"], "years": [2023]},
-        "Latvia": {"ID": "", "file": ["LV", "EC21"], "years": [2021]},
-        "Lithuania": {"ID": "", "file": ["LT", "EC"], "years": [2021]},
-        "Netherlands": {"ID": "", "file": ["NL", "EC21"], "years": [2020]},
-        "Portugal": {"ID": "", "file": ["PT", "EC21"], "years": [2021]},
-        "Slovakia": {"ID": "", "file": ["SK", "EC21"], "years": [2021]},
-        "Slovenia": {"ID": "", "file": ["SI", "EC21"], "years": [2021]},
-        "Spain NA": {"ID": "NA", "file": ["ES_NA", "EC21"], "years": [2021]},
-        "Sweden": {"ID": "SE", "file": ["SE", "EC21"], "years": [2021]},
+        "Austria": {"country_code": "AT", "ec_zipfolder": "AT", "years": [2021]},
+        "Czechia": {"country_code": "CZ", "ec_zipfolder": "CZ", "years": [2023]},
+        "Belgium VLG": {"country_code": "BE", "ec_zipfolder": "BE_VLG", "years": [2021]},
+        "Croatia": {"country_code": "HR", "ec_zipfolder": "HR", "years": [2020]},
+        "Denmark": {"country_code": "DK", "ec_zipfolder": "DK", "years": [2019]},
+        "Estonia": {"country_code": "EE", "ec_zipfolder": "EE", "years": [2021]},
+        "France": {"country_code": "FR", "ec_zipfolder": "FR", "years": [2018]},
+        "Germany LS": {"country_code": "DE", "ec_zipfolder": "DE_LS", "years": [2021]},
+        "Germany NRW": {"country_code": "DE", "ec_zipfolder": "DE_NRW", "years": [2021]},
+        "Germany BB": {"country_code": "DE", "ec_zipfolder": "DE_BB", "years": [2023]},
+        "Latvia": {"country_code": "LV", "ec_zipfolder": "LV", "years": [2021]},
+        "Lithuania": {"country_code": "LT", "ec_zipfolder": "LT", "years": [2021]},
+        "Netherlands": {"country_code": "NL", "ec_zipfolder": "NL", "years": [2020]},
+        "Portugal": {"country_code": "PT", "ec_zipfolder": "PT", "years": [2021]},
+        "Slovakia": {"country_code": "SK", "ec_zipfolder": "SK", "years": [2021]},
+        "Slovenia": {"country_code": "SI", "ec_zipfolder": "SL", "years": [2021]},
+        "Spain NA": {"country_code": "ES", "ec_zipfolder": "ES_NA", "years": [2021]},
+        "Sweden": {"country_code": "SE", "ec_zipfolder": "SE", "years": [2021]},
     }
 
     # If no unique identifier exists (empty string), one will be created.
