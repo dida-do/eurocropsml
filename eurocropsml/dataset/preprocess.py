@@ -2,6 +2,7 @@
 
 import logging
 import sys
+import zipfile
 from functools import cache, partial
 from multiprocessing import Pool
 from pathlib import Path
@@ -15,9 +16,13 @@ import typer
 from tqdm import tqdm
 
 from eurocropsml.dataset.config import EuroCropsDatasetPreprocessConfig
-from eurocropsml.utils import _unzip_file
 
 logger = logging.getLogger(__name__)
+
+
+def _unzip_file(zip_filepath: Path, extract_to_path: Path) -> None:
+    with zipfile.ZipFile(zip_filepath, "r") as zip_ref:
+        zip_ref.extractall(extract_to_path)
 
 
 def download_dataset(preprocess_config: EuroCropsDatasetPreprocessConfig) -> None:
@@ -215,14 +220,20 @@ def _save_row(
 ) -> None:
     parcel_id, parcel_data_series = row_data
     timestamps, observations = zip(*parcel_data_series.items())
-    if not np.all(observations == np.array([0] * 13)):
+
+    # Default for Sentinel-2
+    bands_number = 13
+    if preprocess_config.satellite == "S1":
+        bands_number = 2
+
+    if not np.all(observations == np.array([0] * bands_number)):
         data = np.stack(observations)
         dates = pd.to_datetime(timestamps).to_numpy(dtype="datetime64[D]")
         data, dates = _filter_padding(data, dates)
 
-        if preprocess_config.filter_clouds:
+        if preprocess_config.satellite == "S2" and preprocess_config.filter_clouds:
             data, dates = _filter_clouds(data, dates, preprocess_config)
-        if not np.all(data == np.array([0] * 13)):
+        if not np.all(data == np.array([0] * bands_number)):
             label = labels[parcel_id]
             center = points[parcel_id]
             file_dir = preprocess_dir / f"{region}_{str(parcel_id)}_{str(label)}.npz"
@@ -275,8 +286,14 @@ def preprocess(
                 # removing empty parcels
                 region_data = region_data.dropna(how="all")
                 # replacing single empty timesteps
+
+                # Default for Sentinel-2
+                bands_number = 13
+                if preprocess_config.satellite == "S1":
+                    bands_number = 2
+
                 region_data = region_data.apply(
-                    lambda x: x.map(lambda y: np.array([0] * 13) if y is None else y)
+                    lambda x, b=bands_number: x.map(lambda y: np.array([0] * b) if y is None else y)
                 )
                 with Pool(processes=num_workers) as p:
                     func = partial(
