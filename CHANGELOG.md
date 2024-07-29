@@ -7,6 +7,8 @@ Changes for the upcoming release can be found (and will be added on merging feat
 Changes from previous releases are listed below.
 
 ## Upcoming Release
+- Ensure that parcel_id column is string _(see #30)_
+- Improve EuroCrops filename definition _(see #27)_
 - Ensure that parcel_id_name column is string _(see #25)_
 - Remove crs argument from Pyogrio GeoDataFrame when saving to file _(see #24)_
 - Fix country code for region module _(see #22)_
