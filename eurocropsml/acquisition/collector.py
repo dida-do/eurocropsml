@@ -99,7 +99,6 @@ def acquire_s2_tiles(
     download_kwargs: dict[str, Any] = {
         "year": config.year,
         "country": config.country,
-        "country_code": config.country_code,
         "shape_dir": shape_dir,
         "shape_dir_clean": shape_dir_clean,
         "eodata_dir": eodata_dir,
