@@ -39,6 +39,8 @@ EUROCROPS_S2BANDS = [
     "B12",
 ]
 
+EUROCROPS_S1BANDS_V = ["vv", "vh"]
+
 
 class EuroCropsDataset(Dataset[LabelledData]):
     """PyTorch dataset class for the EuroCropsML dataset.
@@ -71,16 +73,24 @@ class EuroCropsDataset(Dataset[LabelledData]):
         self.preprocess_config = preprocess_config
         self.pad_seq_to_366 = pad_seq_to_366
 
-        if self.config.remove_bands is not None:
-            self.keep_band_idxs: list[int] | None = []
-            self.data_bands: list[str] = []
-            for band_idx, band in enumerate(EUROCROPS_S2BANDS):
-                if band not in self.config.remove_bands:
-                    self.keep_band_idxs.append(band_idx)
-                    self.data_bands.append(band)
-        else:
+        if preprocess_config.satellite == "S2":
+            band_names = EUROCROPS_S2BANDS
+
+            if self.config.remove_bands is not None:
+                self.keep_band_idxs: list[int] | None = []
+                self.data_bands: list[str] = []
+                for band_idx, band in enumerate(band_names):
+                    if band not in self.config.remove_bands:
+                        self.keep_band_idxs.append(band_idx)
+                        self.data_bands.append(band)
+            else:
+                self.keep_band_idxs = None
+                self.data_bands = band_names
+        elif preprocess_config.satellite == "S1":
+            band_names = EUROCROPS_S1BANDS_V
+
             self.keep_band_idxs = None
-            self.data_bands = EUROCROPS_S2BANDS
+            self.data_bands = band_names
 
     @staticmethod
     def _format_dates(
@@ -103,7 +113,7 @@ class EuroCropsDataset(Dataset[LabelledData]):
                 for month, count, idx in zip(unique, unique_counts, unique_indices):
                     if count == 1:
                         month_data[month] = data[idx]
-                    else:
+                    elif preprocess_config.satellite == "S2":
                         try:
                             cloud_probs = np.apply_along_axis(
                                 partial(

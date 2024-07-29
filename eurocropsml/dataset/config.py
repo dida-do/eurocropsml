@@ -21,6 +21,7 @@ class EuroCropsDatasetPreprocessConfig(BaseModel):
     num_workers: int | None = None
     excl_classes: list[int] = []
     keep_classes: list[int] = []
+    satellite: Literal["S1", "S2"] = "S1"
 
     @field_validator("raw_data_dir", "preprocess_dir")
     @classmethod
