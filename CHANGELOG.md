@@ -10,9 +10,12 @@ Changes from previous releases are listed below.
 
 - Add acquisition of Sentinel-1 data _(see #35)_
 
-## 0.3.0 (2024-07-29)
+## 0.3.1 (2024-07-29)
 
-- Ensure that parcel_id column is string _(see #30)_
+- Remove country_code variable in collector downloader _(see #33)_
+
+## 0.3.0 (2024-07-29)
+- Ensure that parcel_id column is integer _(see #30)_
 - Improve EuroCrops filename definition _(see #27)_
 - Ensure that parcel_id_name column is string _(see #25)_
 - Remove crs argument from Pyogrio GeoDataFrame when saving to file _(see #24)_
