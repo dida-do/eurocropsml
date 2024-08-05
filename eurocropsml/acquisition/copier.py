@@ -6,7 +6,7 @@ import os
 import shutil
 from functools import partial
 from pathlib import Path
-from typing import cast
+from typing import Literal, cast
 
 import pandas as pd
 from tqdm import tqdm
@@ -33,12 +33,15 @@ def _copy_to_local_dir(local_dir: Path, safe_file: str) -> None:
         shutil.copytree(filename, local_product)
 
 
-def _get_image_files(full_safe_files: pd.DataFrame, spectral_bands: list[str]) -> pd.DataFrame:
+def _get_image_files(
+    full_safe_files: pd.DataFrame, satellite: Literal["S1", "S2"], bands: list[str]
+) -> pd.DataFrame:
     """Getting paths for each spectral band.
 
     Args:
-        full_safe_files: DataFrame with safe file paths for which to get the band paths.
-        spectral_bands: Spectral bands to consider.
+        full_safe_files: DataFrame with .SAFE file paths for which to get the band paths.
+        satellite: S1 for Sentinel-1 and S2 for Sentinel-2.
+        bands: (Sub-)set of Sentinel-1 (radar) or Sentinel-2 (spectral) bands.
 
     Returns:
         DataFrame with band paths as columns.
@@ -52,31 +55,50 @@ def _get_image_files(full_safe_files: pd.DataFrame, spectral_bands: list[str]) -
         desc="Collecting paths for spectral bands.",
     ):
         if Path(row["productIdentifier"]).exists():
-            filename_list: list = os.listdir(os.path.join(row["productIdentifier"], "GRANULE"))
-            filename: str = filename_list[0]
-            sub_path: str = os.path.join("GRANULE", filename, "IMG_DATA")
-            path_files: str = os.path.join(row["productIdentifier"], sub_path)
-            resolutions: list[int] = [10, 20, 60]
+            filename_list: list
+            files: list[str]
 
-            files: list[str] = os.listdir(path_files)
+            if satellite == "S2":
+                filename_list = os.listdir(os.path.join(row["productIdentifier"], "GRANULE"))
+                filename: str = filename_list[0]
+                sub_path: str = os.path.join("GRANULE", filename, "IMG_DATA")
+                path_files: str = os.path.join(row["productIdentifier"], sub_path)
+                resolutions: list[int] = [10, 20, 60]
 
-            for band in spectral_bands:
-                if "R10m" in files:
-                    for res in resolutions:
-                        r1_files: list[str] = os.listdir(
-                            os.path.join(path_files, "R{0}m".format(res))
-                        )
-                        image_found: list[str] = [file for file in r1_files if f"_B{band}" in file]
-                        if image_found:
-                            row["bandImage_{0}".format(band)] = os.path.join(
-                                sub_path, "R{0}m".format(res), image_found[0]
+                files = os.listdir(path_files)
+
+                for band in bands:
+                    if "R10m" in files:
+                        for res in resolutions:
+                            r1_files: list[str] = os.listdir(
+                                os.path.join(path_files, "R{0}m".format(res))
                             )
-                            image_found = []
-                            break
+                            image_found: list[str] = [
+                                file for file in r1_files if f"_B{band}" in file
+                            ]
+                            if image_found:
+                                row["bandImage_{0}".format(band)] = os.path.join(
+                                    sub_path, "R{0}m".format(res), image_found[0]
+                                )
+                                image_found = []
+                                break
 
-                else:
-                    image_found = [file for file in files if f"_B{band}" in file]
-                    row["bandImage_{0}".format(band)] = os.path.join(path_files, image_found[0])
+                    else:
+                        image_found = [file for file in files if f"_B{band}" in file]
+                        row["bandImage_{0}".format(band)] = os.path.join(path_files, image_found[0])
+                        image_found = []
+
+            else:
+                path_files = os.path.join(row["productIdentifier"], "measurement")
+
+                files = os.listdir(path_files)
+
+                for i in range(len(bands)):
+                    image_found = [file for file in files if f"{bands[i]}" in file]
+                    if image_found:
+                        row["bandImage_{0}".format(bands[i])] = os.path.join(
+                            path_files, image_found[0]
+                        )
                     image_found = []
 
             if idx == 0:
@@ -92,30 +114,32 @@ def _get_image_files(full_safe_files: pd.DataFrame, spectral_bands: list[str]) -
 
 
 def merge_s2_safe_files(
+    satellite: Literal["S1", "S2"],
     bands: list[str],
     output_dir: Path,
     workers: int,
     local_dir: Path | None = None,
 ) -> None:
-    """Copy all relevant safe files to local directory and acquire spectral band paths.
+    """Copy all relevant .SAFE files to local directory and acquire spectral band paths.
 
     Args:
-        bands: Sentinel-2 bands.
-        output_dir: Directory where lists of required SAFE-files (per parcel id) are stored and
+        satellite: S1 for Sentinel-1 and S2 for Sentinel-2.
+        bands: (Sub-)set of Sentinel-1 (radar) or Sentinel-2 (spectral) bands.
+        output_dir: Directory where lists of required .SAFE files (per parcel id) are stored and
             where to save the output files to.
         workers: Maximum number of workers to use for multiprocessing.
-        local_dir: Local directory where the SAFE-files are copied to.
-            If None, SAFE-files will not be stored on local disk.
+        local_dir: Local directory where the .SAFE files are copied to.
+            If None, .SAFE files will not be stored on local disk.
 
     """
 
     safe_df = pd.read_pickle(output_dir.joinpath("collector", "full_safe_file_list.pkg"))
 
-    # list of unique .SAFE-files identifiers
+    # list of unique .SAFE files identifiers
     full_safe_files: pd.Series = safe_df["productIdentifier"]
 
     if local_dir is not None:
-        # Copying the .SAFE-files to a local directory massively fastens up the process of opening
+        # Copying the .SAFE files to a local directory massively fastens up the process of opening
         # them later on. Furthermore, opening them directly on the external directory sometimes led
         # to the directory disconnecting from the VM.
         local_dir = cast(Path, local_dir)
@@ -124,7 +148,7 @@ def merge_s2_safe_files(
         with mp_orig.Pool(processes=max_workers) as p:
             func = partial(_copy_to_local_dir, local_dir)
             process_iter = p.imap(func, full_safe_files.items())
-            ti = tqdm(total=len(full_safe_files), desc="Copying SAFE-files to local disk.")
+            ti = tqdm(total=len(full_safe_files), desc="Copying .SAFE files to local disk.")
             _ = [ti.update(n=1) for _ in process_iter]
             ti.close()
 
@@ -140,7 +164,7 @@ def merge_s2_safe_files(
     copier_path: Path = output_dir.joinpath("copier")
     band_path: Path = copier_path.joinpath("band_images.pkg")
 
-    # Collecting all .jp2-paths for each .SAFE-file.
+    # Collecting all .jp2-paths for each .SAFE file.
     if band_path.is_file():
         # only process the ones that are not already processed.
         band_images_exist: pd.DataFrame = pd.read_pickle(band_path)
@@ -148,11 +172,11 @@ def merge_s2_safe_files(
             band_images_exist["productIdentifier"]
         )
         safe_files_df.drop(safe_files_df[remove_rows].index, inplace=True)
-        new_band_images: pd.DataFrame = _get_image_files(safe_files_df, bands)
+        new_band_images: pd.DataFrame = _get_image_files(safe_files_df, satellite, bands)
         band_images: pd.DataFrame = pd.concat([band_images_exist, new_band_images])
     else:
         copier_path.mkdir(exist_ok=True, parents=True)
-        band_images = _get_image_files(safe_files_df, bands)
+        band_images = _get_image_files(safe_files_df, satellite, bands)
 
     band_images.to_pickle(copier_path.joinpath("band_images.pkg"))
     logger.info(f"Saved band images to {copier_path.joinpath('band_images.pkg')}.")

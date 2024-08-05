@@ -20,10 +20,6 @@ def build_dataset(
         config: Configuration for acquiring EuroCrops reflectance data.
 
     """
-    final_output_dir = config.raw_data_dir
-    output_dir = config.output_dir
-    local_dir = config.local_dir
-
     vector_data_dir = Settings().data_dir.joinpath(
         "meta_data",
         "vector_data",
@@ -31,6 +27,10 @@ def build_dataset(
 
     config.country_config.post_init(vector_data_dir)
     ct_config = config.country_config
+
+    final_output_dir = config.raw_data_dir.joinpath(ct_config.satellite)
+    output_dir = config.output_dir
+    local_dir = config.local_dir
 
     country = ct_config.country
 
@@ -48,7 +48,7 @@ def build_dataset(
 
     logger.info(f"Processing year {ct_config.year} for {country}.")
 
-    collector.acquire_s2_tiles(
+    collector.acquire_sentinel_tiles(
         ct_config,
         country_output_dir.joinpath("collector"),
         cast(Path, ct_config.shapefile),
@@ -56,13 +56,17 @@ def build_dataset(
         config.eodata_dir,
         config.workers,
     )
-    logger.info("Finished step 1: Acquiring list of necessary SAFE-files.")
+    logger.info("Finished step 1: Acquiring list of necessary .SAFE files.")
     copier.merge_s2_safe_files(
-        cast(list[str], ct_config.bands), country_output_dir, config.workers, local_dir
+        ct_config.satellite,
+        cast(list[str], ct_config.bands),
+        country_output_dir,
+        config.workers,
+        local_dir,
     )
     if local_dir is not None:
         logger.info(
-            "Finished step 2: Copying SAFE-files to local disk and "
+            "Finished step 2: Copying .SAFE files to local disk and "
             "acquiring list of individual band image paths."
         )
     else:

@@ -8,7 +8,7 @@ Changes from previous releases are listed below.
 
 ## Upcoming Release
 
-_No changes yet._
+- Add acquisition of Sentinel-1 data _(see #35)_
 
 ## 0.3.0 (2024-07-29)
 

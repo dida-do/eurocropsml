@@ -4,7 +4,7 @@ import logging
 import sys
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import bs4
 import geopandas as gpd
@@ -15,11 +15,13 @@ import requests
 from rasterio.io import DatasetReader
 from rasterio.mask import mask
 from rasterio.plot import reshape_as_image
+from rasterio.transform import Affine
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.ui import WebDriverWait
+from shapely.geometry import Polygon
 from tqdm import tqdm
 
 logger = logging.getLogger(__name__)
@@ -27,7 +29,20 @@ logger = logging.getLogger(__name__)
 pd.options.mode.chained_assignment = None
 
 
+def _transform_polygon(polygon: Polygon, inv_transform: Affine) -> Polygon:
+    # Transform the exterior coordinates
+    transformed_exterior = [inv_transform * (x, y) for x, y in polygon.exterior.coords]
+
+    # Transform the interior coordinates
+    transformed_interiors = [
+        [inv_transform * (x, y) for x, y in interior.coords] for interior in polygon.interiors
+    ]
+
+    return Polygon(transformed_exterior, transformed_interiors)
+
+
 def mask_polygon_raster(
+    satellite: Literal["S1", "S2"],
     tilepaths: list[Path],
     polygon_df: pd.DataFrame,
     parcel_id_name: str,
@@ -36,6 +51,7 @@ def mask_polygon_raster(
     """Clipping parcels from raster files (per band) and calculating median pixel value per band.
 
     Args:
+        satellite: S1 for Sentinel-1 and S2 for Sentinel-2.
         tilepaths: Paths to the raster's band tiles.
         polygon_df: GeoDataFrame of all parcels to be clipped.
         parcel_id_name: The country's parcel ID name (varies from country to country).
@@ -55,9 +71,21 @@ def mask_polygon_raster(
 
     for b, band_path in enumerate(tilepaths):
         with rasterio.open(band_path, "r") as raster_tile:
-            if b == 0 and polygon_df.crs.srs != raster_tile.crs.data["init"]:
-                # transforming shapefile into CRS of raster tile
-                polygon_df = polygon_df.to_crs(raster_tile.crs.data["init"])
+            if b == 0:
+                if satellite == "S2" and polygon_df.crs.srs != raster_tile.crs.data["init"]:
+                    # transforming shapefile into CRS of raster tile
+                    polygon_df = polygon_df.to_crs(raster_tile.crs.data["init"])
+                elif satellite == "S1":
+                    gcps, _ = raster_tile.get_gcps()
+                    transform = rasterio.transform.from_gcps(gcps)
+
+                    inv_transform = ~transform  # Invert the affine transformation matrix
+
+                    polygon_df["geometry"] = polygon_df["geometry"].apply(
+                        lambda poly, inv_transform=inv_transform: _transform_polygon(
+                            poly, inv_transform
+                        )
+                    )
             # clippping geometry out of raster tile and saving in dictionary
             polygon_df.apply(
                 lambda row: _process_row(row, raster_tile, parcels_dict, parcel_id_name),
