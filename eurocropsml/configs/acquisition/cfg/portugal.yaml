@@ -7,6 +7,7 @@ country_config:
   months: [1,12]
   processing_level: "L1C"
   max_requested_products: 1000
+  satellite: "S2"
 workers: 16
 chunk_size: 30
 multiplier: 20
