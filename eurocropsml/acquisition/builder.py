@@ -43,14 +43,14 @@ def build_dataset(
 
     nuts_dir = Settings().data_dir.joinpath("meta_data", "NUTS")
 
-    country_output_dir: Path = output_dir.joinpath(country.replace(" ", "_"))
-    country_output_dir.mkdir(exist_ok=True, parents=True)
+    satellite_output_dir: Path = output_dir.joinpath(country, ct_config.satellite)
+    satellite_output_dir.mkdir(exist_ok=True, parents=True)
 
     logger.info(f"Processing year {ct_config.year} for {country}.")
 
     collector.acquire_sentinel_tiles(
         ct_config,
-        country_output_dir.joinpath("collector"),
+        satellite_output_dir.joinpath("collector"),
         cast(Path, ct_config.shapefile),
         shape_dir_clean,
         config.eodata_dir,
@@ -60,7 +60,7 @@ def build_dataset(
     copier.merge_safe_files(
         ct_config.satellite,
         cast(list[str], ct_config.bands),
-        country_output_dir,
+        satellite_output_dir,
         config.workers,
         local_dir,
     )
@@ -74,7 +74,7 @@ def build_dataset(
 
     clipper.clipping(
         ct_config,
-        country_output_dir,
+        satellite_output_dir,
         shape_dir_clean,
         config.workers,
         config.chunk_size,
@@ -85,7 +85,7 @@ def build_dataset(
     logger.info("Finished step 3: Clipping parcels from raster tiles.")
     region.add_nuts_regions(
         ct_config,
-        country_output_dir,
+        satellite_output_dir,
         shape_dir_clean,
         nuts_dir,
         final_output_dir,
