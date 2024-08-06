@@ -57,7 +57,7 @@ def build_dataset(
         config.workers,
     )
     logger.info("Finished step 1: Acquiring list of necessary .SAFE files.")
-    copier.merge_s2_safe_files(
+    copier.merge_safe_files(
         ct_config.satellite,
         cast(list[str], ct_config.bands),
         country_output_dir,

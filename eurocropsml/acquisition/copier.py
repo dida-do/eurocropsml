@@ -113,7 +113,7 @@ def _get_image_files(
     return image_update
 
 
-def merge_s2_safe_files(
+def merge_safe_files(
     satellite: Literal["S1", "S2"],
     bands: list[str],
     output_dir: Path,
