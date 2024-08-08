@@ -397,14 +397,17 @@ def _downloader(
         # the lowest cloud cover value
         subset_cols = [parcel_id_name, "completionDate"]
 
-        duplicates = combined_result[combined_result.duplicated(subset=subset_cols, keep=False)]
-        combined_result = combined_result[
-            ~combined_result.duplicated(subset=subset_cols, keep=False)
-        ]
+        if satellite == "S2":
+            duplicates = combined_result[combined_result.duplicated(subset=subset_cols, keep=False)]
+            combined_result = combined_result[
+                ~combined_result.duplicated(subset=subset_cols, keep=False)
+            ]
 
-        min_index = duplicates.groupby(subset_cols)["cloudCover"].idxmin()
-        duplicates_filtered = duplicates.loc[min_index]
-        combined_result = pd.concat([duplicates_filtered, combined_result])
+            min_index = duplicates.groupby(subset_cols)["cloudCover"].idxmin()
+            duplicates_filtered = duplicates.loc[min_index]
+            combined_result = pd.concat([duplicates_filtered, combined_result])
+        else:
+            combined_result = combined_result.drop_duplicates(subset=subset_cols, keep="first")
 
         # saving DataFrame that matches .SAFE files with parcels
         combined_result.to_pickle(output_dir.joinpath("full_parcel_list.pkg"))
