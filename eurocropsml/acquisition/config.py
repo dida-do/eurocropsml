@@ -11,30 +11,61 @@ from eurocropsml.utils import _unzip_file
 
 logger = logging.getLogger(__name__)
 
+S2_BANDS = [
+    "01",
+    "02",
+    "03",
+    "04",
+    "05",
+    "06",
+    "07",
+    "08",
+    "8A",
+    "09",
+    "10",
+    "11",
+    "12",
+]
+
+S1_BANDS = ["VV", "VH"]  # order is important
+
 
 class CollectorConfig(BaseModel):
-    """Country-specific configuration for acquiring EuroCrops reflectance data."""
+    """Country-specific configuration for acquiring EuroCrops reflectance data.
+
+    Args:
+        country: Name of the country to collect the data for.
+        year: Year of observation to collect the data from.
+        months: Months of the year.
+        satellite: Satellite mission (Sentinel 1 (S1) or Sentinel 2(S2)).
+        product_type: Satellite product type.
+        processing_level: Sentinel-1 processing level.
+        operational_mode: Sentinel-1 operational mode.
+        max_cloud_cover: Maximum cloud cover (only used for Sentinel-2).
+        bands: Radar (Sentinel-1) or pectral (Sentinel-2) bands to consider.
+        max_requested_products: Maximum requested products during API call.
+            It is only possible to process up to 2000 products at once.
+            If there are more than max_requested_products available, the products
+            will be processed on a monthly basis.
+        country_code: EuroCrops country code to identify shapefile.
+        ec_filename: EuroCrops zip-file name (without extension).
+        shapefile_folder: Path of the EuroCrops shapefile directory.
+        shapefile: Path of the final EuroCrops shapefile.
+        polygon: Country polygon encircling the entire country.
+        parcel_id_name: Identifier of parcel ID column (different for each country).
+            If no unique identifier is available in EuroCropsCountryConfig.parcel_ids,
+            one will be created in collector.py.
+    """
 
     country: str
     year: int
     months: tuple[int, int] = (1, 12)
-    processing_level: Literal["L1C", "L2A"] = "L1C"
+    satellite: Literal["S1", "S2"] = "S2"
+    product_type: Literal["L1C", "L2A", "GRD"] = "L1C"
+    processing_level: Literal[None, "LEVEL1", "LEVEL2"] = None
+    operational_mode: Literal[None, "IW", "EW", "SM", "WF"] = None
     max_cloud_cover: int = 100
-    bands: list[str] = [
-        "01",
-        "02",
-        "03",
-        "04",
-        "05",
-        "06",
-        "07",
-        "08",
-        "8A",
-        "09",
-        "10",
-        "11",
-        "12",
-    ]
+    bands: list[str] = S2_BANDS
     max_requested_products: int = 1000
     country_code: str | None = None
     ec_filename: str | None = None
@@ -45,6 +76,51 @@ class CollectorConfig(BaseModel):
 
     def post_init(self, vector_data_dir: Path) -> None:
         """Make dynamic config based on initialized params."""
+        if self.satellite == "S2":
+            logger.info("Configuring settings for processing Sentinel-2 data...")
+
+            if self.max_cloud_cover is not None and self.max_cloud_cover > 100:
+                logger.info("Maximum cloud cover set to 100.")
+                self.max_cloud_cover = 100
+            if self.max_cloud_cover is not None and self.max_cloud_cover < 0:
+                self.max_cloud_cover = 0
+                logger.info("Maximum cloud cover set to 0.")
+
+            if self.product_type not in ["L1C", "L2A"]:
+                logger.info("Setting S2 product type to L1C.")
+                self.product_type = "L1C"
+
+            self.bands = [band for band in self.bands if band in S2_BANDS]
+
+        elif self.satellite == "S1":
+            logger.info("Configuring settings for processing Sentinel-1 data...")
+            # dual polarization used for agricultural analysis
+            logger.info("Setting Sentinel-1 bands to VV and VH dual polarization.")
+            self.bands = S1_BANDS
+
+            if self.processing_level not in ["LEVEL1", "LEVEL2"]:
+                logger.info(
+                    "Processing level did not match any S1 processing level. "
+                    "Setting processing level to LEVEL1."
+                )
+                self.processing_level = "LEVEL1"
+
+            if self.operational_mode not in ["IW", "EW", "SM", "WF"]:
+                logger.info(
+                    "Operational mode did not match any S1 mode. " "Setting operational mode to IW."
+                )
+                self.operational_mode = "IW"
+
+            if self.product_type not in ["GRD"]:
+                logger.info("Setting S1 product type to GRD.")
+                self.product_type = "GRD"
+
+        else:
+            raise ValueError(
+                "Satellite not available. Please use 'S1' for Sentinel-1 or 'S2' for Sentinel-2."
+            )
+
+        # general setting
         if len(self.months) != 2 or not (1 <= self.months[0] <= self.months[1] <= 12):
             logger.info(
                 "months should be a tuple of two integer values between 1 and 12,"
@@ -52,14 +128,11 @@ class CollectorConfig(BaseModel):
             )
             self.months = (1, 12)
 
-        if self.max_cloud_cover > 100:
-            logger.info("Maximum cloud cover set to 100.")
-            self.max_cloud_cover = 100
-
         if self.max_requested_products > 1000:
             logger.info("Maximum requested products set to 1000.")
             self.max_requested_products = 1000
 
+        # country-specific setting
         eurocrops_config: EuroCropsCountryConfig = EuroCropsCountryConfig()
 
         if self.country not in eurocrops_config.countries:

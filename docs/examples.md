@@ -64,9 +64,9 @@ Please first make sure to download and unzip the necessary [vector data](https:/
 ```console
     └── meta_data/
         ├── NUTS/
-        │   ├── NUTS_RG_01M_2021_3035
-        │   ├── NUTS_RG_01M_2021_3857
-        │   └── NUTS_RG_01M_2021_4326
+        │   ├── NUTS_RG_01M_2021_3035.geojson
+        │   ├── NUTS_RG_01M_2021_3857.geojson
+        │   └── NUTS_RG_01M_2021_4326.geojson
         └── vector_data/
             └── country_folder_from_zenodo
 ```

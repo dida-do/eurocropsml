@@ -58,7 +58,8 @@ def add_nuts_regions(
         # get nuts regions
         nuts_region_filename = f"NUTS_RG_01M_{config.year}_{crs}.geojson"
         nuts_regions_file = nuts_dir.joinpath(nuts_region_filename)
-        if not nuts_dir.exists() or len(list((nuts_dir.iterdir()))) <= 3:
+
+        if not nuts_dir.exists() or len(list((nuts_dir.iterdir()))) < 3:
             nuts_dir.mkdir(exist_ok=True, parents=True)
             _nuts_region_downloader(url, nuts_dir, crs, config.year)
 

@@ -5,8 +5,9 @@ country_config:
   country: "Portugal"
   year: 2021
   months: [1,12]
-  processing_level: "L1C"
+  product_type: "L1C"
   max_requested_products: 1000
+  satellite: "S2"
 workers: 16
 chunk_size: 30
 multiplier: 20

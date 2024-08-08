@@ -9,7 +9,7 @@ import typer
 from hydra import compose, initialize_config_dir
 from omegaconf import OmegaConf
 
-from eurocropsml.acquisition.build import build_dataset
+from eurocropsml.acquisition.builder import build_dataset
 from eurocropsml.acquisition.config import Config
 from eurocropsml.settings import Settings
 
