@@ -426,19 +426,17 @@ def _get_tiles(
     safe_file: str = tile["S3Path"]  # product Identifier
     request: list | None
 
+    endingdate: str | None = cast(
+        str, _get_dict_value_by_name(tile["Attributes"], "endingDateTime")
+    )
+    if endingdate is None:
+        logger.warning("Wasn't able to obtain observation date. This .SAFE file is being skipped.")
+        return None
+
     if satellite == "S2":
         cloudcover: float | None = cast(
             float, _get_dict_value_by_name(tile["Attributes"], "cloudCover")
         )
-        endingdate: str | None = cast(
-            str, _get_dict_value_by_name(tile["Attributes"], "endingDateTime")
-        )
-
-        if endingdate is None:
-            logger.warning(
-                "Wasn't able to obtain observation date. This .SAFE file is being skipped."
-            )
-            return None
 
         if cloudcover is None:
             cloudcover = 0.0
@@ -490,14 +488,15 @@ def _get_tiles(
             srs_name = footprint.get("srsName") if footprint is not None else ""
             crs = int(srs_name.split("#")[-1]) if srs_name is not None else 0
 
+            geometry = tile["GeoFootprint"]["coordinates"]
             request = [
                 (
-                    Polygon(tile["geometry"]["coordinates"][0])
-                    if np.shape(tile["geometry"]["coordinates"][0][0]) == (2,)
-                    else Polygon(tile["geometry"]["coordinates"][0][0])
+                    Polygon(geometry[0])
+                    if np.shape(geometry[0][0]) == (2,)
+                    else Polygon(geometry[0][0])
                 ),
                 safe_file,
-                tile["properties"]["completionDate"],
+                endingdate,
                 int(crs),
             ]
 
