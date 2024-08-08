@@ -276,16 +276,28 @@ def _downloader(
                 ti.update(n=1)
             ti.close()
 
-        request_df: pd.DataFrame = pd.DataFrame(
-            results,
-            columns=(
-                "geometry",
-                "productIdentifier",
-                "completionDate",
-                "cloudCover",
-                "crs",
-            ),
-        )
+        request_df: pd.DataFrame
+        if satellite == "S2":
+            request_df = pd.DataFrame(
+                results,
+                columns=(
+                    "geometry",
+                    "productIdentifier",
+                    "completionDate",
+                    "cloudCover",
+                    "crs",
+                ),
+            )
+        else:
+            request_df = pd.DataFrame(
+                results,
+                columns=(
+                    "geometry",
+                    "productIdentifier",
+                    "completionDate",
+                    "crs",
+                ),
+            )
 
         request_df = request_df.sort_values(by=["completionDate"])
         request_df = request_df.reset_index().drop(columns=["index"])
