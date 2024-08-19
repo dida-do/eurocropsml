@@ -12,17 +12,20 @@ import numpy as np
 import pandas as pd
 import rasterio
 import requests
+import typer
 from rasterio.io import DatasetReader
 from rasterio.mask import mask
 from rasterio.plot import reshape_as_image
 from rasterio.transform import Affine
 from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
+from selenium.common.exceptions import WebDriverException
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.ui import WebDriverWait
 from shapely.geometry import Polygon
 from tqdm import tqdm
+from webdriver_manager.chrome import ChromeDriverManager
 
 logger = logging.getLogger(__name__)
 
@@ -201,29 +204,31 @@ def _get_proj_options(url: str) -> list[str]:
         sys.exit()
 
 
-def _nuts_region_downloader(url: str, download_dir: Path, crs: str, year: int) -> None:
-
-    chrome_options: Options = Options()
-    chrome_options.add_argument("--headless")  # Run Chrome in headless mode
+def _nuts_region_downloader(
+    url: str, download_dir: Path, crs: str, year: int, files: list[str]
+) -> None:
 
     timeout: int = 120  # Timeout after 120 seconds
     polling_interval: int = 5  # Check every 5 second
     file_count = 0
 
-    chrome_prefs = {
-        "profile.default_content_settings.popups": 0,
-        "download.default_directory": str(download_dir),
-        "directory_upgrade": True,
-        "safebrowsing.enabled": True,
-    }
+    # Set Chrome options for headless mode
+    options = webdriver.ChromeOptions()
+    options.add_argument("--headless")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
 
-    chrome_options.add_experimental_option("prefs", chrome_prefs)
+    # Setup ChromeDriver service using webdriver_manager
+    service = Service(ChromeDriverManager().install())
 
     selected_year: str = _get_closest_year(url, year)
     projections: list[str] = _get_proj_options(url)
 
-    driver: webdriver.Chrome = webdriver.Chrome(options=chrome_options)
-    driver.get(url)
+    try:
+        driver = webdriver.Chrome(service=service, options=options)
+        driver.get(url)
+    except WebDriverException:
+        _manual_download(url, files)
 
     field_format: webdriver.remote.webelement.WebElement = driver.find_element(By.ID, "format")
     driver.execute_script("arguments[0].value = 'geojson';", field_format)
@@ -280,6 +285,7 @@ def _nuts_region_downloader(url: str, download_dir: Path, crs: str, year: int) -
                     time.sleep(polling_interval)
                 logger.info(f"Finished downloading NUTS file EPSG:{proj} for {year}.")
                 file_count += 1
+                files.append(filename)
 
             else:
                 file_count += 1
@@ -289,10 +295,38 @@ def _nuts_region_downloader(url: str, download_dir: Path, crs: str, year: int) -
         if file_count == len(projections):
             logger.info("All files have been downloaded.")
         else:
-            logger.info(
-                f"Only {file_count} files could be downloaded. Please check which ones are"
-                " missing and download the remaining ones manually from {url}."
-            )
+            _manual_download(url, files)
+
+
+def _manual_download(url: str, files: list[str]) -> None:
+    if len(files) == 0:
+        logger.warning(
+            "No NUTS files could be downloaded. Please download them manually from "
+            f"{url}. The folder structure should look like this:\n"
+            "path/to/data/directory\n"
+            "└── meta_data/\n"
+            "    ├── NUTS/\n"
+            "    │   ├── NUTS_RG_01M_2021_3035.geojson\n"
+            "    │   ├── NUTS_RG_01M_2021_3857.geojson\n"
+            "    │   └── NUTS_RG_01M_2021_4326.geojson\n"
+            "    └── ...\n"
+        )
+        sys.exit()
+    else:
+        manual_download = typer.confirm(
+            f"Only {', '.join(files)} could be downloaded. Do you want to download the missing "
+            f" ones manually from {url}? This will exit the script. If manually downloaded, "
+            "the folder sturcture should look like this:\n"
+            "path/to/data/directory\n"
+            "└── meta_data/\n"
+            "    ├── NUTS/\n"
+            "    │   ├── NUTS_RG_01M_2021_3035.geojson\n"
+            "    │   ├── NUTS_RG_01M_2021_3857.geojson\n"
+            "    │   └── NUTS_RG_01M_2021_4326.geojson\n"
+            "    └── ...\n"
+        )
+        if manual_download:
+            sys.exit()
 
 
 def _get_dict_value_by_name(

@@ -8,6 +8,7 @@ Changes from previous releases are listed below.
 
 ## Upcoming Release
 
+- Exit script if automatic acquisition of NUTS files wasn't successful _(see #37)_
 - Add acquisition of Sentinel-1 data _(see #35)_
 
 ## 0.3.1 (2024-07-29)
