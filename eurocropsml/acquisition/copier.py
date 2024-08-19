@@ -94,7 +94,7 @@ def _get_image_files(
                 files = os.listdir(path_files)
 
                 for i in range(len(bands)):
-                    image_found = [file for file in files if f"{bands[i]}" in file]
+                    image_found = [file for file in files if f"{bands[i].lower()}" in file]
                     if image_found:
                         row["bandImage_{0}".format(bands[i])] = os.path.join(
                             path_files, image_found[0]
