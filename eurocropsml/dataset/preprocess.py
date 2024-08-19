@@ -250,6 +250,7 @@ def preprocess(
     raw_data_dir = preprocess_config.raw_data_dir
     preprocess_dir = preprocess_config.preprocess_dir
     num_workers = preprocess_config.num_workers
+    satellite = preprocess_config.satellite
 
     if preprocess_dir.exists() and len(list((preprocess_dir.iterdir()))) > 0:
         logger.info("Preprocessing directory already exists. Nothing to do.")
@@ -260,6 +261,7 @@ def preprocess(
 
         logger.info("Starting preprocessing. Compiling labels and centerpoints of parcels")
         preprocess_dir.mkdir(exist_ok=True, parents=True)
+        raw_data_dir = raw_data_dir / satellite
         for file_path in raw_data_dir.glob("*.parquet"):
             country_file: pd.DataFrame = pd.read_parquet(file_path).set_index("parcel_id")
             cols = country_file.columns.tolist()
