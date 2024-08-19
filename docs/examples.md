@@ -38,7 +38,7 @@ There are three environment variables that can set custom directory paths for th
 
 ### Customizing eo-data directory
 
-The `eurocropsml-cli` will, by default, assume that the Sentinel-2 data is located inside a directory called `/eodata`. However, if the directory where the Sentinel-2 is stored is named differently, the `eodata_dir` argument can be utilized in order to change the parent folder of the `.SAFE`-filepaths returned by the EOLab Data Explorer.
+The `eurocropsml-cli` will, by default, assume that the Sentinel-1/Sentinel-2 data is located inside a directory called `/eodata`. However, if the directory where the Sentinel-1/Sentinel-2 is stored is named differently, the `eodata_dir` argument can be utilized in order to change the parent folder of the `.SAFE`-filepaths returned by the EOLab Data Explorer.
 
 ```console
 $ eurocropsml-cli acquisition eurocrops get-data +cfg.eodata_dir="personal_eodata_dir"
@@ -48,7 +48,7 @@ $ eurocropsml-cli acquisition eurocrops get-data +cfg.eodata_dir="personal_eodat
 ### Obtaining data for different countries
 
 The ready-to-use $\texttt{EuroCropsML}$ dataset provides preprocessed data for Estonia, Latvia, and Portugal.
-The $\texttt{eurocropsml}$ package in conjunction with the `eurocropsml-cli` enables the reuse of the processing pipeline steps to obtain analogous preprocessed Sentinel-2 data for other countries. 
+The $\texttt{eurocropsml}$ package in conjunction with the `eurocropsml-cli` enables the reuse of the processing pipeline steps to obtain analogous preprocessed Sentinel-1 or Sentinel-2 data for other countries. 
 In order to do so, it is recommended to create a new configuration file for each country (for example `eurocropsml/configs/acquisition/cfg/eurocrops_country.yaml`) and select it from the command line:
 ```console
 $ eurocropsml-cli acquisition eurocrops get-data cfg=eurocrops_country
