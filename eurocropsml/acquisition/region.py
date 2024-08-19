@@ -139,7 +139,26 @@ def add_nuts_regions(
         joined_final = joined_final.rename(columns={f"{parcel_id_name}": "parcel_id"})
 
         classes_df = joined_final[["parcel_id", "EC_hcat_c", "EC_hcat_n"]]
-        geometry_df = joined_fiwebdriver_manager
+        geometry_df = joined_final[["parcel_id", "geometry"]]
+        geometry_df = gpd.GeoDataFrame(geometry_df, geometry=geometry_df["geometry"])
+        joined_final = joined_final.drop(columns="geometry", axis=1)
+
+        # Replace list of nan with None and convert floats to integers
+        joined_final[dates_strings] = joined_final[dates_strings].apply(
+            lambda col: col.apply(
+                lambda x: (None if x is not None and all(pd.isna(val) for val in x) else x)
+            )
+        )
+        joined_final[dates_strings] = joined_final[dates_strings].apply(
+            lambda col: col.apply(lambda x: [int(val) for val in x] if x is not None else x)
+        )
+
+        label_dir.mkdir(exist_ok=True, parents=True)
+        geom_dir.mkdir(exist_ok=True, parents=True)
+
+        classes_df.to_parquet(
+            label_dir.joinpath(f"{config.ec_filename}_{config.year}_labels.parquet"), index=False
+        )
 
         joined_final.to_parquet(
             final_output_dir.joinpath(f"{config.ec_filename}_{config.year}.parquet"), index=False

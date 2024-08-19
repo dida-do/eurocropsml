@@ -218,6 +218,16 @@ def _nuts_region_downloader(
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
 
+    chrome_prefs = {
+        "profile.default_content_settings.popups": 0,
+        "download.prompt_for_download": False,
+        "download.default_directory": str(download_dir),
+        "directory_upgrade": True,
+        "safebrowsing.enabled": True,
+    }
+
+    options.add_experimental_option("prefs", chrome_prefs)
+
     # Setup ChromeDriver service using webdriver_manager
     service = Service(ChromeDriverManager().install())
 
