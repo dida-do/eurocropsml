@@ -87,7 +87,7 @@ The pre-processing settings depend on the configuration file that is located wit
 ```console
 $ eurocropsml-cli datasets eurocrops <COMMAND> preprocess.filter_clouds=false
 ``` 
-To adjust the lower and upper thresholds $t_1$ and $t_2$ which determine whether an observation is classified as cloudy or non-cloudy, the user can customize the values.
+To adjust the lower and upper thresholds $t_1$ and $t_2$ which determine whether a Sentinel-2 observation is classified as cloudy or non-cloudy, the user can customize the values.
 For example, to set the lower bound to $0.04$ and the upper bound to $0.2$:
 ```console
 $ eurocropsml-cli datasets eurocrops <COMMAND> preprocess.band4_t1=0.04 preprocess.band4_t2=0.2
