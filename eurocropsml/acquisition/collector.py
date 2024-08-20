@@ -55,7 +55,7 @@ def _eolab_finder(
     _, num_days = calendar.monthrange(year, months[1])
     months_list: list[str] = ["0{0}".format(m) if m < 10 else "{0}".format(m) for m in months]
 
-    request_url = """https://datahub.creodias.eu/odata/v1/Products?$filter=({0}(ContentDate/Start \
+    request_url = """https://datahub.eo-lab.org/odata/v1/Products?$filter=({0}(ContentDate/Start \
 ge {1}-{2}-01T00:00:00.000Z and ContentDate/Start le {1}-{3}-{4}T23:59:59.999Z) and (Online eq \
 true) and (OData.CSC.Intersects(Footprint=geography'SRID=4326;{5}')) and (((((Collection/Name eq \
 '{6}'){7}{8} and (((Attributes/Odata.CSC.StringAttribute/any(i0:i0/Name eq 'productType' and \
