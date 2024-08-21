@@ -2,7 +2,6 @@
 
 import logging
 import sys
-import zipfile
 from functools import cache, partial
 from multiprocessing import Pool
 from pathlib import Path
@@ -16,13 +15,9 @@ import typer
 from tqdm import tqdm
 
 from eurocropsml.dataset.config import EuroCropsDatasetPreprocessConfig
+from eurocropsml.utils import _unzip_file
 
 logger = logging.getLogger(__name__)
-
-
-def _unzip_file(zip_filepath: Path, extract_to_path: Path) -> None:
-    with zipfile.ZipFile(zip_filepath, "r") as zip_ref:
-        zip_ref.extractall(extract_to_path)
 
 
 def download_dataset(preprocess_config: EuroCropsDatasetPreprocessConfig) -> None:
