@@ -74,7 +74,10 @@ class EuroCropsDataset(Dataset[LabelledData]):
         self.pad_seq_to_366 = pad_seq_to_366
 
         if preprocess_config.satellite == "S2":
-            band_names = EUROCROPS_S2BANDS
+            if preprocess_config.bands is None:
+                band_names = EUROCROPS_S2BANDS
+            else:
+                band_names = preprocess_config.bands
 
             if self.config.remove_bands is not None:
                 self.keep_band_idxs: list[int] | None = []
@@ -87,10 +90,10 @@ class EuroCropsDataset(Dataset[LabelledData]):
                 self.keep_band_idxs = None
                 self.data_bands = band_names
         elif preprocess_config.satellite == "S1":
-            if preprocess_config.s1_bands is None:
+            if preprocess_config.bands is None:
                 band_names = EUROCROPS_S1BANDS_V
             else:
-                band_names = preprocess_config.s1_bands
+                band_names = preprocess_config.bands
 
             self.keep_band_idxs = None
             self.data_bands = band_names
