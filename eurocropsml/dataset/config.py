@@ -22,6 +22,7 @@ class EuroCropsDatasetPreprocessConfig(BaseModel):
     excl_classes: list[int] = []
     keep_classes: list[int] = []
     satellite: Literal["S1", "S2"] = "S2"
+    s1_bands: list[str] | None = None
 
     @field_validator("raw_data_dir", "preprocess_dir")
     @classmethod
