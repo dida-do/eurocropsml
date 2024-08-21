@@ -15,6 +15,7 @@ import typer
 from tqdm import tqdm
 
 from eurocropsml.dataset.config import EuroCropsDatasetPreprocessConfig
+from eurocropsml.dataset.dataset import EUROCROPS_S1BANDS_V, EUROCROPS_S2BANDS
 from eurocropsml.utils import _unzip_file
 
 logger = logging.getLogger(__name__)
@@ -211,24 +212,20 @@ def _save_row(
     labels: dict[int, int],
     points: dict[int, np.ndarray],
     region: str,
+    num_bands: int,
     row_data: tuple[int, pd.Series],
 ) -> None:
     parcel_id, parcel_data_series = row_data
     timestamps, observations = zip(*parcel_data_series.items())
 
-    # Default for Sentinel-2
-    bands_number = 13
-    if preprocess_config.satellite == "S1":
-        bands_number = 2
-
-    if not np.all(observations == np.array([0] * bands_number)):
+    if not np.all(observations == np.array([0] * num_bands)):
         data = np.stack(observations)
         dates = pd.to_datetime(timestamps).to_numpy(dtype="datetime64[D]")
         data, dates = _filter_padding(data, dates)
 
         if preprocess_config.satellite == "S2" and preprocess_config.filter_clouds:
             data, dates = _filter_clouds(data, dates, preprocess_config)
-        if not np.all(data == np.array([0] * bands_number)):
+        if not np.all(data == np.array([0] * num_bands)):
             label = labels[parcel_id]
             center = points[parcel_id]
             file_dir = preprocess_dir / f"{region}_{str(parcel_id)}_{str(label)}.npz"
@@ -246,6 +243,14 @@ def preprocess(
     preprocess_dir = preprocess_config.preprocess_dir
     num_workers = preprocess_config.num_workers
     satellite = preprocess_config.satellite
+
+    if preprocess_config.bands is None:
+        if satellite == "S2":
+            bands = EUROCROPS_S2BANDS
+        else:
+            bands = EUROCROPS_S1BANDS_V
+    else:
+        bands = preprocess_config.bands
 
     if preprocess_dir.exists() and len(list((preprocess_dir.iterdir()))) > 0:
         logger.info("Preprocessing directory already exists. Nothing to do.")
@@ -284,13 +289,8 @@ def preprocess(
                 region_data = region_data.dropna(how="all")
                 # replacing single empty timesteps
 
-                # Default for Sentinel-2
-                bands_number = 13
-                if preprocess_config.satellite == "S1":
-                    bands_number = 2
-
                 region_data = region_data.apply(
-                    lambda x, b=bands_number: x.map(lambda y: np.array([0] * b) if y is None else y)
+                    lambda x, b=len(bands): x.map(lambda y: np.array([0] * b) if y is None else y)
                 )
                 with Pool(processes=num_workers) as p:
                     func = partial(
@@ -300,6 +300,7 @@ def preprocess(
                         labels,
                         points,
                         region,
+                        len(bands),
                     )
                     process_iter = p.imap(func, region_data.iterrows(), chunksize=1000)
                     ti = tqdm(total=len(region_data), desc=f"Processing {region}")
