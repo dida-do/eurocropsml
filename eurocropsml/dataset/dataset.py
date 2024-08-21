@@ -87,7 +87,10 @@ class EuroCropsDataset(Dataset[LabelledData]):
                 self.keep_band_idxs = None
                 self.data_bands = band_names
         elif preprocess_config.satellite == "S1":
-            band_names = EUROCROPS_S1BANDS_V
+            if preprocess_config.s1_bands is None:
+                band_names = EUROCROPS_S1BANDS_V
+            else:
+                band_names = preprocess_config.s1_bands
 
             self.keep_band_idxs = None
             self.data_bands = band_names
