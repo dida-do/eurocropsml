@@ -14,8 +14,11 @@ import requests
 import typer
 from tqdm import tqdm
 
-from eurocropsml.dataset.config import EuroCropsDatasetPreprocessConfig
-from eurocropsml.dataset.dataset import EUROCROPS_S1BANDS_V, EUROCROPS_S2BANDS
+from eurocropsml.dataset.config import (
+    EUROCROPS_S1BANDS_V,
+    EUROCROPS_S2BANDS,
+    EuroCropsDatasetPreprocessConfig,
+)
 from eurocropsml.utils import _unzip_file
 
 logger = logging.getLogger(__name__)
