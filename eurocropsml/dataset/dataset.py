@@ -12,6 +12,8 @@ from torch.utils.data import Dataset
 
 from eurocropsml.dataset.base import DataItem, LabelledData
 from eurocropsml.dataset.config import (
+    EUROCROPS_S1BANDS_V,
+    EUROCROPS_S2BANDS,
     EuroCropsDatasetConfig,
     EuroCropsDatasetPreprocessConfig,
 )
@@ -22,24 +24,6 @@ logger = logging.getLogger(__name__)
 
 
 NORMALIZING_FACTOR = 1e-4
-
-EUROCROPS_S2BANDS = [
-    "B1",
-    "B2",
-    "B3",
-    "B4",
-    "B5",
-    "B6",
-    "B7",
-    "B8",
-    "B8A",
-    "B9",
-    "B10",
-    "B11",
-    "B12",
-]
-
-EUROCROPS_S1BANDS_V = ["vv", "vh"]
 
 
 class EuroCropsDataset(Dataset[LabelledData]):

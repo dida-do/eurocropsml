@@ -7,6 +7,24 @@ from pydantic import BaseModel, field_validator
 
 from eurocropsml.settings import Settings
 
+EUROCROPS_S2BANDS = [
+    "B1",
+    "B2",
+    "B3",
+    "B4",
+    "B5",
+    "B6",
+    "B7",
+    "B8",
+    "B8A",
+    "B9",
+    "B10",
+    "B11",
+    "B12",
+]
+
+EUROCROPS_S1BANDS_V = ["vv", "vh"]
+
 
 class EuroCropsDatasetPreprocessConfig(BaseModel):
     """Configuration for downloading and preprocessing EuroCrops dataset.
@@ -26,9 +44,10 @@ class EuroCropsDatasetPreprocessConfig(BaseModel):
             a couple of classes are relevant. In that case, it massively speeds up the pre-
             processing.
         satellite: Preprocess Sentinel-1 or Sentinel-2.
-        bands: If this is None, the default bands states in dataset.py will be used. These are also
-            the ones available in the ready-to-use EuroCropsML dataset. If during your own data
-            acquisition not all bands or different bands were acquired, please define them here.
+        bands: If this is None, the default bands stated in the global variables will be used.
+            These are also the ones available in the ready-to-use EuroCropsML dataset.
+            If during your own data acquisition not all bands or different bands were acquired,
+            please define them here.
 
     """
 
