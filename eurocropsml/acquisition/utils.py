@@ -23,7 +23,7 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.ui import WebDriverWait
-from shapely.geometry import Polygon
+from shapely.geometry import MultiPolygon, Polygon
 from tqdm import tqdm
 from webdriver_manager.chrome import ChromeDriverManager
 
@@ -32,16 +32,33 @@ logger = logging.getLogger(__name__)
 pd.options.mode.chained_assignment = None
 
 
-def _transform_polygon(polygon: Polygon, inv_transform: Affine) -> Polygon:
+def _transform_polygon(
+    polygon: Polygon | MultiPolygon, inv_transform: Affine
+) -> Polygon | MultiPolygon:
     # Transform the exterior coordinates
-    transformed_exterior = [inv_transform * (x, y) for x, y in polygon.exterior.coords]
+    if isinstance(polygon, MultiPolygon):
+        transformed_polygons = []
+        for single_polygon in polygon.geoms:
+            transformed_exterior = [
+                inv_transform * (x, y) for x, y in single_polygon.exterior.coords
+            ]
 
-    # Transform the interior coordinates
-    transformed_interiors = [
-        [inv_transform * (x, y) for x, y in interior.coords] for interior in polygon.interiors
-    ]
+            transformed_interiors = [
+                [inv_transform * (x, y) for x, y in interior.coords]
+                for interior in single_polygon.interiors
+            ]
 
-    return Polygon(transformed_exterior, transformed_interiors)
+            transformed_polygons.append(Polygon(transformed_exterior, transformed_interiors))
+
+        return MultiPolygon(transformed_polygons)
+
+    else:
+        transformed_exterior = [inv_transform * (x, y) for x, y in polygon.exterior.coords]
+        transformed_interiors = [
+            [inv_transform * (x, y) for x, y in interior.coords] for interior in polygon.interiors
+        ]
+
+        return Polygon(transformed_exterior, transformed_interiors)
 
 
 def mask_polygon_raster(
