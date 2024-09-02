@@ -35,14 +35,15 @@ pd.options.mode.chained_assignment = None
 def _transform_polygon(
     polygon: Polygon | MultiPolygon, inv_transform: Affine
 ) -> Polygon | MultiPolygon:
-    # Transform the exterior coordinates
     if isinstance(polygon, MultiPolygon):
+        # transform MultiPolygons Polygon by Polygon
         transformed_polygons = []
         for single_polygon in polygon.geoms:
+            # transformation of exterior coordinates
             transformed_exterior = [
                 inv_transform * (x, y) for x, y in single_polygon.exterior.coords
             ]
-
+            # transformation of interior coordinates
             transformed_interiors = [
                 [inv_transform * (x, y) for x, y in interior.coords]
                 for interior in single_polygon.interiors
@@ -53,6 +54,7 @@ def _transform_polygon(
         return MultiPolygon(transformed_polygons)
 
     else:
+        # transform Polygons
         transformed_exterior = [inv_transform * (x, y) for x, y in polygon.exterior.coords]
         transformed_interiors = [
             [inv_transform * (x, y) for x, y in interior.coords] for interior in polygon.interiors
