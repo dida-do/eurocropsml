@@ -77,7 +77,7 @@ Each country config contains a number of parameters that are utilized for multip
 - `workers` (default 16, used in multiple modules): Maximum number of parallel workers used for multiprocessing. This is contingent upon the vailability of central processing units (CPUs). In the event that this exceeds the number of CPUs, the parallel workers will be set to the number of CPUs. However, in instances where the random-access memory (RAM) capacity is insufficient—such as when constructing the argument list prior to clipping—this value can be reduced within the configuration parameters. It is essential to note that this adjustment may result in a slowing of the process. Therefore, it is recommended to only reduce the number of parallel workers when absolutely necessary.
 
 The following two parameters are exclusively used during the clipping process. In the event that the available RAM is insufficient, they can be lowered. It is important to note that this will impede the clipping process, and thus, we again only advise reducing them if absolutely necessary.
-- `chunk_size`: Number of chunks that are procssed in parallel.
+- `chunk_size`: Number of chunks that are processed in parallel.
 - `multiplier`: This is used to save intermediate results during the clipping process, thus, preventing the RAM from exceeding its operational limits. Upon the processing of "`multiplier`" data chunks,  have been processed, the current DataFrame is stored.
 
 
