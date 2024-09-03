@@ -25,7 +25,7 @@ In order to obtain the observation data for a given country and year, the follow
     {any}`NUTS regions<eurocropsml.acquisition.region>`: Add NUTS1-NUTS3 regions. The shapefiles for the NUTS-regions have been obtained from [Eurostat](https://ec.europa.eu/eurostat/de/web/gisco/geodata/statistical-units/territorial-units-statistics).
 
 :::{note}
-The Sentinel-1 data was acquired at processing level LEVEL1, utilizing the IW operational mode. Additionally, the observations were selected for the VH and VV polarization bands.
+By default, the Sentinel-1 data is acquired at processing level LEVEL1, utilizing the IW operational mode. Additionally, the observations are selected for the VH and VV polarization.
 :::
 
 :::{note}
