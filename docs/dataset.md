@@ -79,7 +79,7 @@ $ eurocropsml-cli datasets eurocrops --help
 
 During preprocessing, each data point is saved separately as a $\texttt{NumPy}$ `.npz` file along with metadata such as the spatial coordinates of the centroid of the parcel and the timestamp of each observation. The `.npz` files use the naming convention `<NUTS3-region>_<parcelID>_<EC_hcat_c>.npz`, where `EC_hcat_c` is the [$\texttt{EuroCrops}$ HCAT crop class code](https://arxiv.org/abs/2106.08151).
 
-### Cloud Removal
+### Cloud Removal (for Sentinel-2)
 Additionally, we perform a cloud removal step for Sentinel-2 data following the scene classification approach of the [Level-2A Algorithm](https://sentinels.copernicus.eu/web/sentinel/technical-guides/sentinel-2-msi/level-2a/algorithm-overview) (${\textit{cf.}\,}$ also [Level-2a Algorithm Theoretical Basis Document](https://step.esa.int/thirdparties/sen2cor/2.10.0/docs/S2-PDGS-MPC-L2A-ATBD-V2.10.0.pdf)). To detect clouds, we rely on the brightness thresholds of the red band (B4). If the median reflectance of the band is lower than the threshold $t_1=0.07$, we consider it as cloud-free and assign a cloud probability of 0%. If it is higher than the threshold $t_2=0.25$, it is considered cloudy and is assigned a cloud probability of 100%. Similarly, we linearly interpolate values between the aforementioned thresholds and assign probabilities between 0% and 100%. Consequently, all observations with a cloud probability greater than 50% are removed. The removal of the cloudy observations as well as the individual thresholds can be adjusted in the preprocess config (${\textit{cf.}\,}$ {doc}`Examples<examples>`).
 
 ### Further Notes
