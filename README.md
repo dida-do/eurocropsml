@@ -24,7 +24,7 @@ For `EuroCropsML`, we acquired and aggregated data for the following countries:
 
 | Country      | Total number of datapoints for Sentinel-2 | Total number of datapoints for Sentinel-1 | Number of distinct classes | 
 |--------------|-------------------------------------------|-------------------------------------------|----------------------------|
-| Estonia      | 175,906                                   | 154742                                    | 127                        |
+| Estonia      | 175,906                                   | 154,742                                    | 127                        |
 | Latvia       | 431,143                                   |                                           | 103                        |
 | Portugal     | 99,634                                    |                                           | 79                         |
 
