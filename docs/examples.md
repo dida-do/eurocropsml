@@ -80,8 +80,6 @@ The following two parameters are exclusively used during the clipping process. I
 - `chunk_size`: Number of chunks that are procssed in parallel.
 - `multiplier`: This is used to save intermediate results during the clipping process, thus, preventing the RAM from exceeding its operational limits. Upon the processing of "`multiplier`" data chunks,  have been processed, the current DataFrame is stored.
 
-### Sentinel-1 acquisition
-The acquisition pipeline is configured by default for Sentinel-2 data. To adjust it for Sentinel-1 data, change the `satellite` variable to `S1` in the file `eurocropsml/configs/aquisition/cfg/country.yaml`, where `country.yaml` corresponds to the specific country of interest.
 
 ## Customizing the dataset pipeline
 ### Customizing the pre-processing pipeline
@@ -99,9 +97,6 @@ If multiple customizations are required, it is advisable to create a new custom 
 ```console
 $ eurocropsml-cli datasets eurocrops <COMMAND> preprocess=custom_config
 ``` 
-
-### Sentinel-1 pre-processing
-To pre-process the obtained Sentinel-1 data, set the `satellite` variable to `S1` in the file `eurocropsml/configs/acquisition/dataset/preprocess/default.yaml`.
 
 ### Customizing the dataset utilization
 The $\texttt{EuroCropsML}$ dataset allows users to customize options for various crop type classification scenarios, making it suitable for a range of benchmarking applications. Adjustments can be made by creating a custom split configuration within the `eurocropsml.configs.dataset.split` module or by modifying the parameters of existing configurations. Detailed split configuration parameters are listed in the table below.
