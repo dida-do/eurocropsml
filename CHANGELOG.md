@@ -7,12 +7,11 @@ Changes for the upcoming release can be found (and will be added on merging feat
 Changes from previous releases are listed below.
 
 ## Upcoming Release
-<!-- _No changes yet._ -->
-
 - Include hidden coverage report files in CI as Github action artifacts  _(see #40)_
+- Add documentation of acquiring and processing Sentinel-1 data _(see #38)_
+- Add preprocessing of Sentinel-1 _(see #31)_
 
 ## 0.3.1 (2024-07-29)
-
 - Remove country_code variable in collector downloader _(see #33)_
 
 ## 0.3.0 (2024-07-29)
