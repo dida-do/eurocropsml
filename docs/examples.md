@@ -38,7 +38,7 @@ There are three environment variables that can set custom directory paths for th
 
 ### Customizing eo-data directory
 
-The `eurocropsml-cli` will, by default, assume that the raster  tiles are located inside a directory called `/eodata`. However, if the directory where the tiles are stored is named differently, the `eodata_dir` argument can be utilized in order to change the parent folder of the `.SAFE`-filepaths returned by the EOLab Data Explorer.
+The `eurocropsml-cli` will, by default, assume that the raster tiles are located inside a directory called `/eodata`. However, if the directory where the tiles are stored is named differently, the `eodata_dir` argument can be utilized in order to change the parent folder of the `.SAFE`-filepaths returned by the EOLab Data Explorer.
 
 ```console
 $ eurocropsml-cli acquisition eurocrops get-data +cfg.eodata_dir="personal_eodata_dir"
