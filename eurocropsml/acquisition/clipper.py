@@ -7,7 +7,7 @@ import multiprocessing as mp_orig
 import pickle
 from functools import partial
 from pathlib import Path
-from typing import cast
+from typing import Literal, cast
 
 import geopandas as gpd
 import pandas as pd
@@ -80,9 +80,9 @@ def _get_arguments(
         config: Country-specific configuration for acquiring EuroCrops reflectance data.
         workers: Maximum number of workers used for multiprocessing.
         shape_dir: Directory where EuroCrops shapefile is stored.
-        output_dir: Directory to get the list of safe files from and to store the
+        output_dir: Directory to get the list of .SAFE files from and to store the
             argument list.
-        local_dir: Local directory where the SAFE-files were copied to.
+        local_dir: Local directory where the .SAFE files were copied to.
 
     Returns:
         - List of tuples of arguments for clipping raster tiles.
@@ -162,6 +162,7 @@ def _filter_args(
 
 
 def _process_raster_parallel(
+    satellite: Literal["S1", "S2"],
     polygon_df: pd.DataFrame,
     parcel_id_name: str,
     filtered_images: gpd.GeoDataFrame,
@@ -170,6 +171,7 @@ def _process_raster_parallel(
     """Processing one raster file.
 
     Args:
+        satellite: S1 for Sentinel-1 and S2 for Sentinel-2.
         polygon_df: Dataframe containing all parcel ids. Will be merged with the clipped values.
         parcel_id_name: The country's parcel ID name (varies from country to country).
         filtered_images: Dataframe containing all parcel ids that lie in this raster tile.
@@ -189,7 +191,9 @@ def _process_raster_parallel(
         # geometry information of all parcels
         filtered_geom = polygon_df[polygon_df[parcel_id_name].isin(parcel_ids)]
 
-        result = mask_polygon_raster(band_tiles, filtered_geom, parcel_id_name, product_date)
+        result = mask_polygon_raster(
+            satellite, band_tiles, filtered_geom, parcel_id_name, product_date
+        )
 
         if result is not None:
             result.set_index(parcel_id_name, inplace=True)
@@ -220,7 +224,7 @@ def clipping(
         workers: Maximum number of workers used for multiprocessing.
         chunk_size: Chunk size used for multiprocessed raster clipping.
         multiplier: Intermediate results will be saved every multiplier steps.
-        local_dir: Local directory where the SAFE-files were copied to.
+        local_dir: Local directory where the .SAFE files were copied to.
     """
     args, polygon_df, clipping_path = _get_arguments(
         config=config,
@@ -243,7 +247,9 @@ def clipping(
     file_counts += 1
 
     polygon_df[config.parcel_id_name] = polygon_df[config.parcel_id_name].astype(int)
-    func = partial(_process_raster_parallel, polygon_df, cast(str, config.parcel_id_name))
+    func = partial(
+        _process_raster_parallel, config.satellite, polygon_df, cast(str, config.parcel_id_name)
+    )
 
     polygon_df = polygon_df.drop(["geometry"], axis=1)
     df_final = polygon_df.copy()
