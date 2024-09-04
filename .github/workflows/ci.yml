@@ -72,6 +72,7 @@ jobs:
           path: .coverage.*
           if-no-files-found: ignore
           overwrite: true
+          include-hidden-files: true
 
   coverage:
     name: combining test coverages
