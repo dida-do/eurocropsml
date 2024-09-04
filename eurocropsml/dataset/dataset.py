@@ -107,7 +107,7 @@ class EuroCropsDataset(Dataset[LabelledData]):
                             cloud_probs = np.apply_along_axis(
                                 partial(
                                     find_clouds,
-                                    band4_idx=S2_BANDS.index("B4"),
+                                    band4_idx=S2_BANDS.index("04"),
                                     preprocess_config=preprocess_config,
                                 ),
                                 1,
