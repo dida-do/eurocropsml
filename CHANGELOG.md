@@ -7,7 +7,9 @@ Changes for the upcoming release can be found (and will be added on merging feat
 Changes from previous releases are listed below.
 
 ## Upcoming Release
-_No changes yet._
+<!-- _No changes yet._ -->
+
+- Include hidden coverage report files in CI as Github action artifacts  _(see #40)_
 
 ## 0.3.1 (2024-07-29)
 
