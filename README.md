@@ -25,8 +25,8 @@ For `EuroCropsML`, we acquired and aggregated data for the following countries:
 | Country      | Number of distinct classes | Total number of datapoints for Sentinel-2 | Total number of datapoints for Sentinel-1 | 
 |--------------|----------------------------|-------------------------------------------|-------------------------------------------|
 | Estonia      | 127                        | 175,906                                   | 176,055                                   | 
-| Latvia       | 103                        | 431,143                                   |                                           | 
-| Portugal     | 79                         | 99,634                                    |                                           | 
+| Latvia       | 103                        | 431,143                                   | -                                         | 
+| Portugal     | 79                         | 99,634                                    | -                                         | 
 
 ![Spatial distribution of labels within Estland and Latvia.](docs/_static/labels_spatial_distribution_EE_LV_nuts3_340.png)
 ![Spatial distribution of labels within Portugal.](docs/_static/labels_spatial_distribution_PT_nuts3_340.png)
