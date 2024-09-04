@@ -7,24 +7,6 @@ from pydantic import BaseModel, field_validator
 
 from eurocropsml.settings import Settings
 
-EUROCROPS_S2BANDS = [
-    "B1",
-    "B2",
-    "B3",
-    "B4",
-    "B5",
-    "B6",
-    "B7",
-    "B8",
-    "B8A",
-    "B9",
-    "B10",
-    "B11",
-    "B12",
-]
-
-EUROCROPS_S1BANDS_V = ["vv", "vh"]
-
 
 class EuroCropsDatasetPreprocessConfig(BaseModel):
     """Configuration for downloading and preprocessing EuroCrops dataset.

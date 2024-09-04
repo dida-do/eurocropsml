@@ -11,6 +11,24 @@ from eurocropsml.utils import _unzip_file
 
 logger = logging.getLogger(__name__)
 
+S2_BANDS = [
+    "01",
+    "02",
+    "03",
+    "04",
+    "05",
+    "06",
+    "07",
+    "08",
+    "8A",
+    "09",
+    "10",
+    "11",
+    "12",
+]
+
+S1_BANDS = ["VV", "VH"]  # order is important
+
 
 class CollectorConfig(BaseModel):
     """Country-specific configuration for acquiring EuroCrops reflectance data."""

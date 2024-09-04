@@ -14,11 +14,8 @@ import requests
 import typer
 from tqdm import tqdm
 
-from eurocropsml.dataset.config import (
-    EUROCROPS_S1BANDS_V,
-    EUROCROPS_S2BANDS,
-    EuroCropsDatasetPreprocessConfig,
-)
+from eurocropsml.acquisition.config import S1_BANDS, S2_BANDS
+from eurocropsml.dataset.config import EuroCropsDatasetPreprocessConfig
 from eurocropsml.utils import _unzip_file
 
 logger = logging.getLogger(__name__)
@@ -249,9 +246,9 @@ def preprocess(
 
     if preprocess_config.bands is None:
         if satellite == "S2":
-            bands = EUROCROPS_S2BANDS
+            bands = S2_BANDS
         else:
-            bands = EUROCROPS_S1BANDS_V
+            bands = S1_BANDS
     else:
         bands = preprocess_config.bands
 

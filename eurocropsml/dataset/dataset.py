@@ -10,10 +10,9 @@ import pandas as pd
 import torch
 from torch.utils.data import Dataset
 
+from eurocropsml.acquisition.config import S1_BANDS, S2_BANDS
 from eurocropsml.dataset.base import DataItem, LabelledData
 from eurocropsml.dataset.config import (
-    EUROCROPS_S1BANDS_V,
-    EUROCROPS_S2BANDS,
     EuroCropsDatasetConfig,
     EuroCropsDatasetPreprocessConfig,
 )
@@ -59,7 +58,7 @@ class EuroCropsDataset(Dataset[LabelledData]):
 
         if preprocess_config.satellite == "S2":
             if preprocess_config.bands is None:
-                band_names = EUROCROPS_S2BANDS
+                band_names = S2_BANDS
             else:
                 band_names = preprocess_config.bands
 
@@ -75,7 +74,7 @@ class EuroCropsDataset(Dataset[LabelledData]):
                 self.data_bands = band_names
         elif preprocess_config.satellite == "S1":
             if preprocess_config.bands is None:
-                band_names = EUROCROPS_S1BANDS_V
+                band_names = S1_BANDS
             else:
                 band_names = preprocess_config.bands
 
@@ -108,7 +107,7 @@ class EuroCropsDataset(Dataset[LabelledData]):
                             cloud_probs = np.apply_along_axis(
                                 partial(
                                     find_clouds,
-                                    band4_idx=EUROCROPS_S2BANDS.index("B4"),
+                                    band4_idx=S2_BANDS.index("B4"),
                                     preprocess_config=preprocess_config,
                                 ),
                                 1,
