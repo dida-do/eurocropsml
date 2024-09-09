@@ -25,7 +25,7 @@ S2_BANDS = [
     "10",
     "11",
     "12",
-]
+]  # order is important
 
 S1_BANDS = ["VV", "VH"]  # order is important
 

@@ -10,6 +10,7 @@ import pandas as pd
 import torch
 from torch.utils.data import Dataset
 
+from eurocropsml.acquisition.config import S1_BANDS, S2_BANDS
 from eurocropsml.dataset.base import DataItem, LabelledData
 from eurocropsml.dataset.config import (
     EuroCropsDatasetConfig,
@@ -22,22 +23,6 @@ logger = logging.getLogger(__name__)
 
 
 NORMALIZING_FACTOR = 1e-4
-
-EUROCROPS_S2BANDS = [
-    "B1",
-    "B2",
-    "B3",
-    "B4",
-    "B5",
-    "B6",
-    "B7",
-    "B8",
-    "B8A",
-    "B9",
-    "B10",
-    "B11",
-    "B12",
-]
 
 
 class EuroCropsDataset(Dataset[LabelledData]):
@@ -71,16 +56,30 @@ class EuroCropsDataset(Dataset[LabelledData]):
         self.preprocess_config = preprocess_config
         self.pad_seq_to_366 = pad_seq_to_366
 
-        if self.config.remove_bands is not None:
-            self.keep_band_idxs: list[int] | None = []
-            self.data_bands: list[str] = []
-            for band_idx, band in enumerate(EUROCROPS_S2BANDS):
-                if band not in self.config.remove_bands:
-                    self.keep_band_idxs.append(band_idx)
-                    self.data_bands.append(band)
-        else:
+        if preprocess_config.satellite == "S2":
+            if preprocess_config.bands is None:
+                band_names = S2_BANDS
+            else:
+                band_names = preprocess_config.bands
+
+            if self.config.remove_bands is not None:
+                self.keep_band_idxs: list[int] | None = []
+                self.data_bands: list[str] = []
+                for band_idx, band in enumerate(band_names):
+                    if band not in self.config.remove_bands:
+                        self.keep_band_idxs.append(band_idx)
+                        self.data_bands.append(band)
+            else:
+                self.keep_band_idxs = None
+                self.data_bands = band_names
+        elif preprocess_config.satellite == "S1":
+            if preprocess_config.bands is None:
+                band_names = S1_BANDS
+            else:
+                band_names = preprocess_config.bands
+
             self.keep_band_idxs = None
-            self.data_bands = EUROCROPS_S2BANDS
+            self.data_bands = band_names
 
     @staticmethod
     def _format_dates(
@@ -103,12 +102,12 @@ class EuroCropsDataset(Dataset[LabelledData]):
                 for month, count, idx in zip(unique, unique_counts, unique_indices):
                     if count == 1:
                         month_data[month] = data[idx]
-                    else:
+                    elif preprocess_config.satellite == "S2":
                         try:
                             cloud_probs = np.apply_along_axis(
                                 partial(
                                     find_clouds,
-                                    band4_idx=EUROCROPS_S2BANDS.index("B4"),
+                                    band4_idx=S2_BANDS.index("04"),
                                     preprocess_config=preprocess_config,
                                 ),
                                 1,

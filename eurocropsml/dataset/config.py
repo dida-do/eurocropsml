@@ -9,7 +9,29 @@ from eurocropsml.settings import Settings
 
 
 class EuroCropsDatasetPreprocessConfig(BaseModel):
-    """Configuration for downloading and preprocessing EuroCrops dataset."""
+    """Configuration for downloading and preprocessing EuroCrops dataset.
+
+    Args:
+        download_url: Zenodo URL do download dataset from.
+        raw_data_dir: Directory where the raw EuroCropsML data is stored (from data acquisiton).
+        preprocess_dir: Directory where the preprocessed data is stored.
+        band4_t1: Lower threshold for band 4 for identifying cloudy pixels.
+        band4_t2: Upper threshold for band 4 for identifying cloudy pixels.
+        band4_prob_threshold: Probability threshold for filtering clouds that decides whether an
+            observation is defined cloudy or non-cloudy.
+        filter_clouds: Whether to filter clouds from Sentinel-2 time series.
+        num_workers: Number of workers used during multiprocessing.
+        excl_classes: Classes that should be excluded even before preprocessing.
+        keep_classes: Classes to keep for preprocessing. This comes in handy if for example only
+            a couple of classes are relevant. In that case, it massively speeds up the pre-
+            processing.
+        satellite: Preprocess Sentinel-1 or Sentinel-2.
+        bands: If this is None, the default bands stated in the global variables will be used.
+            These are also the ones available in the ready-to-use EuroCropsML dataset.
+            If during your own data acquisition not all bands or different bands were acquired,
+            please define them here.
+
+    """
 
     download_url: str = "https://zenodo.org/api/records/10629610/versions/latest"
     raw_data_dir: Path
@@ -21,6 +43,8 @@ class EuroCropsDatasetPreprocessConfig(BaseModel):
     num_workers: int | None = None
     excl_classes: list[int] = []
     keep_classes: list[int] = []
+    satellite: Literal["S1", "S2"] = "S2"
+    bands: list[str] | None = None
 
     @field_validator("raw_data_dir", "preprocess_dir")
     @classmethod
