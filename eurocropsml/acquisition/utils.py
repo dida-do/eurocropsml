@@ -4,7 +4,7 @@ import logging
 import sys
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import bs4
 import geopandas as gpd
@@ -12,22 +12,59 @@ import numpy as np
 import pandas as pd
 import rasterio
 import requests
+import typer
 from rasterio.io import DatasetReader
 from rasterio.mask import mask
 from rasterio.plot import reshape_as_image
+from rasterio.transform import Affine
 from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
+from selenium.common.exceptions import WebDriverException
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.ui import WebDriverWait
+from shapely.geometry import MultiPolygon, Polygon
 from tqdm import tqdm
+from webdriver_manager.chrome import ChromeDriverManager
 
 logger = logging.getLogger(__name__)
 
 pd.options.mode.chained_assignment = None
 
 
+def _transform_polygon(
+    polygon: Polygon | MultiPolygon, inv_transform: Affine
+) -> Polygon | MultiPolygon:
+    if isinstance(polygon, MultiPolygon):
+        # transform MultiPolygons Polygon by Polygon
+        transformed_polygons = []
+        for single_polygon in polygon.geoms:
+            # transformation of exterior coordinates
+            transformed_exterior = [
+                inv_transform * (x, y) for x, y in single_polygon.exterior.coords
+            ]
+            # transformation of interior coordinates
+            transformed_interiors = [
+                [inv_transform * (x, y) for x, y in interior.coords]
+                for interior in single_polygon.interiors
+            ]
+
+            transformed_polygons.append(Polygon(transformed_exterior, transformed_interiors))
+
+        return MultiPolygon(transformed_polygons)
+
+    else:
+        # transform Polygons
+        transformed_exterior = [inv_transform * (x, y) for x, y in polygon.exterior.coords]
+        transformed_interiors = [
+            [inv_transform * (x, y) for x, y in interior.coords] for interior in polygon.interiors
+        ]
+
+        return Polygon(transformed_exterior, transformed_interiors)
+
+
 def mask_polygon_raster(
+    satellite: Literal["S1", "S2"],
     tilepaths: list[Path],
     polygon_df: pd.DataFrame,
     parcel_id_name: str,
@@ -36,6 +73,7 @@ def mask_polygon_raster(
     """Clipping parcels from raster files (per band) and calculating median pixel value per band.
 
     Args:
+        satellite: S1 for Sentinel-1 and S2 for Sentinel-2.
         tilepaths: Paths to the raster's band tiles.
         polygon_df: GeoDataFrame of all parcels to be clipped.
         parcel_id_name: The country's parcel ID name (varies from country to country).
@@ -55,9 +93,21 @@ def mask_polygon_raster(
 
     for b, band_path in enumerate(tilepaths):
         with rasterio.open(band_path, "r") as raster_tile:
-            if b == 0 and polygon_df.crs.srs != raster_tile.crs.data["init"]:
-                # transforming shapefile into CRS of raster tile
-                polygon_df = polygon_df.to_crs(raster_tile.crs.data["init"])
+            if b == 0:
+                if satellite == "S2" and polygon_df.crs.srs != raster_tile.crs.data["init"]:
+                    # transforming shapefile into CRS of raster tile
+                    polygon_df = polygon_df.to_crs(raster_tile.crs.data["init"])
+                elif satellite == "S1":
+                    gcps, _ = raster_tile.get_gcps()
+                    transform = rasterio.transform.from_gcps(gcps)
+
+                    inv_transform = ~transform  # Invert the affine transformation matrix
+
+                    polygon_df["geometry"] = polygon_df["geometry"].apply(
+                        lambda poly, inv_transform=inv_transform: _transform_polygon(
+                            poly, inv_transform
+                        )
+                    )
             # clippping geometry out of raster tile and saving in dictionary
             polygon_df.apply(
                 lambda row: _process_row(row, raster_tile, parcels_dict, parcel_id_name),
@@ -173,29 +223,41 @@ def _get_proj_options(url: str) -> list[str]:
         sys.exit()
 
 
-def _nuts_region_downloader(url: str, download_dir: Path, crs: str, year: int) -> None:
-
-    chrome_options: Options = Options()
-    chrome_options.add_argument("--headless")  # Run Chrome in headless mode
+def _nuts_region_downloader(
+    url: str, download_dir: Path, crs: str, year: int, files: list[str]
+) -> None:
 
     timeout: int = 120  # Timeout after 120 seconds
     polling_interval: int = 5  # Check every 5 second
     file_count = 0
 
+    # Set Chrome options for headless mode
+    options = webdriver.ChromeOptions()
+    options.add_argument("--headless")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+
     chrome_prefs = {
         "profile.default_content_settings.popups": 0,
+        "download.prompt_for_download": False,
         "download.default_directory": str(download_dir),
         "directory_upgrade": True,
         "safebrowsing.enabled": True,
     }
 
-    chrome_options.add_experimental_option("prefs", chrome_prefs)
+    options.add_experimental_option("prefs", chrome_prefs)
+
+    # Setup ChromeDriver service using webdriver_manager
+    service = Service(ChromeDriverManager().install())
 
     selected_year: str = _get_closest_year(url, year)
     projections: list[str] = _get_proj_options(url)
 
-    driver: webdriver.Chrome = webdriver.Chrome(options=chrome_options)
-    driver.get(url)
+    try:
+        driver = webdriver.Chrome(service=service, options=options)
+        driver.get(url)
+    except WebDriverException:
+        _manual_download(url, files)
 
     field_format: webdriver.remote.webelement.WebElement = driver.find_element(By.ID, "format")
     driver.execute_script("arguments[0].value = 'geojson';", field_format)
@@ -252,6 +314,7 @@ def _nuts_region_downloader(url: str, download_dir: Path, crs: str, year: int) -
                     time.sleep(polling_interval)
                 logger.info(f"Finished downloading NUTS file EPSG:{proj} for {year}.")
                 file_count += 1
+                files.append(filename)
 
             else:
                 file_count += 1
@@ -261,10 +324,38 @@ def _nuts_region_downloader(url: str, download_dir: Path, crs: str, year: int) -
         if file_count == len(projections):
             logger.info("All files have been downloaded.")
         else:
-            logger.info(
-                f"Only {file_count} files could be downloaded. Please check which ones are"
-                " missing and download the remaining ones manually from {url}."
-            )
+            _manual_download(url, files)
+
+
+def _manual_download(url: str, files: list[str]) -> None:
+    if len(files) == 0:
+        logger.warning(
+            "No NUTS files could be downloaded. Please download them manually from "
+            f"{url}. The folder structure should look like this:\n"
+            "path/to/data/directory\n"
+            "└── meta_data/\n"
+            "    ├── NUTS/\n"
+            "    │   ├── NUTS_RG_01M_2021_3035.geojson\n"
+            "    │   ├── NUTS_RG_01M_2021_3857.geojson\n"
+            "    │   └── NUTS_RG_01M_2021_4326.geojson\n"
+            "    └── ...\n"
+        )
+        sys.exit()
+    else:
+        manual_download = typer.confirm(
+            f"Only {', '.join(files)} could be downloaded. Do you want to download the missing "
+            f" ones manually from {url}? This will exit the script. If manually downloaded, "
+            "the folder sturcture should look like this:\n"
+            "path/to/data/directory\n"
+            "└── meta_data/\n"
+            "    ├── NUTS/\n"
+            "    │   ├── NUTS_RG_01M_2021_3035.geojson\n"
+            "    │   ├── NUTS_RG_01M_2021_3857.geojson\n"
+            "    │   └── NUTS_RG_01M_2021_4326.geojson\n"
+            "    └── ...\n"
+        )
+        if manual_download:
+            sys.exit()
 
 
 def _get_dict_value_by_name(

@@ -28,6 +28,7 @@ $(VIRTUAL_ENV)/timestamp: requirements/*.in
 	@touch $(VIRTUAL_ENV)/timestamp
 
 install: $(VIRTUAL_ENV)/timestamp
+	@echo "Installing Python dependencies..."
 	python -m pip install -q --upgrade pip wheel 
 	pip install -q --extra-index-url https://download.pytorch.org/whl/$(PLATFORM) -e '.[dev]'
 
