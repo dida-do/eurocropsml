@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 def add_nuts_regions(
     config: CollectorConfig,
+    raw_data_dir: Path,
     output_dir: Path,
     shape_dir: Path,
     nuts_dir: Path,
@@ -26,10 +27,13 @@ def add_nuts_regions(
 
     Args:
         config: Country-specific configuration for acquiring EuroCrops reflectance data.
+        raw_data_dir: Directory where raw data that is independent of the satellite
+            is stored. This concerns the labels and geometries.
         output_dir: Directory path where intermediate results will be stored.
         shape_dir: File path of EuroCrops shapefile.
         nuts_dir: Directory where NUTS-region shapefiles are stored.
         final_output_dir: Directory where the final DataFrame will be stored.
+            This depends on the satellite.
 
     Raises:
         ValueError: If NUTS-files are not available.
@@ -40,8 +44,8 @@ def add_nuts_regions(
         "statistical-units/territorial-units-statistics"
     )
 
-    label_dir = final_output_dir.joinpath("labels")
-    geom_dir = final_output_dir.joinpath("geometries")
+    label_dir = raw_data_dir.joinpath("labels")
+    geom_dir = raw_data_dir.joinpath("geometries")
 
     if not (
         label_dir.joinpath(f"{config.country}_labels.parquet").exists()
@@ -138,9 +142,10 @@ def add_nuts_regions(
 
         joined_final = joined_final.rename(columns={f"{parcel_id_name}": "parcel_id"})
 
-        classes_df = joined_final[["parcel_id", "EC_hcat_c", "EC_hcat_n"]]
-        geometry_df = joined_final[["parcel_id", "geometry"]]
-        geometry_df = gpd.GeoDataFrame(geometry_df, geometry=geometry_df["geometry"])
+        shapefile = shapefile.rename(columns={f"{parcel_id_name}": "parcel_id"})
+
+        classes_df = shapefile[["parcel_id", "EC_hcat_c", "EC_hcat_n"]]
+        geometry_df = shapefile[["parcel_id", "geometry"]]
         joined_final = joined_final.drop(columns="geometry", axis=1)
 
         # Replace list of nan with None and convert floats to integers
