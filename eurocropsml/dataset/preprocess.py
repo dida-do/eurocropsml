@@ -10,60 +10,14 @@ from typing import Literal
 import geopandas as gpd
 import numpy as np
 import pandas as pd
-import requests
 import typer
 from tqdm import tqdm
 
 from eurocropsml.acquisition.config import S1_BANDS, S2_BANDS
 from eurocropsml.dataset.config import EuroCropsDatasetPreprocessConfig
-from eurocropsml.utils import _unzip_file
+from eurocropsml.dataset.download import download_dataset
 
 logger = logging.getLogger(__name__)
-
-
-def download_dataset(preprocess_config: EuroCropsDatasetPreprocessConfig) -> None:
-    """Download EuroCropsML dataset from Zenodo.
-
-    Args:
-        preprocess_config: Config used to access the Zenodo URL.
-
-    Raises:
-        requests.exceptions.HTTPError: If Zenodo records could not be accessed.
-    """
-
-    response = requests.get(preprocess_config.download_url)
-
-    data_dir: Path = preprocess_config.raw_data_dir.parent
-    data_dir.mkdir(exist_ok=True, parents=True)
-
-    try:
-        response.raise_for_status()
-        data = response.json()
-
-        for file_entry in data["files"]:
-            file_url = file_entry["links"]["self"]
-            file_name = file_entry["key"]
-
-            filepath: Path = data_dir.joinpath(file_name)
-
-            if not filepath.exists():
-
-                response = requests.get(file_url)
-                response.raise_for_status()
-                with open(filepath, "wb") as file:
-                    file.write(response.content)
-                logger.info(f"{filepath.name} downloaded.")
-            else:
-                logger.info(f"{filepath.name} already exists. Skipping downloading.")
-            file_dir: Path = filepath.with_suffix("")
-            if not file_dir.exists():
-                file_dir = filepath.parent
-                _unzip_file(data_dir.joinpath(file_name), file_dir)
-                logger.info(f"{filepath.name} unzipped.")
-            else:
-                logger.info(f"{file_dir} already exists. Skipping unzipping.")
-    except requests.exceptions.HTTPError as err:
-        logger.info(f"There was an error when trying to get the Zenodo record: {err}")
 
 
 def _read_geojson_file(metadata_file_path: Path, country: str) -> gpd.GeoDataFrame:
@@ -240,9 +194,9 @@ def preprocess(
     """Run preprocessing."""
 
     raw_data_dir = preprocess_config.raw_data_dir
-    preprocess_dir = preprocess_config.preprocess_dir
     num_workers = preprocess_config.num_workers
     satellite = preprocess_config.satellite
+    preprocess_dir = preprocess_config.preprocess_dir / satellite
 
     if preprocess_config.bands is None:
         if satellite == "S2":
@@ -253,16 +207,19 @@ def preprocess(
         bands = preprocess_config.bands
 
     if preprocess_dir.exists() and len(list((preprocess_dir.iterdir()))) > 0:
-        logger.info("Preprocessing directory already exists. Nothing to do.")
+        logger.info(
+            f"Preprocessing directory {preprocess_dir} already exists and contains data. "
+            "Nothing to do."
+        )
         sys.exit(0)
 
     if raw_data_dir.exists():
-        logger.info("Download directory exists. Skipping download.")
+        logger.info("Raw data directory exists. Skipping download.")
 
         logger.info("Starting preprocessing. Compiling labels and centerpoints of parcels")
         preprocess_dir.mkdir(exist_ok=True, parents=True)
-        raw_data_dir = raw_data_dir / satellite
-        for file_path in raw_data_dir.glob("*.parquet"):
+        raw_data_dir_satellite: Path = raw_data_dir / satellite
+        for file_path in raw_data_dir_satellite.glob("*.parquet"):
             country_file: pd.DataFrame = pd.read_parquet(file_path).set_index("parcel_id")
             cols = country_file.columns.tolist()
             cols = cols[5:]
@@ -314,14 +271,19 @@ def preprocess(
     else:
         download = typer.confirm(
             "Could not find raw data to preprocess. "
-            "Would you like to download it? This will also download a preprocessed version."
+            "Would you like to download it? This will also download a preprocessed version "
+            " of the dataset. "
         )
         if download:
-            logger.info("Downloading dataset.")
+            logger.info("Downloading dataset...")
             download_dataset(preprocess_config)
             logger.info(
                 f"Data has been downloaded and saved under {preprocess_config.raw_data_dir.parent}."
             )
         else:
-            logger.info("Cannot preprocess without raw data.")
+            logger.info(
+                "Cannot preprocess without raw data. If you have your own raw data, "
+                f"please move it into {preprocess_config.raw_data_dir.parent} and "
+                "restart the preprocessing afterwards."
+            )
             sys.exit(1)
