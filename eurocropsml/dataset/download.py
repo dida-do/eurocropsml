@@ -93,6 +93,33 @@ def select_version(versions: list[dict]) -> tuple[dict, list[str]]:
     selected_id: int = int(input("Please select one of the above version numbers: "))
     if selected_id in version_ids:
         logger.info(f"Selected version {selected_id}.")
+        if selected_id >= 7:
+            logger.warning(
+                "Please be aware that the folder structure of version 7 or older is not "
+                "supported in this package version and you need to manually move the files"
+                " after downloading as follows\n"
+                "\n"
+                "path/to/data_dir"
+                "    ├── preprocess/"
+                "    │   └── S2/"
+                "    │       ├── <NUTS3>_<parcel_id>_<EC_hcat_c>.npz"
+                "    │       └── ..."
+                "    └── raw_data/"
+                "        ├── geometries/"
+                "        │   ├── Estonia.geojson"
+                "        │   ├── Latvia.geojson"
+                "        │   └── Portugal.geojson"
+                "        ├── labels/"
+                "        │   ├── Estonia_labels.parquet"
+                "        │   ├── Latvia_labels.parquet"
+                "        │   └── Portugal_labels.parquet"
+                "        └── S2/"
+                "            ├── Estonia.parquet"
+                "            ├── Latvia.parquet"
+                "            └── Portugal.parquet"
+                "    ...\n"
+                "\n"
+            )
         return filtered_versions[cast(int, version_ids[selected_id][0])], cast(
             list[str], version_ids[selected_id][1]
         )
