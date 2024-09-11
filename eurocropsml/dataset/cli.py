@@ -10,7 +10,8 @@ from hydra import compose, initialize_config_dir
 from omegaconf import OmegaConf
 
 from eurocropsml.dataset.config import EuroCropsConfig
-from eurocropsml.dataset.preprocess import download_dataset, preprocess
+from eurocropsml.dataset.download import download_dataset
+from eurocropsml.dataset.preprocess import preprocess
 from eurocropsml.dataset.splits import create_splits
 from eurocropsml.settings import Settings
 

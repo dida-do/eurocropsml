@@ -33,7 +33,7 @@ class EuroCropsDatasetPreprocessConfig(BaseModel):
 
     """
 
-    download_url: str = "https://zenodo.org/api/records/10629610/versions/latest"
+    download_url: str = "https://zenodo.org/api/records/10629610/versions"
     raw_data_dir: Path
     preprocess_dir: Path
     band4_t1: float = 0.07
