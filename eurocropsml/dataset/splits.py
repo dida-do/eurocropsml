@@ -37,6 +37,7 @@ def create_splits(split_config: EuroCropsSplit, split_dir: Path) -> None:
         _build_dataset_split(
             data_dir=split_config.data_dir,
             split=split,  # type: ignore[arg-type]
+            satellite=split_config.satellite,
             split_dir=split_dir,
             pretrain_classes=set(split_config.pretrain_classes[split]),
             finetune_classes=(
@@ -50,6 +51,7 @@ def create_splits(split_config: EuroCropsSplit, split_dir: Path) -> None:
             meadow_class=meadow_class,
             force_rebuild=False,
             seed=split_config.random_seed,
+            benchmark=split_config.benchmark,
         )
 
 
@@ -57,6 +59,7 @@ def _build_dataset_split(
     data_dir: Path,
     split_dir: Path,
     split: Literal["class", "regionclass", "region"],
+    satellite: list[Literal["S1", "S2"]],
     num_samples: dict[str, str | int | list[int | str]],
     seed: int,
     pretrain_classes: set,
@@ -65,6 +68,7 @@ def _build_dataset_split(
     finetune_regions: set | None = None,
     meadow_class: int | None = None,
     force_rebuild: bool = False,
+    benchmark: bool = False,
 ) -> None:
     """Build data split for EuroCrops data.
 
@@ -72,6 +76,7 @@ def _build_dataset_split(
         data_dir: Directory where labels and data are stored.
         split_dir: Directory where split file is going to be saved to.
         split: Kind of data split to apply.
+        satellite: Whether to build the splits using Sentinel-1 or Sentinel-2 or both.
         num_samples: Number of samples to sample for finetuning.
         seed: Randoms seed,
         pretrain_classes: Classes of the requested dataset split for
@@ -85,6 +90,15 @@ def _build_dataset_split(
             the meadow class will be downsampled to the median frequency of all other classes
             If None, no downsampling is taking place.
         force_rebuild: Whether to rebuild split if split file already exists.
+        benchmark: Flag in order to build the same split as used in the EuroCropsML dataset
+            (https://arxiv.org/abs/2407.17458). The split was created when only Sentinel-2 data
+            was available. If benchmark is set to True and the 'S1' in satellite is selected, the
+            split will be created using only S2 data. For pre-training, the remaining Sentinel-1
+            parcels (that are not present in the S2 data) will then be distributed between train
+            and validation. For fine-tuning, there are only 149 parcels in S1 which are not in S2.
+            We therefore neglect these completely, s.t. the fine-tuning split stays compltely the
+            same. If the benchmark is set to False, a new train-val-test split will be created
+            based on all parcels present in the data.
 
     Raises:
         FileNotFoundError: If data_dir is not a directory.
@@ -111,6 +125,7 @@ def _build_dataset_split(
         split_dataset_by_class(
             data_dir,
             split_dir,
+            satellite,
             num_samples=num_samples,
             pretrain_classes=pretrain_classes,
             finetune_classes=finetune_classes,
@@ -120,10 +135,17 @@ def _build_dataset_split(
     else:
         if pretrain_regions is None:
             raise ValueError("Please specify the relevant pretrain regions to sample from.")
+        if split == "regionclass" and benchmark is True:
+            benchmark = False
+            logger.info(
+                "Basing the split only on Sentinel-2 for creating the benchmark dataset "
+                "is only possible for split='region'. Setting benchmark to False."
+            )
         split_dataset_by_region(
             data_dir,
             split_dir,
             split,
+            satellite,
             num_samples=num_samples,
             pretrain_classes=pretrain_classes,
             finetune_classes=finetune_classes,
@@ -131,4 +153,5 @@ def _build_dataset_split(
             finetune_regions=finetune_regions,
             meadow_class=meadow_class,
             seed=seed,
+            benchmark=benchmark,
         )

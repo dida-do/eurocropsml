@@ -27,29 +27,32 @@ from eurocropsml.settings import Settings
 logger = logging.getLogger(__name__)
 
 
-def read_files(data_dir: Path) -> list[str]:
+def read_files(data_dir: Path) -> set[str]:
     """Method to read all `.npy` files in a directory.
 
     Args:
         data_dir: Path that contains `.npy` files where labels and data are stored.
 
     Returns:
-        List of all `.npy` files that lie within the directory.
+        List of all `.npz` files that lie within the directory.
     """
-    return [file.name for file in data_dir.iterdir() if file.suffix == ".npz"]
+    return {file.name for file in data_dir.iterdir() if file.suffix == ".npz"}
 
 
 def _split_dataset(
     data_dir: Path,
+    satellite: list[Literal["S1", "S2"]],
     pretrain_classes: set[int],
     finetune_classes: set[int] | None = None,
     regions: set[str] | None = None,
 ) -> tuple[dict[int, list[str]], dict[int, list[str]] | None]:
-    files_list = read_files(data_dir)
+    files_list: set = set()
+    for s in satellite:
+        files_list.update(read_files(data_dir.joinpath(s)))
 
     # pre-filter by regions for region and regionclass split
     if regions is not None:
-        files_list = [file for file in files_list if file.startswith(tuple(regions))]
+        files_list = {file for file in files_list if file.startswith(tuple(regions))}
 
     pretrain_dataset, finetune_dataset = _filter_classes(
         files_list,
@@ -61,7 +64,7 @@ def _split_dataset(
 
 
 def _filter_classes(
-    file_list: list[str],
+    file_list: set,
     pretrain_classes: set[int],
     finetune_classes: set[int] | None,
 ) -> tuple[dict[int, list[str]], dict[int, list[str]] | None]:
@@ -290,6 +293,7 @@ def _create_finetune_set(
 def split_dataset_by_class(
     data_dir: Path,
     split_dir: Path,
+    satellite: list[Literal["S1", "S2"]],
     num_samples: dict[str, str | int | list[int | str]],
     seed: int,
     pretrain_classes: set[int],
@@ -302,6 +306,7 @@ def split_dataset_by_class(
     Args:
         data_dir: Path that contains `.npy` files where labels and data are stored.
         split_dir: Directory where splits are going to be saved to.
+        satellite: Whether to build the splits using Sentinel-1 or Sentinel-2 or both.
         num_samples: Number of samples to sample for finetuning.
         seed: Random seed for data split.
         pretrain_classes: List with classes used for filtering the data.
@@ -320,6 +325,7 @@ def split_dataset_by_class(
     # split into pretrain and finetune dataset
     pretrain_dataset, finetune_dataset = _split_dataset(
         data_dir=data_dir,
+        satellite=satellite,
         pretrain_classes=pretrain_classes,
         finetune_classes=finetune_classes,
     )
@@ -364,8 +370,10 @@ def split_dataset_by_region(
     data_dir: Path,
     split_dir: Path,
     split: Literal["region", "regionclass"],
+    satellite: list[Literal["S1", "S2"]],
     num_samples: dict[str, str | int | list[int | str]],
     seed: int,
+    benchmark: bool,
     pretrain_classes: set[int],
     pretrain_regions: set[str],
     finetune_classes: set[int] | None = None,
@@ -379,8 +387,15 @@ def split_dataset_by_region(
         data_dir: Path that contains `.npy` files where labels and data are stored.
         split_dir: Directory where splits are going to be saved to.
         split: Kind of data split to apply.
+        satellite: Whether to build the splits using Sentinel-1 or Sentinel-2 or both.
         num_samples: Number of samples to sample for finetuning.
         seed: Random seed for data split.
+        benchmark: Flag in order to build the same split as used in the EuroCropsML dataset
+            (https://arxiv.org/abs/2407.17458). This split was created when solely Sentinel-2
+            data was available. If benchmark is True, it will build the split using only S2
+            data and then distribute the Sentinel-1 data (if used) between train and validation.
+            If False, it will just create a new train-val-test split based on all parcels present
+            in the data.
         pretrain_classes: Classes of the requested dataset split for
             hyperparameter tuning and pretraining.
         finetune_classes: Classes of the requested dataset split for finetuning.
@@ -411,6 +426,7 @@ def split_dataset_by_region(
     # split into pretrain and finetune dataset
     pretrain_dataset, finetune_dataset = _split_dataset(
         data_dir=data_dir,
+        satellite=satellite if benchmark is False else ["S2"],
         pretrain_classes=classes,
         finetune_classes=finetune_classes if split == "regionclass" else None,
         regions=set(regions),
@@ -418,6 +434,17 @@ def split_dataset_by_region(
 
     if split == "region":
         finetune_dataset = pretrain_dataset.copy()
+
+    filtered_s1: list[str] = []
+    if benchmark is True and "S1" in satellite:
+        s1_files: set = read_files(data_dir.joinpath("S1"))
+        # get the files that are not present in S2
+        # filter by regions
+        filtered_s1 = [
+            file
+            for file in s1_files
+            if file not in pretrain_dataset.values() and file.startswith(tuple(pretrain_regions))
+        ]
 
     pretrain_dataset = _filter_regions(pretrain_dataset, pretrain_regions)
 
@@ -445,6 +472,11 @@ def split_dataset_by_region(
 
     # save pretraining split
     train, val = train_test_split(pretrain_list, test_size=test_size, random_state=seed)
+
+    if filtered_s1:
+        s1_train, s1_val = train_test_split(filtered_s1, test_size=test_size, random_state=seed)
+        train.extend(s1_train)
+        val.extend(s1_val)
 
     pretrain_dict = _save_to_dict(train, val)
 
