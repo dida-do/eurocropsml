@@ -60,8 +60,8 @@ def test_split_config() -> EuroCropsSplit:
 
 
 @pytest.fixture
-def test_data() -> list[str]:
-    return [
+def test_data() -> set:
+    return {
         "PT1_parcel1_102.npz",
         "PT1_parcel2_103.npz",
         "PT1_parcel3_107.npz",
@@ -75,7 +75,7 @@ def test_data() -> list[str]:
         "PT1_parcel27_107.npz",
         "PT1_parcel28_103.npz",
         "PT2_parcel29_103.npz",
-        "PT2_parcel5_102.npz",
+        "PT2_parcel6_102.npz",
         "FT1_parcel8_105.npz",
         "FT1_parcel9_104.npz",
         "FT1_parcel10_108.npz",
@@ -91,7 +91,7 @@ def test_data() -> list[str]:
         "FT1_parcel20_103.npz",
         "FT2_parcel21_105.npz",
         "FT2_parcel24_102.npz",
-    ]
+    }
 
 
 def test_pad_seq_to_366(test_arrays: tuple[np.ndarray, torch.Tensor]) -> None:
@@ -111,7 +111,7 @@ def test_split_dataset_by_regionclass(test_split_config: EuroCropsSplit, test_da
     _split_dataset_by_region(split, test_split_config, test_data)
 
 
-def test_split_dataset_by_class(test_split_config: EuroCropsSplit, test_data: list) -> None:
+def test_split_dataset_by_class(test_split_config: EuroCropsSplit, test_data: set) -> None:
     pretrain_classes: set = set(test_split_config.pretrain_classes["class"])
     finetune_classes: set = set(test_split_config.finetune_classes["class"])
     pretrain_dataset, finetune_dataset = _filter_classes(
@@ -172,7 +172,7 @@ def _split_dataset_by_region(
 
     # pre-filter by regions for region and regionclass split
     if regions is not None:
-        files_list = [file for file in test_data if file.startswith(tuple(regions))]
+        files_list = {file for file in test_data if file.startswith(tuple(regions))}
 
     pretrain_dataset, finetune_dataset = _filter_classes(
         files_list,
