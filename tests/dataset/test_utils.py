@@ -75,7 +75,7 @@ def test_data() -> set:
         "PT1_parcel27_107.npz",
         "PT1_parcel28_103.npz",
         "PT2_parcel29_103.npz",
-        "PT2_parcel6_102.npz",
+        "PT2_parcel8_102.npz",
         "FT1_parcel8_105.npz",
         "FT1_parcel9_104.npz",
         "FT1_parcel10_108.npz",
