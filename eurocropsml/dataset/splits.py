@@ -4,8 +4,21 @@ import logging
 from pathlib import Path
 from typing import Literal
 
+from sklearn.model_selection import train_test_split
+
 from eurocropsml.dataset.config import EuroCropsSplit
-from eurocropsml.dataset.utils import split_dataset_by_class, split_dataset_by_region
+from eurocropsml.dataset.utils import (
+    _create_final_dict,
+    _create_finetune_set,
+    _downsample_class,
+    _filter_regions,
+    _order_classes,
+    _save_counts_to_csv,
+    _save_to_dict,
+    _save_to_json,
+    _split_dataset,
+    read_files,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -155,3 +168,205 @@ def _build_dataset_split(
             seed=seed,
             benchmark=benchmark,
         )
+
+
+def split_dataset_by_class(
+    data_dir: Path,
+    split_dir: Path,
+    satellite: list[Literal["S1", "S2"]],
+    num_samples: dict[str, str | int | list[int | str]],
+    seed: int,
+    pretrain_classes: set[int],
+    finetune_classes: set[int] | None = None,
+    meadow_class: int | None = None,
+    test_size: float = 0.2,
+) -> None:
+    """Split dataset by classes.
+
+    Args:
+        data_dir: Path that contains `.npy` files where labels and data are stored.
+        split_dir: Directory where splits are going to be saved to.
+        satellite: Whether to build the splits using Sentinel-1 or Sentinel-2 or both.
+        num_samples: Number of samples to sample for finetuning.
+        seed: Random seed for data split.
+        pretrain_classes: List with classes used for filtering the data.
+        finetune_classes: List with classes used for filtering the data.
+        meadow_class: Meadow class identifier. If specified, for the pre-training split,
+            the meadow class will be downsampled to the median frequency of all other classes
+            If None, no downsampling is taking place.
+        test_size: Amount of data used for validation (test set).
+            Defaults to 0.2.
+
+    Raises:
+        Exception: If there are similar samples within pretrain and finetune data-split.
+
+    """
+
+    # split into pretrain and finetune dataset
+    pretrain_dataset, finetune_dataset = _split_dataset(
+        data_dir=data_dir,
+        satellite=satellite,
+        pretrain_classes=pretrain_classes,
+        finetune_classes=finetune_classes,
+    )
+
+    if meadow_class is not None:
+        pretrain_list: list[str] = _downsample_class(
+            pretrain_dataset, seed=seed, class_key=meadow_class
+        )
+    else:
+        pretrain_list = [file for files in pretrain_dataset.values() for file in files]
+
+    # save finetuning split
+    if finetune_dataset is not None:
+        _create_finetune_set(
+            finetune_dataset,
+            split_dir.joinpath("finetune"),
+            "class",
+            pretrain_list,
+            num_samples,
+            test_size,
+            seed,
+        )
+
+    # save pretraining split
+    train, val = train_test_split(pretrain_list, test_size=test_size, random_state=seed)
+
+    pretrain_dict = _save_to_dict(train, val)
+
+    _save_to_json(split_dir.joinpath("pretrain", "class_split.json"), pretrain_dict)
+
+    metatrain_dict = _order_classes(train)
+    metaval_dict = _order_classes(val)
+
+    meta_dict: dict = {"train": metatrain_dict, "val": metaval_dict}
+
+    _save_to_json(split_dir.joinpath("meta", "class_split.json"), meta_dict)
+
+    _save_counts_to_csv(pretrain_list, split_dir.joinpath("counts", "pretrain"), "class")
+
+
+def split_dataset_by_region(
+    data_dir: Path,
+    split_dir: Path,
+    split: Literal["region", "regionclass"],
+    satellite: list[Literal["S1", "S2"]],
+    num_samples: dict[str, str | int | list[int | str]],
+    seed: int,
+    benchmark: bool,
+    pretrain_classes: set[int],
+    pretrain_regions: set[str],
+    finetune_classes: set[int] | None = None,
+    finetune_regions: set[str] | None = None,
+    meadow_class: int | None = None,
+    test_size: float = 0.2,
+) -> None:
+    """Split dataset by regions or regions and classes.
+
+    Args:
+        data_dir: Path that contains `.npy` files where labels and data are stored.
+        split_dir: Directory where splits are going to be saved to.
+        split: Kind of data split to apply.
+        satellite: Whether to build the splits using Sentinel-1 or Sentinel-2 or both.
+        num_samples: Number of samples to sample for finetuning.
+        seed: Random seed for data split.
+        benchmark: Flag in order to build the same split as used in the EuroCropsML dataset
+            (https://arxiv.org/abs/2407.17458). This split was created when solely Sentinel-2
+            data was available. If benchmark is True, it will build the split using only S2
+            data and then distribute the Sentinel-1 data (if used) between train and validation.
+            If False, it will just create a new train-val-test split based on all parcels present
+            in the data.
+        pretrain_classes: Classes of the requested dataset split for
+            hyperparameter tuning and pretraining.
+        finetune_classes: Classes of the requested dataset split for finetuning.
+        pretrain_regions: Regions of the requested dataset split for
+            hyperparameter tuning and pretraining.
+        finetune_regions: Regions of the requested dataset split for finetuning.
+            None if EuroCrops should only be used for pretraining.
+        meadow_class: Meadow class identifier. If specified, for the pre-training split,
+            the meadow class will be downsampled to the median frequency of all other classes
+            If None, no downsampling is taking place.
+        test_size: Amount of data used for validation (test set).
+            Defaults to 0.2.
+
+    Raises:
+        Exception: If there are similar samples within pretrain and finetune data-split.
+    """
+
+    regions = (
+        pretrain_regions | finetune_regions if finetune_regions is not None else pretrain_regions
+    )
+
+    classes = (
+        pretrain_classes | finetune_classes
+        if finetune_classes is not None and split == "region"
+        else pretrain_classes
+    )
+
+    # split into pretrain and finetune dataset
+    pretrain_dataset, finetune_dataset = _split_dataset(
+        data_dir=data_dir,
+        satellite=satellite if benchmark is False else ["S2"],
+        pretrain_classes=classes,
+        finetune_classes=finetune_classes if split == "regionclass" else None,
+        regions=set(regions),
+    )
+
+    if split == "region":
+        finetune_dataset = pretrain_dataset.copy()
+
+    filtered_s1: list[str] = []
+    if benchmark is True and "S1" in satellite:
+        s1_files: set = read_files(data_dir.joinpath("S1"))
+        # get the files that are not present in S2
+        # filter by regions
+        filtered_s1 = [
+            file
+            for file in s1_files
+            if file not in pretrain_dataset.values() and file.startswith(tuple(pretrain_regions))
+        ]
+
+    pretrain_dataset = _filter_regions(pretrain_dataset, pretrain_regions)
+
+    if meadow_class is not None and meadow_class in pretrain_classes:
+        pretrain_list: list[str] = _downsample_class(
+            pretrain_dataset, seed=seed, class_key=meadow_class
+        )
+    else:
+        pretrain_list = [file for files in pretrain_dataset.values() for file in files]
+
+    if (
+        finetune_dataset is not None and finetune_regions is not None
+    ):  # otherwise EuroCrops is solely used for pretraining
+        finetune_dataset = _filter_regions(finetune_dataset, finetune_regions)
+
+        _create_finetune_set(
+            finetune_dataset,
+            split_dir.joinpath("finetune"),
+            split,
+            pretrain_list,
+            num_samples,
+            test_size,
+            seed,
+        )
+
+    # save pretraining split
+    train, val = train_test_split(pretrain_list, test_size=test_size, random_state=seed)
+
+    if filtered_s1:
+        s1_train, s1_val = train_test_split(filtered_s1, test_size=test_size, random_state=seed)
+        train.extend(s1_train)
+        val.extend(s1_val)
+
+    pretrain_dict = _save_to_dict(train, val)
+
+    _save_to_json(split_dir.joinpath("pretrain", f"{split}_split.json"), pretrain_dict)
+
+    _save_counts_to_csv(pretrain_list, split_dir.joinpath("counts", "pretrain"), split)
+
+    meta_dict: dict = {
+        "train": _create_final_dict(train, pretrain_regions),
+        "val": _create_final_dict(val, pretrain_regions),
+    }
+
+    _save_to_json(split_dir.joinpath("meta", f"{split}_split.json"), meta_dict)
