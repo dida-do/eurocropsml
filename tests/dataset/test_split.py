@@ -19,7 +19,7 @@ def test_split_config() -> tuple[tempfile.TemporaryDirectory, EuroCropsSplit]:
         data_dir=Path(temp_dir.name),
         random_seed=42,
         num_samples={"train": [1], "validation": 2, "test": 2},
-        # meadow_class=102,
+        satellie=["S1", "S2"],
         pretrain_classes={
             "class": [102, 103, 107],
             "region": [102, 103, 104, 105, 107, 108],
