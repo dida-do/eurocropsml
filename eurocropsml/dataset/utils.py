@@ -5,7 +5,6 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
-import random
 from collections import defaultdict
 from collections.abc import Iterable
 from functools import cached_property, partial
@@ -242,7 +241,7 @@ def _create_finetune_set(
     finetune_list: list[str] = [
         value for values_list in finetune_dataset.values() for value in values_list
     ]
-
+    finetune_list.sort()
     if set(pretrain_list) & set(finetune_list):
         raise Exception(
             f"There are {len((set(pretrain_list) & set(finetune_list)))} "
@@ -261,9 +260,19 @@ def _create_finetune_set(
     if num_samples["test"] != "all":
         num_samples["test"] = int(cast(int, num_samples["test"]))
     if isinstance(num_samples["validation"], int) and len(finetune_val) > num_samples["validation"]:
-        finetune_val = random.sample(finetune_val, num_samples["validation"])
+        finetune_val = resample(
+            finetune_val,
+            replace=False,
+            n_samples=num_samples["validation"],
+            random_state=seed,
+        )
     if isinstance(num_samples["test"], int) and len(finetune_test) > num_samples["test"]:
-        finetune_test = random.sample(finetune_test, num_samples["test"])
+        finetune_test = resample(
+            finetune_test,
+            replace=False,
+            n_samples=num_samples["test"],
+            random_state=seed,
+        )
 
     sample_list: list[str | int]
     if isinstance(num_samples["train"], list):
@@ -343,6 +352,7 @@ def split_dataset_by_class(
             seed,
         )
 
+    pretrain_list.sort()
     # save pretraining split
     train, val = train_test_split(pretrain_list, test_size=test_size, random_state=seed)
 
@@ -431,6 +441,7 @@ def split_dataset_by_region(
     if (
         finetune_dataset is not None and finetune_regions is not None
     ):  # otherwise EuroCrops is solely used for pretraining
+
         finetune_dataset = _filter_regions(finetune_dataset, finetune_regions)
 
         _create_finetune_set(
@@ -442,6 +453,7 @@ def split_dataset_by_region(
             test_size,
             seed,
         )
+    pretrain_list.sort()
 
     # save pretraining split
     train, val = train_test_split(pretrain_list, test_size=test_size, random_state=seed)
