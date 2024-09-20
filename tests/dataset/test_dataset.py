@@ -4,15 +4,24 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from eurocropsml.dataset.config import EuroCropsDatasetPreprocessConfig
+from eurocropsml.dataset.config import (
+    S2_BANDS,
+    EuroCropsDatasetConfig,
+    EuroCropsDatasetPreprocessConfig,
+)
 from eurocropsml.dataset.dataset import EuroCropsDataset
 
 
 @pytest.fixture
-def config() -> EuroCropsDatasetPreprocessConfig:
+def preprocess_config() -> EuroCropsDatasetPreprocessConfig:
     return EuroCropsDatasetPreprocessConfig(
         raw_data_dir=Path("raw_data_dir"), preprocess_dir=Path("preprocess_dir")
     )
+
+
+@pytest.fixture
+def config() -> EuroCropsDatasetConfig:
+    return EuroCropsDatasetConfig(split="region")
 
 
 @pytest.fixture
@@ -32,10 +41,16 @@ def test_arrays_dict() -> dict[str, np.ndarray]:
 
 
 def test_format_dates_day(
-    test_arrays_dict: dict[str, np.ndarray], config: EuroCropsDatasetPreprocessConfig
+    test_arrays_dict: dict[str, np.ndarray],
+    config: EuroCropsDatasetConfig,
+    preprocess_config: EuroCropsDatasetPreprocessConfig,
 ) -> None:
     arrays_dict = EuroCropsDataset._format_dates(
-        date_type="day", arrays_dict=test_arrays_dict, preprocess_config=config
+        date_type="day",
+        arrays_dict=test_arrays_dict,
+        config=config,
+        preprocess_config=preprocess_config,
+        s2_data_bands=S2_BANDS,
     )
     data = arrays_dict["data"]
     dates = arrays_dict["dates"]
@@ -47,10 +62,15 @@ def test_format_dates_day(
 
 def test_format_dates_day_leapyear(
     leap_test_arrays_dict: dict[str, np.ndarray],
-    config: EuroCropsDatasetPreprocessConfig,
+    config: EuroCropsDatasetConfig,
+    preprocess_config: EuroCropsDatasetPreprocessConfig,
 ) -> None:
     arrays_dict = EuroCropsDataset._format_dates(
-        date_type="day", arrays_dict=leap_test_arrays_dict, preprocess_config=config
+        date_type="day",
+        arrays_dict=leap_test_arrays_dict,
+        config=config,
+        preprocess_config=preprocess_config,
+        s2_data_bands=S2_BANDS,
     )
     data = arrays_dict["data"]
     dates = arrays_dict["dates"]
@@ -61,10 +81,16 @@ def test_format_dates_day_leapyear(
 
 
 def test_format_dates_month(
-    test_arrays_dict: dict[str, np.ndarray], config: EuroCropsDatasetPreprocessConfig
+    test_arrays_dict: dict[str, np.ndarray],
+    config: EuroCropsDatasetConfig,
+    preprocess_config: EuroCropsDatasetPreprocessConfig,
 ) -> None:
     arrays_dict = EuroCropsDataset._format_dates(
-        date_type="month", arrays_dict=test_arrays_dict, preprocess_config=config
+        date_type="month",
+        arrays_dict=test_arrays_dict,
+        config=config,
+        preprocess_config=preprocess_config,
+        s2_data_bands=S2_BANDS,
     )
     data = arrays_dict["data"]
     dates = arrays_dict["dates"]
