@@ -5,7 +5,6 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
-import random
 from collections import defaultdict
 from collections.abc import Iterable
 from functools import cached_property, partial
@@ -245,7 +244,7 @@ def _create_finetune_set(
     finetune_list: list[str] = [
         value for values_list in finetune_dataset.values() for value in values_list
     ]
-
+    finetune_list.sort()
     if set(pretrain_list) & set(finetune_list):
         raise Exception(
             f"There are {len((set(pretrain_list) & set(finetune_list)))} "
@@ -264,9 +263,19 @@ def _create_finetune_set(
     if num_samples["test"] != "all":
         num_samples["test"] = int(cast(int, num_samples["test"]))
     if isinstance(num_samples["validation"], int) and len(finetune_val) > num_samples["validation"]:
-        finetune_val = random.sample(finetune_val, num_samples["validation"])
+        finetune_val = resample(
+            finetune_val,
+            replace=False,
+            n_samples=num_samples["validation"],
+            random_state=seed,
+        )
     if isinstance(num_samples["test"], int) and len(finetune_test) > num_samples["test"]:
-        finetune_test = random.sample(finetune_test, num_samples["test"])
+        finetune_test = resample(
+            finetune_test,
+            replace=False,
+            n_samples=num_samples["test"],
+            random_state=seed,
+        )
 
     sample_list: list[str | int]
     if isinstance(num_samples["train"], list):
@@ -288,6 +297,181 @@ def _create_finetune_set(
         )
 
     _save_counts_to_csv(finetune_list, split_path.parents[0].joinpath("counts", "finetune"), split)
+
+
+def split_dataset_by_class(
+    data_dir: Path,
+    split_dir: Path,
+    num_samples: dict[str, str | int | list[int | str]],
+    seed: int,
+    pretrain_classes: set[int],
+    finetune_classes: set[int] | None = None,
+    meadow_class: int | None = None,
+    test_size: float = 0.2,
+) -> None:
+    """Split dataset by classes.
+
+    Args:
+        data_dir: Path that contains `.npy` files where labels and data are stored.
+        split_dir: Directory where splits are going to be saved to.
+        num_samples: Number of samples to sample for finetuning.
+        seed: Random seed for data split.
+        pretrain_classes: List with classes used for filtering the data.
+        finetune_classes: List with classes used for filtering the data.
+        meadow_class: Meadow class identifier. If specified, for the pre-training split,
+            the meadow class will be downsampled to the median frequency of all other classes
+            If None, no downsampling is taking place.
+        test_size: Amount of data used for validation (test set).
+            Defaults to 0.2.
+
+    Raises:
+        Exception: If there are similar samples within pretrain and finetune data-split.
+
+    """
+
+    # split into pretrain and finetune dataset
+    pretrain_dataset, finetune_dataset = _split_dataset(
+        data_dir=data_dir,
+        pretrain_classes=pretrain_classes,
+        finetune_classes=finetune_classes,
+    )
+
+    if meadow_class is not None:
+        pretrain_list: list[str] = _downsample_class(
+            pretrain_dataset, seed=seed, class_key=meadow_class
+        )
+    else:
+        pretrain_list = [file for files in pretrain_dataset.values() for file in files]
+
+    # save finetuning split
+    if finetune_dataset is not None:
+        _create_finetune_set(
+            finetune_dataset,
+            split_dir.joinpath("finetune"),
+            "class",
+            pretrain_list,
+            num_samples,
+            test_size,
+            seed,
+        )
+
+    pretrain_list.sort()
+    # save pretraining split
+    train, val = train_test_split(pretrain_list, test_size=test_size, random_state=seed)
+
+    pretrain_dict = _save_to_dict(train, val)
+
+    _save_to_json(split_dir.joinpath("pretrain", "class_split.json"), pretrain_dict)
+
+    metatrain_dict = _order_classes(train)
+    metaval_dict = _order_classes(val)
+
+    meta_dict: dict = {"train": metatrain_dict, "val": metaval_dict}
+
+    _save_to_json(split_dir.joinpath("meta", "class_split.json"), meta_dict)
+
+    _save_counts_to_csv(pretrain_list, split_dir.joinpath("counts", "pretrain"), "class")
+
+
+def split_dataset_by_region(
+    data_dir: Path,
+    split_dir: Path,
+    split: Literal["region", "regionclass"],
+    num_samples: dict[str, str | int | list[int | str]],
+    seed: int,
+    pretrain_classes: set[int],
+    pretrain_regions: set[str],
+    finetune_classes: set[int] | None = None,
+    finetune_regions: set[str] | None = None,
+    meadow_class: int | None = None,
+    test_size: float = 0.2,
+) -> None:
+    """Split dataset by regions or regions and classes.
+
+    Args:
+        data_dir: Path that contains `.npy` files where labels and data are stored.
+        split_dir: Directory where splits are going to be saved to.
+        split: Kind of data split to apply.
+        num_samples: Number of samples to sample for finetuning.
+        seed: Random seed for data split.
+        pretrain_classes: Classes of the requested dataset split for
+            hyperparameter tuning and pretraining.
+        finetune_classes: Classes of the requested dataset split for finetuning.
+        pretrain_regions: Regions of the requested dataset split for
+            hyperparameter tuning and pretraining.
+        finetune_regions: Regions of the requested dataset split for finetuning.
+            None if EuroCrops should only be used for pretraining.
+        meadow_class: Meadow class identifier. If specified, for the pre-training split,
+            the meadow class will be downsampled to the median frequency of all other classes
+            If None, no downsampling is taking place.
+        test_size: Amount of data used for validation (test set).
+            Defaults to 0.2.
+
+    Raises:
+        Exception: If there are similar samples within pretrain and finetune data-split.
+    """
+
+    regions = (
+        pretrain_regions | finetune_regions if finetune_regions is not None else pretrain_regions
+    )
+
+    classes = (
+        pretrain_classes | finetune_classes
+        if finetune_classes is not None and split == "region"
+        else pretrain_classes
+    )
+
+    # split into pretrain and finetune dataset
+    pretrain_dataset, finetune_dataset = _split_dataset(
+        data_dir=data_dir,
+        pretrain_classes=classes,
+        finetune_classes=finetune_classes if split == "regionclass" else None,
+        regions=set(regions),
+    )
+
+    if split == "region":
+        finetune_dataset = pretrain_dataset.copy()
+
+    pretrain_dataset = _filter_regions(pretrain_dataset, pretrain_regions)
+
+    if meadow_class is not None and meadow_class in pretrain_classes:
+        pretrain_list: list[str] = _downsample_class(
+            pretrain_dataset, seed=seed, class_key=meadow_class
+        )
+    else:
+        pretrain_list = [file for files in pretrain_dataset.values() for file in files]
+
+    if (
+        finetune_dataset is not None and finetune_regions is not None
+    ):  # otherwise EuroCrops is solely used for pretraining
+        finetune_dataset = _filter_regions(finetune_dataset, finetune_regions)
+
+        _create_finetune_set(
+            finetune_dataset,
+            split_dir.joinpath("finetune"),
+            split,
+            pretrain_list,
+            num_samples,
+            test_size,
+            seed,
+        )
+    pretrain_list.sort()
+
+    # save pretraining split
+    train, val = train_test_split(pretrain_list, test_size=test_size, random_state=seed)
+
+    pretrain_dict = _save_to_dict(train, val)
+
+    _save_to_json(split_dir.joinpath("pretrain", f"{split}_split.json"), pretrain_dict)
+
+    _save_counts_to_csv(pretrain_list, split_dir.joinpath("counts", "pretrain"), split)
+
+    meta_dict: dict = {
+        "train": _create_final_dict(train, pretrain_regions),
+        "val": _create_final_dict(val, pretrain_regions),
+    }
+
+    _save_to_json(split_dir.joinpath("meta", f"{split}_split.json"), meta_dict)
 
 
 def pad_seq_to_366(seq: np.ndarray, dates: torch.Tensor) -> np.ndarray:
