@@ -1,4 +1,5 @@
 import json
+import random
 import tempfile
 from pathlib import Path
 from typing import cast
@@ -21,14 +22,14 @@ def test_split_config() -> tuple[tempfile.TemporaryDirectory, EuroCropsSplit]:
         num_samples={"train": [1], "validation": 2, "test": 2},
         satellie=["S1", "S2"],
         pretrain_classes={
-            "class": [102, 103, 107],
-            "region": [102, 103, 104, 105, 107, 108],
-            "regionclass": [102, 103, 104],
+            "class": [11102, 11103, 11107],
+            "region": [11102, 11103, 11104, 11105, 11107, 11108],
+            "regionclass": [11102, 11103, 11104],
         },
         finetune_classes={
-            "class": [105, 104, 108],
-            "region": [102, 103, 104, 105, 107, 108],
-            "regionclass": [105, 107, 108],
+            "class": [11105, 11104, 11108],
+            "region": [11102, 11103, 11104, 11105, 11107, 11108],
+            "regionclass": [11105, 11107, 11108],
         },
         pretrain_regions=["PT1", "PT2"],
         finetune_regions=["FT1", "FT2"],
@@ -39,45 +40,20 @@ def test_split_config() -> tuple[tempfile.TemporaryDirectory, EuroCropsSplit]:
 
 @pytest.fixture
 def test_data() -> list[str]:
-    return [
-        "PT1_parcel1_102.npz",
-        "PT1_parcel2_103.npz",
-        "PT1_parcel3_107.npz",
-        "PT2_parcel4_107.npz",
-        "PT2_parcel5_102.npz",
-        "PT2_parcel6_107.npz",
-        "PT2_parcel7_103.npz",
-        "PT2_parcel22_107.npz",
-        "PT1_parcel25_105.npz",
-        "PT1_parcel26_103.npz",
-        "PT1_parcel27_107.npz",
-        "PT1_parcel28_103.npz",
-        "PT2_parcel29_103.npz",
-        "PT2_parcel33_102.npz",
-        "PT2_parcel33_104.npz",
-        "PT2_parcel34_107.npz",
-        "PT1_parcel35_103.npz",
-        "PT1_parcel36_107.npz",
-        "PT2_parcel28_103.npz",
-        "FT1_parcel8_105.npz",
-        "FT1_parcel9_104.npz",
-        "FT1_parcel10_108.npz",
-        "FT2_parcel11_105.npz",
-        "FT2_parcel12_104.npz",
-        "FT2_parcel13_108.npz",
-        "FT1_parcel14_102.npz",
-        "FT1_parcel15_103.npz",
-        "FT1_parcel16_107.npz",
-        "FT2_parcel17_102.npz",
-        "FT2_parcel18_103.npz",
-        "FT2_parcel19_107.npz",
-        "FT1_parcel20_103.npz",
-        "FT2_parcel21_105.npz",
-        "FT2_parcel24_102.npz",
-        "FT2_parcel30_108.npz",
-        "FT2_parcel31_108.npz",
-        "FT1_parcel32_104.npz",
-    ]
+    random.seed(42)
+    file_list: list[str] = []
+
+    for i in range(501, 1501):
+        region = random.choice(["PT1", "PT2"])
+        c = random.choice([11102, 11103, 11104, 11105, 11107, 11108])
+        file_list.append(f"{region}_parcel{i}_{c}.npz")
+
+    for i in range(1501, 2001):
+        region = random.choice(["FT1", "FT2"])
+        c = random.choice([11102, 11103, 11104, 11105, 11107, 11108])
+        file_list.append(f"{region}_parcel{i}_{c}.npz")
+
+    return file_list
 
 
 @pytest.fixture
