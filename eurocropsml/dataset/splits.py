@@ -229,6 +229,8 @@ def split_dataset_by_class(
             seed,
         )
 
+    # sorting list to make train_test_split deterministic
+    pretrain_list.sort()
     # save pretraining split
     train, val = train_test_split(pretrain_list, test_size=test_size, random_state=seed)
 
@@ -350,10 +352,14 @@ def split_dataset_by_region(
             seed,
         )
 
+    # sorting list to make train_test_split deterministic
+    pretrain_list.sort()
     # save pretraining split
     train, val = train_test_split(pretrain_list, test_size=test_size, random_state=seed)
 
     if filtered_s1:
+        # sorting list to make train_test_split deterministic
+        filtered_s1.sort()
         s1_train, s1_val = train_test_split(filtered_s1, test_size=test_size, random_state=seed)
         train.extend(s1_train)
         val.extend(s1_val)
