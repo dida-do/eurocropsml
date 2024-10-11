@@ -157,9 +157,8 @@ def _calibrate_intensity(
     min_db: minimal value in db, to avoid infinity values.
     """
     amplitude = _calibrate_amplitude(digital_number, calibration_lut, noise_lut)
-    intensity = abs(amplitude) ** 2
     # convert to dexibels (dB)
-    intensity = 10.0 * np.log10(np.maximum(intensity, 1e-10))  # prevent division by 0
+    intensity = 10.0 * np.log10(np.maximum(amplitude, 1e-10))  # prevent division by 0
 
     if min_db is not None:
         intensity = cast(xr.DataArray, np.maximum(intensity, min_db))
