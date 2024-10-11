@@ -187,7 +187,7 @@ def _process_row(
                 patch_median = np.median(backscatter_db[not_zero])
 
             else:
-                # # If no calibration data is available (Sentinel-2), use masked values directly
+                # If no calibration data is available (Sentinel-2), use masked values directly
                 # Calculate the median of each patch where the clipped values are not zero
                 patch_median = np.median(masked_img[not_zero]).astype(np.int16)
 
@@ -196,10 +196,9 @@ def _process_row(
 
         parcels_dict[parcel_id].append(patch_median)
     except ValueError:
-        # in case geometry is not inside raster tile
-        # since we are cropping to the extent of the geometry,
-        # this can also happen if none of the pixels is fully contained
-        # inside the geometry
+        # Since we are cropping to the extent of the geometry, if none of the raster pixels is
+        # fully contained inside the geometry, rasterio.mask will throw an error that the 
+        # shapes do not overlap
         parcels_dict[parcel_id].append(None)
 
 
