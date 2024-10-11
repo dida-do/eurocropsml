@@ -15,8 +15,8 @@ import pyogrio
 import typer
 from tqdm import tqdm
 
+from eurocropsml.acquisition.clipping.utils import _merge_clipper, mask_polygon_raster
 from eurocropsml.acquisition.config import CollectorConfig
-from eurocropsml.acquisition.utils import _merge_clipper, mask_polygon_raster
 
 logger = logging.getLogger(__name__)
 
@@ -163,8 +163,10 @@ def _filter_args(
 
 def _process_raster_parallel(
     satellite: Literal["S1", "S2"],
+    denoise: bool,
     polygon_df: pd.DataFrame,
     parcel_id_name: str,
+    bands: list[str],
     filtered_images: gpd.GeoDataFrame,
     band_tiles: list[Path],
 ) -> pd.DataFrame:
@@ -172,9 +174,11 @@ def _process_raster_parallel(
 
     Args:
         satellite: S1 for Sentinel-1 and S2 for Sentinel-2.
+        denoise: Whether to perform thermal noise removal for Sentinel-1
         polygon_df: Dataframe containing all parcel ids. Will be merged with the clipped values.
         parcel_id_name: The country's parcel ID name (varies from country to country).
         filtered_images: Dataframe containing all parcel ids that lie in this raster tile.
+        bands: (Sub-)set of Sentinel-1 (radar) or Sentinel-2 (spectral) bands.
         band_tiles: Paths to the raster's band tiles.
 
     Returns:
@@ -192,7 +196,7 @@ def _process_raster_parallel(
         filtered_geom = polygon_df[polygon_df[parcel_id_name].isin(parcel_ids)]
 
         result = mask_polygon_raster(
-            satellite, band_tiles, filtered_geom, parcel_id_name, product_date
+            satellite, band_tiles, bands, filtered_geom, parcel_id_name, product_date
         )
 
         if result is not None:
@@ -248,7 +252,12 @@ def clipping(
 
     polygon_df[config.parcel_id_name] = polygon_df[config.parcel_id_name].astype(int)
     func = partial(
-        _process_raster_parallel, config.satellite, polygon_df, cast(str, config.parcel_id_name)
+        _process_raster_parallel,
+        config.satellite,
+        config.denoise,
+        polygon_df,
+        cast(str, config.parcel_id_name),
+        config.bands,
     )
 
     polygon_df = polygon_df.drop(["geometry"], axis=1)
@@ -299,4 +308,19 @@ def clipping(
         clipping_path,
         cast(str, config.parcel_id_name),
         new_data,
+    )
+
+
+if __name__ == "__main__":
+    config = CollectorConfig(country="Estonia", year="2021", satellite="S1")
+    config.post_init(vector_data_dir=Path("/processeurocrops/data/meta_data/vector_data"))
+    shape_dir_clean = Path("/processeurocrops/data/meta_data/vector_data/EE_2021_clean")
+    clipping(
+        config=config,
+        output_dir=Path("/processeurocrops/data/output_data/Estonia/S1"),
+        shape_dir=shape_dir_clean,
+        workers=1,
+        chunk_size=20,
+        multiplier=15,
+        local_dir=Path("processeurocrops/data/safe_files"),
     )
