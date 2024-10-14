@@ -174,7 +174,7 @@ def _process_raster_parallel(
 
     Args:
         satellite: S1 for Sentinel-1 and S2 for Sentinel-2.
-        denoise: Whether to perform thermal noise removal for Sentinel-1
+        denoise: Whether to perform thermal noise removal for Sentinel-1.
         polygon_df: Dataframe containing all parcel ids. Will be merged with the clipped values.
         parcel_id_name: The country's parcel ID name (varies from country to country).
         filtered_images: Dataframe containing all parcel ids that lie in this raster tile.
@@ -308,19 +308,4 @@ def clipping(
         clipping_path,
         cast(str, config.parcel_id_name),
         new_data,
-    )
-
-
-if __name__ == "__main__":
-    config = CollectorConfig(country="Estonia", year="2021", satellite="S1")
-    config.post_init(vector_data_dir=Path("/processeurocrops/data/meta_data/vector_data"))
-    shape_dir_clean = Path("/processeurocrops/data/meta_data/vector_data/EE_2021_clean")
-    clipping(
-        config=config,
-        output_dir=Path("/processeurocrops/data/output_data/Estonia/S1"),
-        shape_dir=shape_dir_clean,
-        workers=1,
-        chunk_size=20,
-        multiplier=15,
-        local_dir=Path("processeurocrops/data/safe_files"),
     )
