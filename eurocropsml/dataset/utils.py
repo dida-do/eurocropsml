@@ -45,16 +45,16 @@ def _split_dataset(
     finetune_classes: set[int] | None = None,
     regions: set[str] | None = None,
 ) -> tuple[dict[int, list[str]], dict[int, list[str]] | None]:
-    files_list: set = set()
+    file_set: set = set()
     for s in satellite:
-        files_list.update(read_files(data_dir.joinpath(s)))
+        file_set.update(read_files(data_dir.joinpath(s)))
 
     # pre-filter by regions for region and regionclass split
     if regions is not None:
-        files_list = {file for file in files_list if file.startswith(tuple(regions))}
+        file_set = {file for file in file_set if file.startswith(tuple(regions))}
 
     pretrain_dataset, finetune_dataset = _filter_classes(
-        files_list,
+        file_set,
         pretrain_classes,
         finetune_classes,
     )
@@ -63,19 +63,22 @@ def _split_dataset(
 
 
 def _filter_classes(
-    file_list: set,
+    file_set: set,
     pretrain_classes: set[int],
     finetune_classes: set[int] | None,
 ) -> tuple[dict[int, list[str]], dict[int, list[str]] | None]:
     pretrain_dict: dict[int, list[str]] = defaultdict(list)
     finetune_dict: dict[int, list[str]] = defaultdict(list)
     pretrain_dict = {
-        identifier: [file for file in file_list if str(identifier) in file]
+        identifier: [file for file in file_set if Path(file).stem.split("_")[-1] == str(identifier)]
         for identifier in pretrain_classes
     }
+
     if finetune_classes is not None:
         finetune_dict = {
-            identifier: [file for file in file_list if str(identifier) in file]
+            identifier: [
+                file for file in file_set if Path(file).stem.split("_")[-1] == str(identifier)
+            ]
             for identifier in finetune_classes
         }
         return pretrain_dict, finetune_dict
@@ -244,7 +247,7 @@ def _create_finetune_set(
     finetune_list: list[str] = [
         value for values_list in finetune_dataset.values() for value in values_list
     ]
-    # sorting list to make train_test_split deterministic
+
     finetune_list.sort()
     if set(pretrain_list) & set(finetune_list):
         raise Exception(
@@ -298,6 +301,25 @@ def _create_finetune_set(
         )
 
     _save_counts_to_csv(finetune_list, split_path.parents[0].joinpath("counts", "finetune"), split)
+
+
+def _pad_missing_dates(
+    data_dict: dict[str, np.ndarray],
+    dates: dict[str, torch.Tensor],
+    s1_bands_len: int = 2,
+    s2_bands_len: int = 13,
+) -> np.ndarray:
+    all_days: torch.Tensor = dates["all"]
+    data_s1 = np.full((len(all_days), s1_bands_len), s1_bands_len * [0])
+    data_s2 = np.full((len(all_days), s2_bands_len), s2_bands_len * [0])
+
+    s1_indices = np.searchsorted(all_days, dates["S1"])
+    data_s1[s1_indices] = data_dict["S1"]
+
+    s2_indices = np.searchsorted(all_days, dates["S2"])
+    data_s2[s2_indices] = data_dict["S2"]
+
+    return np.hstack((data_s1, data_s2))
 
 
 def pad_seq_to_366(seq: np.ndarray, dates: torch.Tensor) -> np.ndarray:
@@ -395,9 +417,12 @@ class MMapStore:
         # load mmaps from cache
         self.mmaps = self.__class__.all_mmaps[self.mmap_data_dir]
 
-    def __getitem__(self, f: Path) -> dict[str, np.ndarray]:
+    def __getitem__(self, f: dict[str, Path]) -> dict[str, dict[str, np.ndarray]]:
         return {
-            array_name: array_mmap[self.mmap_store_metadata.file_index_map[f]]
+            array_name: {
+                key: array_mmap[self.mmap_store_metadata.file_index_map[filepath]]
+                for key, filepath in f.items()
+            }
             for array_name, array_mmap in self.mmaps.items()
         }
 
