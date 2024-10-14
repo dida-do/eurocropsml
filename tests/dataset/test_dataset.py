@@ -4,11 +4,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from eurocropsml.dataset.config import (
-    S2_BANDS,
-    EuroCropsDatasetConfig,
-    EuroCropsDatasetPreprocessConfig,
-)
+from eurocropsml.dataset.config import S2_BANDS, EuroCropsDatasetPreprocessConfig
 from eurocropsml.dataset.dataset import EuroCropsDataset
 
 
@@ -20,80 +16,75 @@ def preprocess_config() -> EuroCropsDatasetPreprocessConfig:
 
 
 @pytest.fixture
-def config() -> EuroCropsDatasetConfig:
-    return EuroCropsDatasetConfig(split="region")
-
-
-@pytest.fixture
-def leap_test_arrays_dict() -> dict[str, np.ndarray]:
+def leap_test_arrays_dict() -> dict[str, dict[str, np.ndarray]]:
     return {
-        "data": np.ones((366, 13)),
-        "dates": pd.date_range(start="2020-01-01", end="2020-12-31").to_numpy(),
+        "data": {"S1": np.ones((366, 2)), "S2": np.ones((366, 13))},
+        "dates": {
+            "S1": pd.date_range(start="2020-01-01", end="2020-12-31").to_numpy(),
+            "S2": pd.date_range(start="2020-01-01", end="2020-12-31").to_numpy(),
+        },
     }
 
 
 @pytest.fixture
-def test_arrays_dict() -> dict[str, np.ndarray]:
+def test_arrays_dict() -> dict[str, dict[str, np.ndarray]]:
     return {
-        "data": np.ones((366, 13)),
-        "dates": pd.date_range(start="2021-01-01", end="2021-12-31").to_numpy(),
+        "data": {"S1": np.ones((366, 2)), "S2": np.ones((366, 13))},
+        "dates": {
+            "S1": pd.date_range(start="2021-01-01", end="2021-12-31").to_numpy(),
+            "S2": pd.date_range(start="2021-01-01", end="2021-12-31").to_numpy(),
+        },
     }
 
 
 def test_format_dates_day(
-    test_arrays_dict: dict[str, np.ndarray],
-    config: EuroCropsDatasetConfig,
+    test_arrays_dict: dict[str, dict[str, np.ndarray]],
     preprocess_config: EuroCropsDatasetPreprocessConfig,
 ) -> None:
     arrays_dict = EuroCropsDataset._format_dates(
         date_type="day",
         arrays_dict=test_arrays_dict,
-        config=config,
         preprocess_config=preprocess_config,
         s2_data_bands=S2_BANDS,
     )
-    data = arrays_dict["data"]
-    dates = arrays_dict["dates"]
-    assert data.shape == test_arrays_dict["data"].shape
+    data = arrays_dict["data"]["S1"]
+    dates = arrays_dict["dates"]["S1"]
+    assert data.shape == test_arrays_dict["data"]["S1"].shape
     assert np.max(dates) == 364
     assert np.min(dates) == 0
     assert np.array_equal(np.unique(dates), dates)
 
 
 def test_format_dates_day_leapyear(
-    leap_test_arrays_dict: dict[str, np.ndarray],
-    config: EuroCropsDatasetConfig,
+    leap_test_arrays_dict: dict[str, dict[str, np.ndarray]],
     preprocess_config: EuroCropsDatasetPreprocessConfig,
 ) -> None:
     arrays_dict = EuroCropsDataset._format_dates(
         date_type="day",
         arrays_dict=leap_test_arrays_dict,
-        config=config,
         preprocess_config=preprocess_config,
         s2_data_bands=S2_BANDS,
     )
-    data = arrays_dict["data"]
-    dates = arrays_dict["dates"]
-    assert data.shape == leap_test_arrays_dict["data"].shape
+    data = arrays_dict["data"]["S1"]
+    dates = arrays_dict["dates"]["S1"]
+    assert data.shape == leap_test_arrays_dict["data"]["S1"].shape
     assert np.max(dates) == 365
     assert np.min(dates) == 0
     assert np.array_equal(np.unique(dates), dates)
 
 
 def test_format_dates_month(
-    test_arrays_dict: dict[str, np.ndarray],
-    config: EuroCropsDatasetConfig,
+    test_arrays_dict: dict[str, dict[str, np.ndarray]],
     preprocess_config: EuroCropsDatasetPreprocessConfig,
 ) -> None:
     arrays_dict = EuroCropsDataset._format_dates(
         date_type="month",
         arrays_dict=test_arrays_dict,
-        config=config,
         preprocess_config=preprocess_config,
         s2_data_bands=S2_BANDS,
     )
-    data = arrays_dict["data"]
-    dates = arrays_dict["dates"]
-    assert data.shape == (12, test_arrays_dict["data"].shape[1])
+    data = arrays_dict["data"]["S1"]
+    dates = arrays_dict["dates"]["S1"]
+    assert data.shape == (12, test_arrays_dict["data"]["S1"].shape[1])
     assert np.max(dates) == 11
     assert np.min(dates) == 0
