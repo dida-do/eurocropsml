@@ -55,8 +55,8 @@ def _open_noise_dataset(safe_dir: Path, band: str) -> xr.Dataset:
         line_list.append(vector["line"])
         pixel = np.fromstring(vector["pixel"]["$"], dtype=int, sep=" ")
         pixel_list.append(pixel)
-        noise_range_rut = np.fromstring(vector["noiseRangeLut"]["$"], dtype=np.float32, sep=" ")
-        noise_range_lut_list.append(noise_range_rut)
+        noise_range_lut = np.fromstring(vector["noiseRangeLut"]["$"], dtype=np.float32, sep=" ")
+        noise_range_lut_list.append(noise_range_lut)
 
     pixel = np.array(pixel_list)
     if (pixel - pixel[0]).any():
