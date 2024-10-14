@@ -320,7 +320,7 @@ def split_dataset_by_region(
     filtered_s1: list[str] = []
     if benchmark is True and "S1" in satellite:
         s1_files: set = read_files(data_dir.joinpath("S1"))
-        # get the files that are not present in S2
+        # get the files that are not present in S2 (only for pretraining)
         # filter by regions
         filtered_s1 = [
             file
