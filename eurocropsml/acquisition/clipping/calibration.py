@@ -39,6 +39,8 @@ def _parse_tag_as_list(
 def _open_noise_dataset(safe_dir: Path, band: str) -> xr.Dataset:
     """Function to read noise from LUT.
 
+    This reads the NADS (Noise Annotation Data Set) file.
+
     Adjusted from xarray-sentinel (https://github.com/bopen/xarray-sentinel).
     """
     xml_dir: Path = safe_dir / "annotation" / "calibration"
@@ -68,7 +70,9 @@ def _open_noise_dataset(safe_dir: Path, band: str) -> xr.Dataset:
 
 
 def _open_calibration_dataset(safe_dir: Path, band: str) -> xr.Dataset:
-    """Function to read calibration from LUT.
+    """Function to read calibration from LUT
+    
+    This reads the CADS (Calibration Annotation Data Set) file.
 
     Adjusted from xarray-sentinel (https://github.com/bopen/xarray-sentinel).
     """
