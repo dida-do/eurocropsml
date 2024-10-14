@@ -156,8 +156,8 @@ def _calibrate_digital_number_in_db(
     Adjusted from xarray-sentinel (https://github.com/bopen/xarray-sentinel).
 
     digital_number: Digital numbers from the original raster tile to be calibrated.
-    calibration_lut: calibration LUT (sigmaNought).
-    noise_lut: Thermal noise LUT.
+    backscatter_calibration_lut: calibration LUT (sigmaNought).
+    thermal_noise_lut: Thermal noise LUT.
     min_db: minimal value in db, to avoid infinity values.
     """
     sigma_nought = _calibrate(digital_number, backscatter_calibration_lut, thermal_noise_lut)
