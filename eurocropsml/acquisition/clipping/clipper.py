@@ -174,7 +174,8 @@ def _process_raster_parallel(
 
     Args:
         satellite: S1 for Sentinel-1 and S2 for Sentinel-2.
-        denoise: Whether to perform thermal noise removal for Sentinel-1. For Sentinel-2 this argument has no effect.
+        denoise: Whether to perform thermal noise removal for Sentinel-1.
+            For Sentinel-2 this argument has no effect.
         polygon_df: Dataframe containing all parcel ids. Will be merged with the clipped values.
         parcel_id_name: The country's parcel ID name (varies from country to country).
         filtered_images: Dataframe containing all parcel ids that lie in this raster tile.
