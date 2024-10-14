@@ -196,7 +196,7 @@ def _process_raster_parallel(
         filtered_geom = polygon_df[polygon_df[parcel_id_name].isin(parcel_ids)]
 
         result = mask_polygon_raster(
-            satellite, band_tiles, bands, filtered_geom, parcel_id_name, product_date
+            satellite, band_tiles, bands, filtered_geom, parcel_id_name, product_date, denoise
         )
 
         if result is not None:

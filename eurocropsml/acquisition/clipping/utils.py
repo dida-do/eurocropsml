@@ -77,7 +77,7 @@ def mask_polygon_raster(
         polygon_df: GeoDataFrame of all parcels to be clipped.
         parcel_id_name: The country's parcel ID name (varies from country to country).
         product_date: Date on which the raster tile was obtained.
-        denoise: Whether to perform thermal noise removal for Sentinel-1
+        denoise: Whether to perform thermal noise removal for Sentinel-1.
 
     Returns:
         Dataframe with clipped values.
