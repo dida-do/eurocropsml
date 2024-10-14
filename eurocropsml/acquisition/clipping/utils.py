@@ -18,7 +18,7 @@ from shapely.geometry import MultiPolygon, Polygon
 from tqdm import tqdm
 
 from eurocropsml.acquisition.clipping.calibration import (
-    _calibrate_intensity,
+    _calibrate_digital_number_in_db,
     _open_calibration_dataset,
     _open_noise_dataset,
 )
@@ -181,7 +181,7 @@ def _process_row(
                 )
 
                 # get backscatter in decibels
-                backscatter_db: np.ndarray = _calibrate_intensity(
+                backscatter_db: np.ndarray = _calibrate_digital_number_in_db(
                     cropped_data, sigma_nought, noise_vector
                 )
                 patch_median = np.median(backscatter_db[not_zero])

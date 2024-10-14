@@ -70,8 +70,8 @@ def _open_noise_dataset(safe_dir: Path, band: str) -> xr.Dataset:
 
 
 def _open_calibration_dataset(safe_dir: Path, band: str) -> xr.Dataset:
-    """Function to read calibration from LUT
-    
+    """Function to read calibration from LUT.
+
     This reads the CADS (Calibration Annotation Data Set) file.
 
     Adjusted from xarray-sentinel (https://github.com/bopen/xarray-sentinel).
@@ -121,37 +121,37 @@ def _get_lut_value(
     return lut
 
 
-def _calibrate_amplitude(
+def _calibrate(
     digital_number: xr.DataArray,
-    calibration_lut: xr.DataArray,
-    noise_lut: xr.DataArray | None = None,
+    backscatter_calibration_lut: xr.DataArray,
+    thermal_noise_lut: xr.DataArray | None = None,
     **kwargs: Any,
 ) -> xr.DataArray:
-    """Return the calibrated amplitude using the calibration LUT in the product metadata.
+    """Return the calibrated sigma nought (backscatter coefficient) using the calibration LUT.
 
     Apply thermal noise removal if wanted.
     Adjusted from xarray-sentinel (https://github.com/bopen/xarray-sentinel).
 
     digital_number: Digital numbers from the original raster tile to be calibrated.
-    calibration_lut: calibration LUT (sigmaNought).
-    noise_lut: Thermal noise LUT.
+    backscatter_calibration_lut: Calibration LUT for backscatter (sigma nought).
+    thermal_noise_lut: Thermal noise LUT to remove sensor noise.
     """
-    intensity = digital_number**2
-    calibration = _get_lut_value(digital_number, calibration_lut, **kwargs)
-    if noise_lut is not None:
-        noise = _get_lut_value(digital_number, noise_lut, **kwargs)
-        intensity = intensity - noise
-    amplitude: xr.DataArray = intensity / calibration**2
-    return abs(amplitude)
+    radar_intensity = digital_number**2
+    backscatter_calibration = _get_lut_value(digital_number, backscatter_calibration_lut, **kwargs)
+    if thermal_noise_lut is not None:
+        thermal_noise = _get_lut_value(digital_number, thermal_noise_lut, **kwargs)
+        radar_intensity = radar_intensity - thermal_noise
+    sigma_nought: xr.DataArray = radar_intensity / backscatter_calibration**2
+    return abs(sigma_nought)
 
 
-def _calibrate_intensity(
+def _calibrate_digital_number_in_db(
     digital_number: xr.DataArray,
-    calibration_lut: xr.DataArray,
-    noise_lut: xr.DataArray | None = None,
+    backscatter_calibration_lut: xr.DataArray,
+    thermal_noise_lut: xr.DataArray | None = None,
     min_db: float | None = -50.0,
 ) -> np.ndarray:
-    """Return the calibrated intensity using the calibration LUT in the product metadata.
+    """Return calibrated sigma nought (backscatter coefficient) in dB using the calibration LUT.
 
     Adjusted from xarray-sentinel (https://github.com/bopen/xarray-sentinel).
 
@@ -160,11 +160,11 @@ def _calibrate_intensity(
     noise_lut: Thermal noise LUT.
     min_db: minimal value in db, to avoid infinity values.
     """
-    amplitude = _calibrate_amplitude(digital_number, calibration_lut, noise_lut)
-    # convert to dexibels (dB)
-    intensity = 10.0 * np.log10(np.maximum(amplitude, 1e-10))  # prevent division by 0
+    sigma_nought = _calibrate(digital_number, backscatter_calibration_lut, thermal_noise_lut)
+    # convert to decibels (dB)
+    sigma_nought_db = 10.0 * np.log10(np.maximum(sigma_nought, 1e-10))  # prevent division by 0
 
     if min_db is not None:
-        intensity = cast(xr.DataArray, np.maximum(intensity, min_db))
+        sigma_nought_db = cast(xr.DataArray, np.maximum(sigma_nought_db, min_db))
 
-    return cast(np.ndarray, intensity.values)
+    return cast(np.ndarray, sigma_nought_db.values)
