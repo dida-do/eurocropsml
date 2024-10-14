@@ -197,8 +197,8 @@ def _process_row(
         parcels_dict[parcel_id].append(patch_median)
     except ValueError:
         # Since we are cropping to the extent of the geometry, if none of the raster pixels is
-        # fully contained inside the geometry, rasterio.mask will throw an error that the
-        # shapes do not overlap
+        # fully contained inside the geometry, rasterio.mask will throw an error that the shapes
+        # do not overlap
         parcels_dict[parcel_id].append(None)
 
 
