@@ -63,7 +63,7 @@ def _split_dataset(
 
 
 def _filter_classes(
-    file_set: set,
+    file_set: set[str],
     pretrain_classes: set[int],
     finetune_classes: set[int] | None,
 ) -> tuple[dict[int, list[str]], dict[int, list[str]] | None]:
