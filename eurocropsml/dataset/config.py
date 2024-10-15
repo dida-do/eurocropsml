@@ -5,6 +5,7 @@ from typing import Literal
 
 from pydantic import BaseModel, field_validator
 
+from eurocropsml.acquisition.config import S1_BANDS, S2_BANDS
 from eurocropsml.settings import Settings
 
 
@@ -33,7 +34,7 @@ class EuroCropsDatasetPreprocessConfig(BaseModel):
 
     """
 
-    download_url: str = "https://zenodo.org/api/records/10629610/versions/latest"
+    download_url: str = "https://zenodo.org/api/records/10629610/versions"
     raw_data_dir: Path
     preprocess_dir: Path
     band4_t1: float = 0.07
@@ -65,6 +66,10 @@ class EuroCropsSplit(BaseModel):
 
     meadow_class: int | None = None
 
+    satellite: list[Literal["S1", "S2"]] = ["S2"]
+
+    benchmark: bool = True
+
     pretrain_classes: dict[str, list[int]]
     finetune_classes: dict[str, list[int]] = {}
 
@@ -94,6 +99,9 @@ class EuroCropsDatasetConfig(BaseModel):
     date_type: Literal["day", "month"] = "day"
     filter_clouds: bool = True
     normalize: bool = True
+    satellite: list[Literal["S1", "S2"]] = ["S2"]
+    s1_bands: list[str] | None = S1_BANDS
+    s2_bands: list[str] | None = S2_BANDS
     # max_samples corresponds to maximum number of samples per class for finetune training data.
     # If ["all"], all samples are used, if e.g. [1, 2, "all"], three use-cases are created where
     # number of samples per class are 1 or 2 respectively, or where all samples are used.

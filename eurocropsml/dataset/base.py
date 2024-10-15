@@ -24,7 +24,11 @@ class DataItem:
     """
 
     def __init__(
-        self, data: torch.Tensor, meta_data: dict[str, torch.Tensor] | None = None
+        self,
+        data: torch.Tensor,
+        meta_data: (
+            dict[str, torch.Tensor] | dict[str, dict[str, torch.Tensor] | torch.Tensor] | None
+        ) = None,
     ) -> None:
         self.data = data
         if meta_data is None:
@@ -37,9 +41,14 @@ class DataItem:
         For more information consult https://pytorch.org/docs/stable/generated/torch.Tensor.to.html
         """
         data = self.data.to(*args, **kwargs)
-        meta_data = {}
+        meta_data: dict = {}
         for key, value in self.meta_data.items():
-            meta_data[key] = value.to(*args, **kwargs)
+            if isinstance(value, torch.Tensor):
+                meta_data[key] = value.to(*args, **kwargs)
+
+            else:
+                for inner_key, inner_value in value.items():
+                    meta_data[key][inner_key] = inner_value.to(*args, **kwargs)
         return DataItem(data, meta_data)
 
 
@@ -55,9 +64,9 @@ class LabelledData(NamedTuple):
         return self.data_item.data
 
     @property
-    def meta_data(self) -> dict[str, torch.Tensor]:
+    def meta_data(self) -> dict[str, dict[str, torch.Tensor] | torch.Tensor]:
         """Get meta_data from data_items."""
-        return self.data_item.meta_data
+        return cast(dict[str, dict[str, torch.Tensor] | torch.Tensor], self.data_item.meta_data)
 
     @classmethod
     def from_tensor_dict(cls, tensors: dict[str, torch.Tensor]) -> LabelledData:
@@ -72,6 +81,7 @@ class LabelledData(NamedTuple):
         Raises:
             KeyError: If tensors do not contain "data" or "label"
         """
+
         data = tensors.pop("data")
         label = tensors.pop("label")
         return LabelledData(DataItem(data, tensors), label)
@@ -79,12 +89,29 @@ class LabelledData(NamedTuple):
     def to_tensor_dict(self) -> dict[str, torch.Tensor]:
         """Output LabelledData as dict."""
         tensors = {"data": self.data, "label": self.label}
-        tensors.update(self.meta_data)
+        tensors.update(_flatten_meta_data(self.meta_data))
         return tensors
 
     def to_tuple(self) -> tuple[DataItem, torch.Tensor]:
         """Output LabelledData as tuple of DataItem and tensor containing labels."""
         return self.data_item, self.label
+
+
+def _flatten_meta_data(
+    meta_data: dict[str, torch.Tensor] | dict[str, dict[str, torch.Tensor] | torch.Tensor]
+) -> dict[str, torch.Tensor]:
+    """Helper function to update flatten a nested dictionary."""
+    flat_tensors = {}
+
+    for key, value in meta_data.items():
+        if isinstance(value, dict):
+            for sub_key, sub_value in value.items():
+                if isinstance(sub_value, torch.Tensor):
+                    flat_tensors[f"{key}_{sub_key}"] = sub_value
+        elif isinstance(value, torch.Tensor):
+            flat_tensors[key] = value
+
+    return flat_tensors
 
 
 def custom_collate_fn(batch: Sequence[LabelledData]) -> LabelledData:
