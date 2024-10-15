@@ -147,10 +147,6 @@ class EuroCropsDataset(Dataset[LabelledData]):
             array_name: {key: torch.tensor(np_array) for key, np_array in meta_array.items()}
             for array_name, meta_array in arrays_dict.items()
         }
-        meta_data["dates"] = cast(dict[str, torch.Tensor], meta_data["dates"])
-        meta_data["dates"]["all"] = torch.unique(  # type: ignore[index]
-            torch.cat([meta_data["dates"][satellite] for satellite in f])  # type: ignore[index]
-        )
         # center is always the same, replace by first value
         meta_data["center"] = cast(torch.Tensor, next(iter(meta_data["center"].values())))
 
@@ -168,6 +164,9 @@ class EuroCropsDataset(Dataset[LabelledData]):
             np_data: np.ndarray = np.hstack(list(np_data_dict.values()))
 
         elif len(f) == 2:  # if both S1 and S2 are used and no padding to 366 day
+            meta_data["dates"]["all"] = torch.unique(  # type: ignore[index]
+                torch.cat([meta_data["dates"][satellite] for satellite in f])  # type: ignore[index]
+            )
             np_data = _pad_missing_dates(
                 np_data_dict,
                 cast(dict[str, torch.Tensor], meta_data["dates"]),
@@ -175,7 +174,7 @@ class EuroCropsDataset(Dataset[LabelledData]):
                 len(self.s2_data_bands),  # type: ignore[arg-type]
             )
         else:
-            np_data = cast(np.ndarray, np_data_dict.values())
+            np_data = np.array(list(np_data_dict.values()))
 
         tensor_data = torch.tensor(np_data, dtype=torch.float)
 
