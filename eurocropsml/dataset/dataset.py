@@ -164,7 +164,7 @@ class EuroCropsDataset(Dataset[LabelledData]):
             for satellite, value_array in np_data_dict.items():
                 np_data_dict[satellite] = pad_seq_to_366(
                     value_array, meta_data["dates"][satellite]  # type: ignore[index]
-                ) 
+                )
             np_data: np.ndarray = np.hstack(list(np_data_dict.values()))
 
         elif len(f) == 2:  # if both S1 and S2 are used and no padding to 366 day
