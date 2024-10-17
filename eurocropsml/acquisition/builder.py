@@ -4,7 +4,8 @@ import logging
 from pathlib import Path
 from typing import cast
 
-from eurocropsml.acquisition import clipper, collector, copier, region
+from eurocropsml.acquisition import collector, copier, region
+from eurocropsml.acquisition.clipping import clipper
 from eurocropsml.acquisition.config import AcquisitionConfig
 from eurocropsml.settings import Settings
 
