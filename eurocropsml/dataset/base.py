@@ -133,7 +133,7 @@ def custom_collate_fn(batch: Sequence[LabelledData]) -> LabelledData:
                 prev_tensors := batch_tensors[tensor_name]
             ):
                 tensor_stackability[tensor_name] = prev_tensors[-1].shape == tensor.shape
-            batch_tensors[tensor_name].append(tensor)
+            batch_tensors[tensor_name].append(tensor.squeeze())
 
     batched_tensors = {
         tensor_name: (
