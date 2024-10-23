@@ -72,6 +72,7 @@ def _get_arguments(
     workers: int,
     shape_dir: Path,
     output_dir: Path,
+    month: int,
     local_dir: Path | None = None,
 ) -> tuple[list[tuple[pd.DataFrame, list]], gpd.GeoDataFrame, Path]:
     """Get arguments for clipping polygons from raster files.
@@ -94,7 +95,7 @@ def _get_arguments(
     parcel_id_name: str = cast(str, config.parcel_id_name)
     bands: list[str] = cast(list[str], config.bands)
 
-    clipping_path = output_dir.joinpath("clipper")
+    clipping_path = output_dir.joinpath("clipper").joinpath(f'{month}')
     clipping_path.mkdir(exist_ok=True, parents=True)
 
     if clipping_path.joinpath("args.pkg").exists():
@@ -108,6 +109,9 @@ def _get_arguments(
         full_images_paths: Path = output_dir.joinpath("collector", "full_parcel_list.pkg")
         full_images = pd.read_pickle(full_images_paths)
 
+        full_images['completionDate'] = pd.to_datetime(full_images['completionDate'])
+        full_images = full_images[(full_images['completionDate'].dt.month == month)]
+
         if local_dir is not None:
             full_images["productIdentifier"] = str(local_dir) + full_images[
                 "productIdentifier"
@@ -115,6 +119,10 @@ def _get_arguments(
 
         band_image_path: Path = output_dir.joinpath("copier", "band_images.pkg")
         band_images: pd.DataFrame = pd.read_pickle(band_image_path)
+
+        band_images = band_images[
+            (band_images['productIdentifier'].str.extract(r'/\d{4}/(\d{2})/')[0].astype(int) == month)
+        ]
 
         max_workers = min(mp_orig.cpu_count(), max(1, min(len(band_images), workers)))
         args = []
@@ -226,77 +234,102 @@ def clipping(
         multiplier: Intermediate results will be saved every multiplier steps.
         local_dir: Local directory where the .SAFE files were copied to.
     """
-    args, polygon_df, clipping_path = _get_arguments(
-        config=config,
-        workers=workers,
-        shape_dir=shape_dir,
-        output_dir=output_dir,
-        local_dir=local_dir,
-    )
 
-    max_workers = min(mp_orig.cpu_count(), max(1, min(len(args), workers)))
+    for month in config.months:
 
-    clipped_dir = clipping_path.joinpath("clipped")
-    clipped_dir.mkdir(exist_ok=True, parents=True)
+        args_month, polygon_df, clipping_path = _get_arguments(
+            config=config,
+            workers=workers,
+            shape_dir=shape_dir,
+            output_dir=output_dir,
+            month=month,
+            local_dir=local_dir,
+        )
 
-    # Process data in smaller chunks
-    file_counts = len(list(clipped_dir.rglob("Final_*.pkg")))
+        clipped_dir = clipping_path.joinpath("clipped")
+        clipped_dir.mkdir(exist_ok=True, parents=True)
 
-    processed = file_counts * multiplier * chunk_size
-    save_files = multiplier * chunk_size
-    file_counts += 1
+        max_workers = min(mp_orig.cpu_count(), max(1, min(len(args_month), workers)))
 
-    polygon_df[config.parcel_id_name] = polygon_df[config.parcel_id_name].astype(int)
-    func = partial(
-        _process_raster_parallel, config.satellite, polygon_df, cast(str, config.parcel_id_name)
-    )
+        # Process data in smaller chunks
+        file_counts = len(list(clipped_dir.rglob("Final_*.pkg")))
 
-    polygon_df = polygon_df.drop(["geometry"], axis=1)
-    df_final = polygon_df.copy()
-    df_final.set_index(config.parcel_id_name, inplace=True)
+        processed = file_counts * multiplier * chunk_size
+        save_files = multiplier * chunk_size
+        file_counts += 1
 
-    new_data: bool = False
-    if processed < len(args):
-        new_data = True
-        logger.info("Starting parallel raster clipping...")
-        te = tqdm(total=len(args) - processed, desc="Clipping raster tiles.")
-        while processed < len(args):
-            chunk_args: list[tuple[pd.DataFrame, list]] = args[processed : processed + chunk_size]
-            results: list[pd.DataFrame] = []
+        polygon_df[config.parcel_id_name] = polygon_df[config.parcel_id_name].astype(int)
 
-            with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
-                futures = [executor.submit(func, *arg) for arg in chunk_args]
+        func = partial(
+            _process_raster_parallel, config.satellite, polygon_df, cast(str, config.parcel_id_name)
+        )
 
-                for future in concurrent.futures.as_completed(futures):
-                    try:
-                        result = future.result()
-                        results.append(result)
-                    except Exception:
-                        results.append(None)
+        polygon_df_month = polygon_df.drop(["geometry"], axis=1)
+        df_final_month = polygon_df_month.copy()
+        df_final_month.set_index(config.parcel_id_name, inplace=True)
 
-            # Process and save results
-            for result in results:
-                if result is not None and not result.empty:
-                    df_final = df_final.fillna(result)
-                te.update(n=1)
+        polygon_df = polygon_df.drop(["geometry"], axis=1)
 
-            processed += len(chunk_args)
-            if processed % save_files == 0:
-                df_final.to_pickle(clipped_dir.joinpath(f"Final_{file_counts}.pkg"))
-                del df_final
-                df_final = polygon_df.copy()
-                df_final.set_index(config.parcel_id_name, inplace=True)
-                file_counts += 1
-            # Clear variables to release memory
-            del chunk_args, futures
-            gc.collect()
+        new_data: bool = False
+        if processed < len(args_month):
+            new_data = True
+            logger.info(f"Starting parallel raster clipping for {month}...")
+            te = tqdm(total=len(args_month) - processed, desc=f"Clipping raster tiles for {month}.")
+            while processed < len(args_month):
+                chunk_args: list[tuple[pd.DataFrame, list]] = args_month[processed : processed + chunk_size]
+                results: list[pd.DataFrame] = []
 
-        df_final.to_pickle(clipped_dir.joinpath(f"Final_{file_counts}.pkg"))
+                with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
+                    futures = [executor.submit(func, *arg) for arg in chunk_args]
 
-    _merge_dataframe(
-        polygon_df,
-        clipped_dir,
-        clipping_path,
-        cast(str, config.parcel_id_name),
-        new_data,
-    )
+                    for future in concurrent.futures.as_completed(futures):
+                        try:
+                            result = future.result()
+                            results.append(result)
+                        except Exception:
+                            results.append(None)
+
+                # Process and save results
+                for result in results:
+                    if result is not None and not result.empty:
+                        result.columns = [pd.to_datetime(result.columns[0]).strftime('%Y-%m-%d')]
+                        df_final_month.columns = [pd.to_datetime(col).strftime('%Y-%m-%d') for col in
+                                                  df_final_month.columns]
+                        df_final_month = df_final_month.fillna(result)
+                    te.update(n=1)
+
+                processed += len(chunk_args)
+                if processed % save_files == 0:
+                    df_final_month.to_pickle(clipped_dir.joinpath(f"Final_{file_counts}.pkg"))
+                    del df_final_month
+                    df_final_month = polygon_df_month.copy()
+                    df_final_month.set_index(config.parcel_id_name, inplace=True)
+                    file_counts += 1
+                # Clear variables to release memory
+                del chunk_args, futures
+                gc.collect()
+
+            df_final_month.to_pickle(clipped_dir.joinpath(f"Final_{file_counts}.pkg"))
+
+        _merge_dataframe(
+            polygon_df,
+            clipped_dir,
+            clipped_dir,
+            cast(str, config.parcel_id_name),
+            new_data,
+        )
+
+def main():
+    config = CollectorConfig(country="Austria", year=2021)
+    vector_data_dir = Path('/big_volume/data_s1/meta_data/vector_data/')
+    config.post_init(vector_data_dir)
+    output_dir = Path('/big_volume/data_s1/output_data/Austria/S1')
+    shape_dir = Path('/big_volume/data_s1/meta_data/vector_data/AT_2021_clean/')
+    workers = 16
+    chunk_size = 20
+    multiplier = 15
+
+    clipping(config, output_dir, shape_dir, workers, chunk_size, multiplier)
+
+if __name__ == '__main__':
+    main()

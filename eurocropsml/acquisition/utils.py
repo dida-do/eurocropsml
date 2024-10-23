@@ -98,17 +98,22 @@ def mask_polygon_raster(
                     # transforming shapefile into CRS of raster tile
                     polygon_df = polygon_df.to_crs(raster_tile.crs.data["init"])
                 elif satellite == "S1":
-                    gcps, _ = raster_tile.get_gcps()
+
+                    gcps, tile_crs = raster_tile.get_gcps()
+
+                    if polygon_df.crs.srs != tile_crs.data["init"]:
+                        polygon_df = polygon_df.to_crs(tile_crs.data["init"])
+
                     transform = rasterio.transform.from_gcps(gcps)
 
                     inv_transform = ~transform  # Invert the affine transformation matrix
 
                     polygon_df["geometry"] = polygon_df["geometry"].apply(
-                        lambda poly, inv_transform=inv_transform: _transform_polygon(
-                            poly, inv_transform
+                        lambda poly, i_trans=inv_transform: _transform_polygon(
+                            poly, i_trans
                         )
                     )
-            # clippping geometry out of raster tile and saving in dictionary
+            # clipping geometry out of raster tile and saving in dictionary
             polygon_df.apply(
                 lambda row: _process_row(row, raster_tile, parcels_dict, parcel_id_name),
                 axis=1,
@@ -139,7 +144,7 @@ def _process_row(
             patch_median: int = 0
         else:
             patch_median = np.median(masked_img[:, :, 0][not_zero]).astype(np.int16)
-            patch_median = max(0, patch_median)
+            # patch_median = max(0, patch_median)
         parcels_dict[parcel_id].append(patch_median)
     except ValueError:
         # in case geometry is not inside raster tile
@@ -152,8 +157,12 @@ def _merge_clipper(
     output_dir: Path,
     parcel_id_name: str,
 ) -> None:
+
     logger.info("Starting merging of DataFrames...")
     df_list: list = [file for file in clipped_output_dir.iterdir() if "Final_" in file.name]
+
+    full_df.columns = [full_df.columns[0]] + [pd.to_datetime(col).strftime('%Y-%m-%d') for col in
+                                              full_df.columns[1:]]
 
     # setting parcel_id column to index
     full_df.set_index(parcel_id_name, inplace=True)

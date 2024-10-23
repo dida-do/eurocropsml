@@ -13,6 +13,7 @@ import pandas as pd
 import requests
 import typer
 from tqdm import tqdm
+import os
 
 from eurocropsml.acquisition.config import S1_BANDS, S2_BANDS
 from eurocropsml.dataset.config import EuroCropsDatasetPreprocessConfig
@@ -262,53 +263,59 @@ def preprocess(
         logger.info("Starting preprocessing. Compiling labels and centerpoints of parcels")
         preprocess_dir.mkdir(exist_ok=True, parents=True)
         raw_data_dir = raw_data_dir / satellite
-        for file_path in raw_data_dir.glob("*.parquet"):
-            country_file: pd.DataFrame = pd.read_parquet(file_path).set_index("parcel_id")
-            cols = country_file.columns.tolist()
-            cols = cols[5:]
-            # filter nan-values
-            country_file = country_file[~country_file[f"nuts{nuts_level}"].isna()]
-            points = _get_latlons(raw_data_dir.joinpath("geometries"), file_path.stem)
-            labels = _get_labels(raw_data_dir.joinpath("labels"), file_path.stem, preprocess_config)
 
-            # country_file.set_index("parcel_id", inplace=True)
-            regions = country_file[f"nuts{nuts_level}"].unique()
-            te = tqdm(
-                total=len(regions),
-                desc=f"Processing {file_path.stem}",
-            )
-            for region in regions:
-                region_data = country_file[country_file[f"nuts{nuts_level}"] == region]
+        for month in os.listdir(raw_data_dir):
+            logger.info(f"Processing data for month {month}")
 
-                # remove parcels that do not appear in the labels dictionary as keys
-                region_data = region_data[region_data.index.isin(labels.keys())]
-                region_data = region_data[cols]
-                # removing empty columns
-                region_data = region_data.dropna(axis=1, how="all")
-                # removing empty parcels
-                region_data = region_data.dropna(how="all")
-                # replacing single empty timesteps
+            month_data_dir = raw_data_dir.joinpath(month)
 
-                region_data = region_data.apply(
-                    lambda x, b=len(bands): x.map(lambda y: np.array([0] * b) if y is None else y)
+            for file_path in month_data_dir.glob("*.parquet"):
+                country_file: pd.DataFrame = pd.read_parquet(file_path).set_index("parcel_id")
+                cols = country_file.columns.tolist()
+                cols = cols[5:]
+                # filter nan-values
+                country_file = country_file[~country_file[f"nuts{nuts_level}"].isna()]
+                points = _get_latlons(month_data_dir.joinpath("geometries"), file_path.stem)
+                labels = _get_labels(month_data_dir.joinpath("labels"), file_path.stem, preprocess_config)
+
+                # country_file.set_index("parcel_id", inplace=True)
+                regions = country_file[f"nuts{nuts_level}"].unique()
+                te = tqdm(
+                    total=len(regions),
+                    desc=f"Processing {file_path.stem}",
                 )
-                with Pool(processes=num_workers) as p:
-                    func = partial(
-                        _save_row,
-                        preprocess_config,
-                        preprocess_dir,
-                        labels,
-                        points,
-                        region,
-                        len(bands),
-                    )
-                    process_iter = p.imap(func, region_data.iterrows(), chunksize=1000)
-                    ti = tqdm(total=len(region_data), desc=f"Processing {region}")
-                    _ = [ti.update(n=1) for _ in process_iter]
-                    ti.close()
+                for region in regions:
+                    region_data = country_file[country_file[f"nuts{nuts_level}"] == region]
 
-                    te.update(n=1)
-            te.close()
+                    # remove parcels that do not appear in the labels dictionary as keys
+                    region_data = region_data[region_data.index.isin(labels.keys())]
+                    region_data = region_data[cols]
+                    # removing empty columns
+                    region_data = region_data.dropna(axis=1, how="all")
+                    # removing empty parcels
+                    region_data = region_data.dropna(how="all")
+                    # replacing single empty timesteps
+
+                    region_data = region_data.apply(
+                        lambda x, b=len(bands): x.map(lambda y: np.array([0] * b) if y is None else y)
+                    )
+                    with Pool(processes=num_workers) as p:
+                        func = partial(
+                            _save_row,
+                            preprocess_config,
+                            preprocess_dir,
+                            labels,
+                            points,
+                            region,
+                            len(bands),
+                        )
+                        process_iter = p.imap(func, region_data.iterrows(), chunksize=1000)
+                        ti = tqdm(total=len(region_data), desc=f"Processing {region}")
+                        _ = [ti.update(n=1) for _ in process_iter]
+                        ti.close()
+
+                        te.update(n=1)
+                te.close()
 
         logger.info(f"Data has been preprocessed and saved under {preprocess_dir}.")
     else:
