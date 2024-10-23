@@ -308,10 +308,11 @@ def _pad_missing_dates(
     dates: dict[str, torch.Tensor],
     s1_bands_len: int = 2,
     s2_bands_len: int = 13,
+    padding_value: float = -999.0,
 ) -> np.ndarray:
     all_days: torch.Tensor = dates["all"]
-    data_s1 = np.full((len(all_days), s1_bands_len), s1_bands_len * [0])
-    data_s2 = np.full((len(all_days), s2_bands_len), s2_bands_len * [0])
+    data_s1 = np.full((len(all_days), s1_bands_len), s1_bands_len * [padding_value])
+    data_s2 = np.full((len(all_days), s2_bands_len), s2_bands_len * [padding_value])
 
     s1_indices = np.searchsorted(all_days, dates["S1"])
     data_s1[s1_indices] = data_dict["S1"]
@@ -322,13 +323,16 @@ def _pad_missing_dates(
     return np.hstack((data_s1, data_s2))
 
 
-def pad_seq_to_366(seq: np.ndarray, dates: torch.Tensor) -> np.ndarray:
+def pad_seq_to_366(
+    seq: np.ndarray, dates: torch.Tensor, padding_value: float = -999.0
+) -> np.ndarray:
     """Pad sequence to 366 days.
 
     Args:
         seq: Array containing sequence data to be padded.
         dates: Array of matching size specifying the dates
             associated to each the sequences data point.
+        padding_value: Value to use for padding.
 
     Returns:
         A padded sequence data array with all missing dates
@@ -341,7 +345,7 @@ def pad_seq_to_366(seq: np.ndarray, dates: torch.Tensor) -> np.ndarray:
     df_dates = pd.DataFrame(columns=rg, dtype=int)
     df_dates = pd.concat([df_dates, df_data])
 
-    df_dates = df_dates.fillna(-1)
+    df_dates = df_dates.fillna(padding_value)
 
     pad_seq: list = [df_dates[col].to_numpy() for col in rg]
 
