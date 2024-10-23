@@ -40,7 +40,7 @@ def add_nuts_regions(
         "statistical-units/territorial-units-statistics"
     )
 
-    for month in config.months:
+    for month in range(config.months[0], config.months[1] + 1):
 
         label_dir = final_output_dir.joinpath(f"{month}", "labels")
         geom_dir = final_output_dir.joinpath(f"{month}", "geometries")

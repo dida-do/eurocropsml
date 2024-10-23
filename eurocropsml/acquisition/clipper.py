@@ -235,7 +235,8 @@ def clipping(
         local_dir: Local directory where the .SAFE files were copied to.
     """
 
-    for month in config.months:
+    for month in range(config.months[0], config.months[1] + 1):
+
 
         args_month, polygon_df, clipping_path = _get_arguments(
             config=config,
