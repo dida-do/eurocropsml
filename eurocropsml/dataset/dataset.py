@@ -3,33 +3,33 @@
 import logging
 from functools import partial
 from pathlib import Path
-from typing import Literal
+from typing import Literal, cast
 
 import numpy as np
 import pandas as pd
 import torch
 from torch.utils.data import Dataset
 
-from eurocropsml.acquisition.config import S1_BANDS, S2_BANDS
 from eurocropsml.dataset.base import DataItem, LabelledData
 from eurocropsml.dataset.config import (
     EuroCropsDatasetConfig,
     EuroCropsDatasetPreprocessConfig,
 )
 from eurocropsml.dataset.preprocess import find_clouds
-from eurocropsml.dataset.utils import MMapStore, pad_seq_to_366
+from eurocropsml.dataset.utils import MMapStore, _pad_missing_dates, pad_seq_to_366
 
 logger = logging.getLogger(__name__)
 
 
-NORMALIZING_FACTOR = 1e-4
+NORMALIZING_FACTOR_S1 = 2e-2
+NORMALIZING_FACTOR_S2 = 1e-4
 
 
 class EuroCropsDataset(Dataset[LabelledData]):
     """PyTorch dataset class for the EuroCropsML dataset.
 
     Args:
-        file_list: List of file paths (one file per parcel/time series).
+        file_dict: Dictionary of file paths (one file per parcel/time series) for each satellite.
         encode: Encoding used to encode the classes into integers.
         mmap_store: Instance of memory map store.
         config: EuroCropsDatasetConfig instance.
@@ -39,7 +39,7 @@ class EuroCropsDataset(Dataset[LabelledData]):
 
     def __init__(
         self,
-        file_list: list[Path],
+        file_dict: dict[str, list[Path]],
         encode: dict[int, int],
         mmap_store: MMapStore,
         config: EuroCropsDatasetConfig,
@@ -48,7 +48,7 @@ class EuroCropsDataset(Dataset[LabelledData]):
     ) -> None:
         super().__init__()
 
-        self.file_list = file_list
+        self.file_dict = file_dict
         self.mmap_store = mmap_store
 
         self.encode = encode
@@ -56,98 +56,152 @@ class EuroCropsDataset(Dataset[LabelledData]):
         self.preprocess_config = preprocess_config
         self.pad_seq_to_366 = pad_seq_to_366
 
-        if preprocess_config.satellite == "S2":
-            if preprocess_config.bands is None:
-                band_names = S2_BANDS
-            else:
-                band_names = preprocess_config.bands
+        if "S2" in config.satellite:
+            band_names = cast(list[str], config.s2_bands)
 
             if self.config.remove_bands is not None:
                 self.keep_band_idxs: list[int] | None = []
-                self.data_bands: list[str] = []
+                self.s2_data_bands: list[str] | None = []
                 for band_idx, band in enumerate(band_names):
                     if band not in self.config.remove_bands:
                         self.keep_band_idxs.append(band_idx)
-                        self.data_bands.append(band)
+                        self.s2_data_bands.append(band)
             else:
                 self.keep_band_idxs = None
-                self.data_bands = band_names
-        elif preprocess_config.satellite == "S1":
-            if preprocess_config.bands is None:
-                band_names = S1_BANDS
-            else:
-                band_names = preprocess_config.bands
-
+                self.s2_data_bands = band_names
+        else:
             self.keep_band_idxs = None
-            self.data_bands = band_names
+            self.s2_data_bands = None
+        if "S1" in config.satellite:
+            self.s1_data_bands: list[str] | None = config.s1_bands
+        else:
+            self.s1_data_bands = None
 
     @staticmethod
     def _format_dates(
         preprocess_config: EuroCropsDatasetPreprocessConfig,
+        s2_data_bands: list[str] | None,
         date_type: Literal["day", "month"],
-        arrays_dict: dict[str, np.ndarray],
-    ) -> dict[str, np.ndarray]:
-        data, dates = arrays_dict["data"], arrays_dict["dates"]
+        arrays_dict: dict[str, dict[str, np.ndarray]],
+    ) -> dict[str, dict[str, np.ndarray]]:
 
         match date_type:
             case "day":
                 # "-1" because days of the year should start at 0 for pos_encoding
-                arrays_dict["dates"] = pd.to_datetime(dates).day_of_year.to_numpy() - 1
+                for satellite, dates in arrays_dict["dates"].items():
+                    arrays_dict["dates"][satellite] = (
+                        pd.to_datetime(dates).day_of_year.to_numpy() - 1
+                    )
             case "month":
-                dates_month = pd.to_datetime(dates).month.to_numpy() - 1
-                unique, unique_indices, unique_counts = np.unique(
-                    dates_month, return_index=True, return_counts=True
-                )
-                month_data = np.zeros((12, *data.shape[1:]))
-                for month, count, idx in zip(unique, unique_counts, unique_indices):
-                    if count == 1:
-                        month_data[month] = data[idx]
-                    elif preprocess_config.satellite == "S2":
-                        try:
-                            cloud_probs = np.apply_along_axis(
-                                partial(
-                                    find_clouds,
-                                    band4_idx=S2_BANDS.index("04"),
-                                    preprocess_config=preprocess_config,
-                                ),
-                                1,
-                                data[idx : idx + count],
-                            )
-                        except ValueError:
-                            raise ValueError("Band 4 cannot be excluded if date_type is 'months'")
-                        month_data[month] = data[idx + np.argmin(cloud_probs)]
-                arrays_dict["data"], arrays_dict["dates"] = month_data, np.arange(12)
+                for satellite, data in arrays_dict["data"].items():
+                    dates = arrays_dict["dates"][satellite]
+                    dates_month = pd.to_datetime(dates).month.to_numpy() - 1
+                    unique, unique_indices, unique_counts = np.unique(
+                        dates_month, return_index=True, return_counts=True
+                    )
+                    month_data = np.zeros((12, *data.shape[1:]))
+                    for month, count, idx in zip(unique, unique_counts, unique_indices):
+                        if count == 1:
+                            month_data[month] = data[idx]
+                        elif satellite == "S2":
+                            s2_data_bands = cast(list[str], s2_data_bands)
+                            try:
+                                cloud_probs = np.apply_along_axis(
+                                    partial(
+                                        find_clouds,
+                                        band4_idx=s2_data_bands.index("04"),
+                                        preprocess_config=preprocess_config,
+                                    ),
+                                    1,
+                                    data[idx : idx + count],
+                                )
+                            except ValueError:
+                                raise ValueError(
+                                    "Band 4 cannot be excluded if date_type is 'months'"
+                                )
+                            month_data[month] = data[idx + np.argmin(cloud_probs)]
+                    arrays_dict["data"][satellite] = month_data
+                    arrays_dict["dates"][satellite] = np.arange(12)
         return arrays_dict
 
     def __getitem__(
         self,
         idx: int,
     ) -> LabelledData:
-        f = self.file_list[idx]
+        f = {key: paths[idx] for key, paths in self.file_dict.items()}
+
         arrays_dict = self.mmap_store[f]
 
-        arrays_dict = self._format_dates(self.preprocess_config, self.config.date_type, arrays_dict)
+        arrays_dict = self._format_dates(
+            self.preprocess_config,
+            self.s2_data_bands,
+            self.config.date_type,
+            arrays_dict,
+        )
 
-        np_data = arrays_dict.pop("data")
+        np_data_dict = arrays_dict.pop("data")
         if self.keep_band_idxs is not None:
-            np_data = np_data[:, self.keep_band_idxs]
+            np_data_dict["S2"] = np_data_dict["S2"][:, self.keep_band_idxs]
 
-        meta_data: dict[str, torch.Tensor] = {
-            array_name: torch.tensor(np_array) for array_name, np_array in arrays_dict.items()
+        meta_data: dict[str, dict[str, torch.Tensor] | torch.Tensor] = {
+            array_name: {key: torch.tensor(np_array) for key, np_array in meta_array.items()}
+            for array_name, meta_array in arrays_dict.items()
         }
+        # center is always the same, replace by first value
+        meta_data["center"] = cast(torch.Tensor, next(iter(meta_data["center"].values())))
+
+        if self.config.normalize:
+            if "S1" in np_data_dict:
+                np_data_dict["S1"] = np_data_dict["S1"] * NORMALIZING_FACTOR_S1
+            if "S2" in np_data_dict:
+                np_data_dict["S2"] = np_data_dict["S2"] * NORMALIZING_FACTOR_S2
+
         if self.pad_seq_to_366:
-            np_data = pad_seq_to_366(np_data, meta_data["dates"])
+            for satellite, value_array in np_data_dict.items():
+                np_data_dict[satellite] = pad_seq_to_366(
+                    value_array, meta_data["dates"][satellite]  # type: ignore[index]
+                )
+            meta_data["dates"] = cast(
+                torch.Tensor,
+                torch.unique(
+                    torch.cat(
+                        [meta_data["dates"][satellite] for satellite in f]  # type: ignore[index]
+                    )
+                ),
+            )
+            np_data: np.ndarray = np.hstack(list(np_data_dict.values()))
+
+        elif len(f) == 2:  # if both S1 and S2 are used and no padding to 366 day
+            all_dates: torch.Tensor = torch.unique(
+                torch.cat([meta_data["dates"][satellite] for satellite in f])  # type: ignore[index]
+            )
+            np_data = _pad_missing_dates(
+                np_data_dict,
+                cast(dict[str, torch.Tensor], meta_data["dates"]),
+                all_dates,
+                len(self.s1_data_bands),  # type: ignore[arg-type]
+                len(self.s2_data_bands),  # type: ignore[arg-type]
+            )
+            meta_data["dates"] = all_dates  # only keep full range of dates
+        else:
+            meta_data["dates"] = torch.unique(
+                torch.cat([meta_data["dates"][satellite] for satellite in f])  # type: ignore[index]
+            )
+            np_data = np.array(list(np_data_dict.values()))
+            np_data = np.squeeze(np_data)
 
         tensor_data = torch.tensor(np_data, dtype=torch.float)
-        if self.config.normalize:
-            tensor_data = torch.mul(tensor_data, NORMALIZING_FACTOR)
 
-        y = int(Path(f).stem.split("_")[-1])
+        # get class from any filepath
+        filepath: Path = next(iter(f.values()))
+        y = int(filepath.stem.split("_")[-1])
         # encode class
         y = self.encode[y]
         target = torch.tensor(y)
 
-        return LabelledData(DataItem(data=tensor_data, meta_data=meta_data), target)
+        return LabelledData(
+            DataItem(data=tensor_data, meta_data=cast(dict[str, torch.Tensor], meta_data)), target
+        )
 
     def __len__(self) -> int:
-        return len(self.file_list)
+        return max(len(files) for files in self.file_dict.values())
