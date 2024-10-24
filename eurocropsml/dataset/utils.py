@@ -306,18 +306,18 @@ def _create_finetune_set(
 def _pad_missing_dates(
     data_dict: dict[str, np.ndarray],
     dates: dict[str, torch.Tensor],
+    all_dates: torch.Tensor,
     s1_bands_len: int = 2,
     s2_bands_len: int = 13,
     padding_value: float = -999.0,
 ) -> np.ndarray:
-    all_days: torch.Tensor = dates["all"]
-    data_s1 = np.full((len(all_days), s1_bands_len), s1_bands_len * [padding_value])
-    data_s2 = np.full((len(all_days), s2_bands_len), s2_bands_len * [padding_value])
+    data_s1 = np.full((len(all_dates), s1_bands_len), s1_bands_len * [padding_value])
+    data_s2 = np.full((len(all_dates), s2_bands_len), s2_bands_len * [padding_value])
 
-    s1_indices = np.searchsorted(all_days, dates["S1"])
+    s1_indices = np.searchsorted(all_dates, dates["S1"])
     data_s1[s1_indices] = data_dict["S1"]
 
-    s2_indices = np.searchsorted(all_days, dates["S2"])
+    s2_indices = np.searchsorted(all_dates, dates["S2"])
     data_s2[s2_indices] = data_dict["S2"]
 
     return np.hstack((data_s1, data_s2))
