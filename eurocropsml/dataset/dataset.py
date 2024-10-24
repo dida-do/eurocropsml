@@ -161,20 +161,34 @@ class EuroCropsDataset(Dataset[LabelledData]):
                 np_data_dict[satellite] = pad_seq_to_366(
                     value_array, meta_data["dates"][satellite]  # type: ignore[index]
                 )
+            meta_data["dates"] = cast(
+                torch.Tensor,
+                torch.unique(
+                    torch.cat(
+                        [meta_data["dates"][satellite] for satellite in f]  # type: ignore[index]
+                    )
+                ),
+            )
             np_data: np.ndarray = np.hstack(list(np_data_dict.values()))
 
         elif len(f) == 2:  # if both S1 and S2 are used and no padding to 366 day
-            meta_data["dates"]["all"] = torch.unique(  # type: ignore[index]
+            all_dates: torch.Tensor = torch.unique(
                 torch.cat([meta_data["dates"][satellite] for satellite in f])  # type: ignore[index]
             )
             np_data = _pad_missing_dates(
                 np_data_dict,
                 cast(dict[str, torch.Tensor], meta_data["dates"]),
+                all_dates,
                 len(self.s1_data_bands),  # type: ignore[arg-type]
                 len(self.s2_data_bands),  # type: ignore[arg-type]
             )
+            meta_data["dates"] = all_dates  # only keep full range of dates
         else:
+            meta_data["dates"] = torch.unique(
+                torch.cat([meta_data["dates"][satellite] for satellite in f])  # type: ignore[index]
+            )
             np_data = np.array(list(np_data_dict.values()))
+            np_data = np.squeeze(np_data)
 
         tensor_data = torch.tensor(np_data, dtype=torch.float)
 
@@ -185,7 +199,9 @@ class EuroCropsDataset(Dataset[LabelledData]):
         y = self.encode[y]
         target = torch.tensor(y)
 
-        return LabelledData(DataItem(data=tensor_data, meta_data=meta_data), target)
+        return LabelledData(
+            DataItem(data=tensor_data, meta_data=cast(dict[str, torch.Tensor], meta_data)), target
+        )
 
     def __len__(self) -> int:
         return max(len(files) for files in self.file_dict.values())
