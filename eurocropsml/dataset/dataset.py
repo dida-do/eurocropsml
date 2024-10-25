@@ -135,12 +135,13 @@ class EuroCropsDataset(Dataset[LabelledData]):
         meta_data: dict[str, torch.Tensor] = {
             array_name: torch.tensor(np_array) for array_name, np_array in arrays_dict.items()
         }
-        if self.pad_seq_to_366:
-            np_data = pad_seq_to_366(np_data, meta_data["dates"])
 
         tensor_data = torch.tensor(np_data, dtype=torch.float)
         if self.config.normalize:
             tensor_data = torch.mul(tensor_data, NORMALIZING_FACTOR)
+
+        if self.pad_seq_to_366:
+            tensor_data = pad_seq_to_366(tensor_data, meta_data["dates"])
 
         y = int(Path(f).stem.split("_")[-1])
         # encode class
