@@ -124,7 +124,7 @@ def custom_collate_fn(batch: Sequence[LabelledData], padding_value: int = -1) ->
     ):
         batched_tensors["label"] = torch.concat(batch_tensors["label"], 0)
 
-    if (pad_mask := batched_tensors["data"].le(padding_value)).any():
+    if (pad_mask := batched_tensors["data"].eq(padding_value)).any():
         if (aug_mask := batched_tensors.get("mask")) is not None:
             # if pad_mask.dim (B, T, C) != aug_mask.dim (B, T, C) | (B, T)
             # => aug_mask.dim is (B, T), thus pad_mask need to be converted
