@@ -109,9 +109,7 @@ def mask_polygon_raster(
                     inv_transform = ~transform  # Invert the affine transformation matrix
 
                     polygon_df["geometry"] = polygon_df["geometry"].apply(
-                        lambda poly, i_trans=inv_transform: _transform_polygon(
-                            poly, i_trans
-                        )
+                        lambda poly, i_trans=inv_transform: _transform_polygon(poly, i_trans)
                     )
             # clipping geometry out of raster tile and saving in dictionary
             polygon_df.apply(
@@ -161,8 +159,9 @@ def _merge_clipper(
     logger.info("Starting merging of DataFrames...")
     df_list: list = [file for file in clipped_output_dir.iterdir() if "Final_" in file.name]
 
-    full_df.columns = [full_df.columns[0]] + [pd.to_datetime(col).strftime('%Y-%m-%d') for col in
-                                              full_df.columns[1:]]
+    full_df.columns = [full_df.columns[0]] + [
+        pd.to_datetime(col).strftime("%Y-%m-%d") for col in full_df.columns[1:]
+    ]
 
     # setting parcel_id column to index
     full_df.set_index(parcel_id_name, inplace=True)

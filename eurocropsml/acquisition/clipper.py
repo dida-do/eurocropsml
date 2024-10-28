@@ -84,6 +84,7 @@ def _get_arguments(
         output_dir: Directory to get the list of .SAFE files from and to store the
             argument list.
         local_dir: Local directory where the .SAFE files were copied to.
+        month: Month that is being processed.
 
     Returns:
         - List of tuples of arguments for clipping raster tiles.
@@ -95,7 +96,7 @@ def _get_arguments(
     parcel_id_name: str = cast(str, config.parcel_id_name)
     bands: list[str] = cast(list[str], config.bands)
 
-    clipping_path = output_dir.joinpath("clipper").joinpath(f'{month}')
+    clipping_path = output_dir.joinpath("clipper").joinpath(f"{month}")
     clipping_path.mkdir(exist_ok=True, parents=True)
 
     if clipping_path.joinpath("args.pkg").exists():
@@ -109,8 +110,8 @@ def _get_arguments(
         full_images_paths: Path = output_dir.joinpath("collector", "full_parcel_list.pkg")
         full_images = pd.read_pickle(full_images_paths)
 
-        full_images['completionDate'] = pd.to_datetime(full_images['completionDate'])
-        full_images = full_images[(full_images['completionDate'].dt.month == month)]
+        full_images["completionDate"] = pd.to_datetime(full_images["completionDate"])
+        full_images = full_images[(full_images["completionDate"].dt.month == month)]
 
         if local_dir is not None:
             full_images["productIdentifier"] = str(local_dir) + full_images[
@@ -121,7 +122,10 @@ def _get_arguments(
         band_images: pd.DataFrame = pd.read_pickle(band_image_path)
 
         band_images = band_images[
-            (band_images['productIdentifier'].str.extract(r'/\d{4}/(\d{2})/')[0].astype(int) == month)
+            (
+                band_images["productIdentifier"].str.extract(r"/\d{4}/(\d{2})/")[0].astype(int)
+                == month
+            )
         ]
 
         max_workers = min(mp_orig.cpu_count(), max(1, min(len(band_images), workers)))
@@ -237,7 +241,6 @@ def clipping(
 
     for month in range(config.months[0], config.months[1] + 1):
 
-
         args_month, polygon_df, clipping_path = _get_arguments(
             config=config,
             workers=workers,
@@ -277,7 +280,9 @@ def clipping(
             logger.info(f"Starting parallel raster clipping for {month}...")
             te = tqdm(total=len(args_month) - processed, desc=f"Clipping raster tiles for {month}.")
             while processed < len(args_month):
-                chunk_args: list[tuple[pd.DataFrame, list]] = args_month[processed : processed + chunk_size]
+                chunk_args: list[tuple[pd.DataFrame, list]] = args_month[
+                    processed : processed + chunk_size
+                ]
                 results: list[pd.DataFrame] = []
 
                 with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
@@ -293,9 +298,11 @@ def clipping(
                 # Process and save results
                 for result in results:
                     if result is not None and not result.empty:
-                        result.columns = [pd.to_datetime(result.columns[0]).strftime('%Y-%m-%d')]
-                        df_final_month.columns = [pd.to_datetime(col).strftime('%Y-%m-%d') for col in
-                                                  df_final_month.columns]
+                        result.columns = [pd.to_datetime(result.columns[0]).strftime("%Y-%m-%d")]
+                        df_final_month.columns = [
+                            pd.to_datetime(col).strftime("%Y-%m-%d")
+                            for col in df_final_month.columns
+                        ]
                         df_final_month = df_final_month.fillna(result)
                     te.update(n=1)
 
@@ -319,18 +326,3 @@ def clipping(
             cast(str, config.parcel_id_name),
             new_data,
         )
-
-def main():
-    config = CollectorConfig(country="Austria", year=2021)
-    vector_data_dir = Path('/big_volume/data_s1/meta_data/vector_data/')
-    config.post_init(vector_data_dir)
-    output_dir = Path('/big_volume/data_s1/output_data/Austria/S1')
-    shape_dir = Path('/big_volume/data_s1/meta_data/vector_data/AT_2021_clean/')
-    workers = 16
-    chunk_size = 20
-    multiplier = 15
-
-    clipping(config, output_dir, shape_dir, workers, chunk_size, multiplier)
-
-if __name__ == '__main__':
-    main()

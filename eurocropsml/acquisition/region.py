@@ -95,7 +95,8 @@ def add_nuts_regions(
 
             for nuts_level in [1, 2, 3]:
                 nuts_filtered = nuts_df[nuts_df["LEVL_CODE"] == nuts_level]
-                # we use intersect instead of within since some parcels are at the border of two regions
+                # we use intersect instead of within
+                # since some parcels are at the border of two regions
                 shapefile = gpd.sjoin(shapefile, nuts_filtered, how="left", predicate="intersects")
                 no_intersections = shapefile[shapefile.index_right.isna()]
                 no_intersections = no_intersections.to_crs("EPSG:3857")
@@ -123,10 +124,13 @@ def add_nuts_regions(
                 cols_shapefile = cols_shapefile + [f"nuts{nuts_level+1}"]
 
             # add nuts region to final reflectance dataframe
-            full_df: pd.DataFrame = pd.read_parquet(output_dir.joinpath("clipper", f"{month}", "clipped", "clipped.parquet"))
+            full_df: pd.DataFrame = pd.read_parquet(
+                output_dir.joinpath("clipper", f"{month}", "clipped", "clipped.parquet")
+            )
 
-            full_df.columns = [full_df.columns[0]] + [pd.to_datetime(col).strftime('%Y-%m-%d') for col in
-                                                      full_df.columns[1:]]
+            full_df.columns = [full_df.columns[0]] + [
+                pd.to_datetime(col).strftime("%Y-%m-%d") for col in full_df.columns[1:]
+            ]
 
             shapefile[parcel_id_name] = shapefile[parcel_id_name].astype(int)
             joined_final = pd.merge(full_df, shapefile, on=parcel_id_name, how="left")
@@ -162,11 +166,15 @@ def add_nuts_regions(
             geom_dir.mkdir(exist_ok=True, parents=True)
 
             classes_df.to_parquet(
-                label_dir.joinpath(f"{config.ec_filename}_{config.year}_labels.parquet"), index=False
+                label_dir.joinpath(f"{config.ec_filename}_{config.year}_labels.parquet"),
+                index=False,
             )
 
             joined_final.to_parquet(
-                final_output_dir.joinpath(f"{month}", f"{config.ec_filename}_{config.year}.parquet"), index=False
+                final_output_dir.joinpath(
+                    f"{month}", f"{config.ec_filename}_{config.year}.parquet"
+                ),
+                index=False,
             )
 
         geometry_df.to_file(

@@ -1,6 +1,7 @@
 """Preprocessing utilities for the EuroCrops dataset."""
 
 import logging
+import os
 import sys
 from functools import cache, partial
 from multiprocessing import Pool
@@ -13,7 +14,6 @@ import pandas as pd
 import requests
 import typer
 from tqdm import tqdm
-import os
 
 from eurocropsml.acquisition.config import S1_BANDS, S2_BANDS
 from eurocropsml.dataset.config import EuroCropsDatasetPreprocessConfig
@@ -276,7 +276,9 @@ def preprocess(
                 # filter nan-values
                 country_file = country_file[~country_file[f"nuts{nuts_level}"].isna()]
                 points = _get_latlons(month_data_dir.joinpath("geometries"), file_path.stem)
-                labels = _get_labels(month_data_dir.joinpath("labels"), file_path.stem, preprocess_config)
+                labels = _get_labels(
+                    month_data_dir.joinpath("labels"), file_path.stem, preprocess_config
+                )
 
                 # country_file.set_index("parcel_id", inplace=True)
                 regions = country_file[f"nuts{nuts_level}"].unique()
@@ -297,7 +299,9 @@ def preprocess(
                     # replacing single empty timesteps
 
                     region_data = region_data.apply(
-                        lambda x, b=len(bands): x.map(lambda y: np.array([0] * b) if y is None else y)
+                        lambda x, b=len(bands): x.map(
+                            lambda y: np.array([0] * b) if y is None else y
+                        )
                     )
                     with Pool(processes=num_workers) as p:
                         func = partial(
