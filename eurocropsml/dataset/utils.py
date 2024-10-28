@@ -332,11 +332,11 @@ def pad_seq_to_366(
         seq: Array containing sequence data to be padded.
         dates: Array of matching size specifying the dates
             associated to each the sequences data point.
-        padding_value: Value to use for padding.
+        padding_value: Value used for padding.
 
     Returns:
-        A padded sequence data array with all missing dates
-        filled in by a `-1` mask value.
+        A padded sequence data array with all missing dates filled in by a
+            `padding_value`-mask value.
 
     """
     rg = range(366)
