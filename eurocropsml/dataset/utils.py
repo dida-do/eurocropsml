@@ -323,8 +323,9 @@ def _pad_missing_dates(
     return np.hstack((data_s1, data_s2))
 
 
-
-def pad_seq_to_366(seq: torch.Tensor, dates: torch.Tensor, padding_value: int = -999) -> torch.Tensor:
+def pad_seq_to_366(
+    seq: np.ndarray, dates: torch.Tensor, padding_value: float = -999.0
+) -> np.ndarray:
     """Pad sequence to 366 days.
 
     Args:
@@ -340,15 +341,15 @@ def pad_seq_to_366(seq: torch.Tensor, dates: torch.Tensor, padding_value: int = 
     """
     rg = range(366)
 
-    df_data = pd.DataFrame(seq.T.tolist(), columns=dates.tolist())
+    df_data = pd.DataFrame(np.array(seq).T.tolist(), columns=dates.tolist())
     df_dates = pd.DataFrame(columns=rg, dtype=int)
     df_dates = pd.concat([df_dates, df_data])
 
     df_dates = df_dates.fillna(padding_value)
 
-    pad_seq: np.ndarray = np.array([df_dates[col].to_numpy() for col in rg])
+    pad_seq: list = [df_dates[col].to_numpy() for col in rg]
 
-    return torch.Tensor(pad_seq)
+    return np.array(pad_seq)
 
 
 class MMapMetadata:
