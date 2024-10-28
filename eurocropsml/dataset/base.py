@@ -145,11 +145,7 @@ def custom_collate_fn(
             batched_tensors["mask"] = torch.logical_or(aug_mask.bool(), pad_mask)
             batched_tensors["pad_mask"] = pad_mask
         else:
-            mask = pad_mask.all(dim=-1)
-            assert mask.equal(
-                pad_mask.any(dim=-1)
-            ), "There are unknown values outside of padding, please investigate"
-            batched_tensors["mask"] = mask
+            batched_tensors["mask"] = pad_mask
     return LabelledData.from_tensor_dict(batched_tensors)
 
 
