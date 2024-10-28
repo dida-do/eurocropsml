@@ -195,6 +195,7 @@ class EuroCropsDataset(Dataset[LabelledData]):
         # get class from any filepath
         filepath: Path = next(iter(f.values()))
         y = int(filepath.stem.split("_")[-1])
+        
         # encode class
         y = self.encode[y]
         target = torch.tensor(y)

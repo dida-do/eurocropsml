@@ -99,7 +99,7 @@ def custom_collate_fn(
 
     Args:
         batch: List of DataItem from dataset
-        padding_value: Value to use for padding.
+        padding_value: Value used for padding.
 
     Returns:
         New DataItem with batched data.
