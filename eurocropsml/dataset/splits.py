@@ -131,9 +131,11 @@ def _build_dataset_split(
 
         if all(file.is_file() for file in split_files):
             logger.info(
-                "Files already exist. Skipping recreation.",
+                "Files already exist and force_rebuild=False. "
+                f"Skipping recreation of {split}-split.",
             )
             return
+    logger.info(f"Creating {split}-split...")
     if split == "class":
         split_dataset_by_class(
             data_dir,
