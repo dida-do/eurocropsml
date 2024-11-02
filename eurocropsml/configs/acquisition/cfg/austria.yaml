@@ -7,7 +7,7 @@ country_config:
   months: [1,12]
   product_type: "L1C"
   max_requested_products: 1000
-  satellite: "S1"
+  satellite: "S2"
 workers: 10
 chunk_size: 10
 multiplier: 10

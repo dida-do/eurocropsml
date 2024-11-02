@@ -4,4 +4,4 @@ band4_t1: 0.07
 band4_t2: 0.25
 band4_prob_threshold: 0.5
 filter_clouds: True
-satellite: "S1"
+satellite: "S2"

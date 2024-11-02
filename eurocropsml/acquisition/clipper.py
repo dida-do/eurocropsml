@@ -121,6 +121,9 @@ def _get_arguments(
         band_image_path: Path = output_dir.joinpath("copier", "band_images.pkg")
         band_images: pd.DataFrame = pd.read_pickle(band_image_path)
 
+        # productIdentifier has the following format:
+        # eodata/Sentinel-1/SAR/GRD/2021/01/08/S1A_IW_GRDH_1SDV_20210108T051818_20210108T051843_036042_04393F_C9C1.SAFE
+        # We extract the month (2 digits) following by year (4 digits)
         band_images = band_images[
             (
                 band_images["productIdentifier"].str.extract(r"/\d{4}/(\d{2})/")[0].astype(int)
@@ -241,7 +244,7 @@ def clipping(
 
     for month in range(config.months[0], config.months[1] + 1):
 
-        args_month, polygon_df, clipping_path = _get_arguments(
+        args_month, polygon_df_month, clipping_path = _get_arguments(
             config=config,
             workers=workers,
             shape_dir=shape_dir,
@@ -262,17 +265,20 @@ def clipping(
         save_files = multiplier * chunk_size
         file_counts += 1
 
-        polygon_df[config.parcel_id_name] = polygon_df[config.parcel_id_name].astype(int)
-
-        func = partial(
-            _process_raster_parallel, config.satellite, polygon_df, cast(str, config.parcel_id_name)
+        polygon_df_month[config.parcel_id_name] = polygon_df_month[config.parcel_id_name].astype(
+            int
         )
 
-        polygon_df_month = polygon_df.drop(["geometry"], axis=1)
+        func = partial(
+            _process_raster_parallel,
+            config.satellite,
+            polygon_df_month,
+            cast(str, config.parcel_id_name),
+        )
+
+        polygon_df_month = polygon_df_month.drop(["geometry"], axis=1)
         df_final_month = polygon_df_month.copy()
         df_final_month.set_index(config.parcel_id_name, inplace=True)
-
-        polygon_df = polygon_df.drop(["geometry"], axis=1)
 
         new_data: bool = False
         if processed < len(args_month):
@@ -320,7 +326,7 @@ def clipping(
             df_final_month.to_pickle(clipped_dir.joinpath(f"Final_{file_counts}.pkg"))
 
         _merge_dataframe(
-            polygon_df,
+            polygon_df_month,
             clipped_dir,
             clipped_dir,
             cast(str, config.parcel_id_name),

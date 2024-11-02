@@ -142,7 +142,7 @@ def _process_row(
             patch_median: int = 0
         else:
             patch_median = np.median(masked_img[:, :, 0][not_zero]).astype(np.int16)
-            # patch_median = max(0, patch_median)
+            patch_median = max(0, patch_median)
         parcels_dict[parcel_id].append(patch_median)
     except ValueError:
         # in case geometry is not inside raster tile

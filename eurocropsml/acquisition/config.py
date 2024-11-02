@@ -60,10 +60,10 @@ class CollectorConfig(BaseModel):
     country: str
     year: int
     months: tuple[int, int] = (1, 12)
-    satellite: Literal["S1", "S2"] = "S1"
-    product_type: Literal["L1C", "L2A", "GRD"] = "GRD"
-    processing_level: Literal[None, "LEVEL1", "LEVEL2"] = "LEVEL1"
-    operational_mode: Literal[None, "IW", "EW", "SM", "WF"] = "IW"
+    satellite: Literal["S1", "S2"] = "S2"
+    product_type: Literal["L1C", "L2A", "GRD"] = "L1C"
+    processing_level: Literal[None, "LEVEL1", "LEVEL2"] = None
+    operational_mode: Literal[None, "IW", "EW", "SM", "WF"] = None
     max_cloud_cover: int = 100
     bands: list[str] = S1_BANDS
     max_requested_products: int = 1000
