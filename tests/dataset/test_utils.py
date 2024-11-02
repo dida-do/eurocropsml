@@ -96,7 +96,7 @@ def test_data() -> list[str]:
 
 def test_pad_seq_to_366(test_arrays: tuple[np.ndarray, torch.Tensor]) -> None:
     test_data, test_dates = test_arrays
-    np_data = pad_seq_to_366(test_data, test_dates)
+    np_data = pad_seq_to_366(torch.tensor(test_data, dtype=torch.float), test_dates)
 
     assert np_data.shape == (366, test_data.shape[1])
 
