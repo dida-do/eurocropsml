@@ -173,13 +173,13 @@ class EuroCropsDataset(Dataset[LabelledData]):
                     value_array, meta_data["dates"][satellite]  # type: ignore[index]
                 )
             meta_data["dates"] = _unique_dates(
-                cast(dict[str, torch.Tensor], meta_data["dates"]), list(f.keys())
+                cast(dict[str, torch.Tensor], meta_data["dates"]), f.keys()
             )
             np_data: np.ndarray = np.hstack(list(np_data_dict.values()))
 
         elif len(f) == 2:  # if both S1 and S2 are used and no padding to 366 day
             all_dates: torch.Tensor = _unique_dates(
-                cast(dict[str, torch.Tensor], meta_data["dates"]), list(f.keys())
+                cast(dict[str, torch.Tensor], meta_data["dates"]), f.keys()
             )
             np_data = _pad_missing_dates(
                 np_data_dict,
@@ -191,7 +191,7 @@ class EuroCropsDataset(Dataset[LabelledData]):
             meta_data["dates"] = all_dates  # only keep full range of dates
         else:
             meta_data["dates"] = _unique_dates(
-                cast(dict[str, torch.Tensor], meta_data["dates"]), list(f.keys())
+                cast(dict[str, torch.Tensor], meta_data["dates"]), f.keys()
             )
             np_data = np.array(list(np_data_dict.values()))
             np_data = np.squeeze(np_data)
