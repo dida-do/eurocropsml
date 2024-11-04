@@ -352,6 +352,12 @@ def pad_seq_to_366(
     return np.array(pad_seq)
 
 
+def _unique_dates(dates: dict[str, torch.Tensor], satellites: list[str]) -> torch.Tensor:
+    concatenated_dates = torch.cat([dates[satellite] for satellite in satellites])
+    unique_sorted_dates: torch.Tensor = torch.unique(concatenated_dates, sorted=True)
+    return unique_sorted_dates
+
+
 class MMapMetadata:
     """Memory map metadata class.
 
