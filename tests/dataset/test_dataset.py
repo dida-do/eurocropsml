@@ -47,12 +47,13 @@ def test_format_dates_day(
         preprocess_config=preprocess_config,
         s2_data_bands=S2_BANDS,
     )
-    data = arrays_dict["data"]["S1"]
-    dates = arrays_dict["dates"]["S1"]
-    assert data.shape == test_arrays_dict["data"]["S1"].shape
-    assert np.max(dates) == 364
-    assert np.min(dates) == 0
-    assert np.array_equal(np.unique(dates), dates)
+    for satellite in arrays_dict["data"].keys():
+        data = arrays_dict["data"][satellite]
+        dates = arrays_dict["dates"][satellite]
+        assert data.shape == test_arrays_dict["data"][satellite].shape
+        assert np.max(dates) == 364
+        assert np.min(dates) == 0
+        assert np.array_equal(np.unique(dates), dates)
 
 
 def test_format_dates_day_leapyear(
@@ -65,12 +66,13 @@ def test_format_dates_day_leapyear(
         preprocess_config=preprocess_config,
         s2_data_bands=S2_BANDS,
     )
-    data = arrays_dict["data"]["S1"]
-    dates = arrays_dict["dates"]["S1"]
-    assert data.shape == leap_test_arrays_dict["data"]["S1"].shape
-    assert np.max(dates) == 365
-    assert np.min(dates) == 0
-    assert np.array_equal(np.unique(dates), dates)
+    for satellite in arrays_dict["data"].keys():
+        data = arrays_dict["data"][satellite]
+        dates = arrays_dict["dates"][satellite]
+        assert data.shape == leap_test_arrays_dict["data"][satellite].shape
+        assert np.max(dates) == 365
+        assert np.min(dates) == 0
+        assert np.array_equal(np.unique(dates), dates)
 
 
 def test_format_dates_month(
@@ -83,8 +85,9 @@ def test_format_dates_month(
         preprocess_config=preprocess_config,
         s2_data_bands=S2_BANDS,
     )
-    data = arrays_dict["data"]["S1"]
-    dates = arrays_dict["dates"]["S1"]
-    assert data.shape == (12, test_arrays_dict["data"]["S1"].shape[1])
-    assert np.max(dates) == 11
-    assert np.min(dates) == 0
+    for satellite in arrays_dict["data"].keys():
+        data = arrays_dict["data"][satellite]
+        dates = arrays_dict["dates"][satellite]
+        assert data.shape == (12, test_arrays_dict["data"][satellite].shape[1])
+        assert np.max(dates) == 11
+        assert np.min(dates) == 0
