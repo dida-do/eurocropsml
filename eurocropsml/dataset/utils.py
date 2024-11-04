@@ -486,17 +486,14 @@ def pad_seq_to_366(seq: torch.Tensor, dates: torch.Tensor, padding_value: int = 
             `padding_value`-mask value.
 
     """
-    rg = range(366)
 
-    df_data = pd.DataFrame(seq.T.tolist(), columns=dates.tolist())
-    df_dates = pd.DataFrame(columns=rg, dtype=int)
-    df_dates = pd.concat([df_dates, df_data])
+    padded_seq = np.full((366, seq.shape[1]), padding_value)
 
-    df_dates = df_dates.fillna(padding_value)
+    date_indices = dates.to(torch.int32).numpy()
 
-    pad_seq: np.ndarray = np.array([df_dates[col].to_numpy() for col in rg])
+    padded_seq[date_indices] = seq
 
-    return torch.Tensor(pad_seq)
+    return torch.Tensor(padded_seq)
 
 
 class MMapMetadata:
