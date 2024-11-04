@@ -302,6 +302,107 @@ def _create_finetune_set(
 
     _save_counts_to_csv(finetune_list, split_path.parents[0].joinpath("counts", "finetune"), split)
 
+def split_dataset_by_region(
+    data_dir: Path,
+    split_dir: Path,
+    split: Literal["region", "regionclass"],
+    num_samples: dict[str, str | int | list[int | str]],
+    seed: int,
+    pretrain_classes: set[int],
+    pretrain_regions: set[str],
+    finetune_classes: set[int] | None = None,
+    finetune_regions: set[str] | None = None,
+    meadow_class: int | None = None,
+    test_size: float = 0.2,
+) -> None:
+    """Split dataset by regions or regions and classes.
+
+    Args:
+        data_dir: Path that contains `.npy` files where labels and data are stored.
+        split_dir: Directory where splits are going to be saved to.
+        split: Kind of data split to apply.
+        num_samples: Number of samples to sample for finetuning.
+        seed: Random seed for data split.
+        pretrain_classes: Classes of the requested dataset split for
+            hyperparameter tuning and pretraining.
+        finetune_classes: Classes of the requested dataset split for finetuning.
+        pretrain_regions: Regions of the requested dataset split for
+            hyperparameter tuning and pretraining.
+        finetune_regions: Regions of the requested dataset split for finetuning.
+            None if EuroCrops should only be used for pretraining.
+        meadow_class: Meadow class identifier. If specified, for the pre-training split,
+            the meadow class will be downsampled to the median frequency of all other classes
+            If None, no downsampling is taking place.
+        test_size: Amount of data used for validation (test set).
+            Defaults to 0.2.
+
+    Raises:
+        Exception: If there are similar samples within pretrain and finetune data-split.
+    """
+
+    regions = (
+        pretrain_regions | finetune_regions if finetune_regions is not None else pretrain_regions
+    )
+
+    classes = (
+        pretrain_classes | finetune_classes
+        if finetune_classes is not None and split == "region"
+        else pretrain_classes
+    )
+
+    # split into pretrain and finetune dataset
+    pretrain_dataset, finetune_dataset = _split_dataset(
+        data_dir=data_dir,
+        pretrain_classes=classes,
+        finetune_classes=finetune_classes if split == "regionclass" else None,
+        regions=set(regions),
+    )
+
+    if split == "region":
+        finetune_dataset = pretrain_dataset.copy()
+
+    pretrain_dataset = _filter_regions(pretrain_dataset, pretrain_regions)
+
+    if meadow_class is not None and meadow_class in pretrain_classes:
+        pretrain_list: list[str] = _downsample_class(
+            pretrain_dataset, seed=seed, class_key=meadow_class
+        )
+    else:
+        pretrain_list = [file for files in pretrain_dataset.values() for file in files]
+
+    if (
+        finetune_dataset is not None and finetune_regions is not None
+    ):  # otherwise EuroCrops is solely used for pretraining
+
+        finetune_dataset = _filter_regions(finetune_dataset, finetune_regions)
+
+        _create_finetune_set(
+            finetune_dataset,
+            split_dir.joinpath("finetune"),
+            split,
+            pretrain_list,
+            num_samples,
+            test_size,
+            seed,
+        )
+    pretrain_list.sort()
+
+    # save pretraining split
+    train, val = train_test_split(pretrain_list, test_size=test_size, random_state=seed)
+
+    pretrain_dict = _save_to_dict(train, val)
+
+    _save_to_json(split_dir.joinpath("pretrain", f"{split}_split.json"), pretrain_dict)
+
+    _save_counts_to_csv(pretrain_list, split_dir.joinpath("counts", "pretrain"), split)
+
+    meta_dict: dict = {
+        "train": _create_final_dict(train, pretrain_regions),
+        "val": _create_final_dict(val, pretrain_regions),
+    }
+
+    _save_to_json(split_dir.joinpath("meta", f"{split}_split.json"), meta_dict)
+
 
 def _pad_missing_dates(
     data_dict: dict[str, np.ndarray],
@@ -326,10 +427,9 @@ def _pad_missing_dates(
 
     return combined_data
 
-
 def pad_seq_to_366(
-    seq: np.ndarray, dates: torch.Tensor, padding_value: float = -999.0
-) -> np.ndarray:
+    seq: torch.Tensor, dates: torch.Tensor, padding_value: float = -1.0
+) -> torch.Tensor:
     """Pad sequence to 366 days.
 
     Args:
@@ -343,17 +443,14 @@ def pad_seq_to_366(
             `padding_value`-mask value.
 
     """
-    rg = range(366)
 
-    df_data = pd.DataFrame(np.array(seq).T.tolist(), columns=dates.tolist())
-    df_dates = pd.DataFrame(columns=rg, dtype=int)
-    df_dates = pd.concat([df_dates, df_data])
+    padded_seq = torch.full((366, seq.size(-1)), padding_value, dtype=seq.dtype)
 
-    df_dates = df_dates.fillna(padding_value)
+    date_indices = dates.to(torch.int32)
 
-    pad_seq: list = [df_dates[col].to_numpy() for col in rg]
+    padded_seq[date_indices] = seq
 
-    return np.array(pad_seq)
+    return padded_seq
 
 
 def _unique_dates(dates: dict[str, torch.Tensor], satellites: list[str]) -> torch.Tensor:
