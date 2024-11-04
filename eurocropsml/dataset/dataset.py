@@ -188,8 +188,8 @@ class EuroCropsDataset(Dataset[LabelledData]):
             )
             meta_data["dates"] = all_dates  # only keep full range of dates
         else:
-            meta_data["dates"] = torch.unique(
-                torch.cat([meta_data["dates"][satellite] for satellite in f])  # type: ignore[index]
+            meta_data["dates"] = _unique_dates(
+                cast(dict[str, torch.Tensor], meta_data["dates"]), list(f.keys())
             )
             np_data = np.array(list(np_data_dict.values()))
             np_data = np.squeeze(np_data)
