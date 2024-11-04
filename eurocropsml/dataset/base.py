@@ -87,7 +87,7 @@ class LabelledData(NamedTuple):
         return self.data_item, self.label
 
 
-def custom_collate_fn(batch: Sequence[LabelledData], padding_value: int = -1) -> LabelledData:
+def custom_collate_fn(batch: Sequence[LabelledData], padding_value: float = -1.0) -> LabelledData:
     """Collate function for batch creation within data loader.
 
     Used to create batches from a dataset's DataItem.
