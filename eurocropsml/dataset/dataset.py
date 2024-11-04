@@ -62,6 +62,12 @@ class EuroCropsDataset(Dataset[LabelledData]):
         self.preprocess_config = preprocess_config
         self.pad_seq_to_366 = pad_seq_to_366
 
+        if self.config.normalize is False:
+            logger.warning(
+                "You have removed deactivate the default normalization. "
+                "This requires custom modification of sequence padding."
+            )
+
         if "S2" in self.config.satellite:
             band_names = cast(list[str], self.config.s2_bands)
 
