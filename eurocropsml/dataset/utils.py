@@ -311,16 +311,20 @@ def _pad_missing_dates(
     s2_bands_len: int = 13,
     padding_value: float = -999.0,
 ) -> np.ndarray:
-    data_s1 = np.full((len(all_dates), s1_bands_len), s1_bands_len * [padding_value])
-    data_s2 = np.full((len(all_dates), s2_bands_len), s2_bands_len * [padding_value])
+    # Combined output array for S1 and S2 bands with padding values
+    combined_data: np.ndarray = np.full(
+        (len(all_dates), s1_bands_len + s2_bands_len), padding_value
+    )
 
+    # Find insertion indices for S1 and S2 bands
     s1_indices = np.searchsorted(all_dates, dates["S1"])
-    data_s1[s1_indices] = data_dict["S1"]
-
     s2_indices = np.searchsorted(all_dates, dates["S2"])
-    data_s2[s2_indices] = data_dict["S2"]
 
-    return np.hstack((data_s1, data_s2))
+    # Insert data directly into the combined array for S1 and S2
+    combined_data[s1_indices, :s1_bands_len] = data_dict["S1"]
+    combined_data[s2_indices, s1_bands_len:] = data_dict["S2"]
+
+    return combined_data
 
 
 def pad_seq_to_366(
