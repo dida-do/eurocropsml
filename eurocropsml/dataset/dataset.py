@@ -159,9 +159,11 @@ class EuroCropsDataset(Dataset[LabelledData]):
         # normalization and scaling to (0,1]
         if self.config.normalize:
             if "S1" in np_data_dict:
+                # range before normalization and scaling: [-50.0,1.0]
                 normalized_s1 = np_data_dict["S1"] * NORMALIZING_FACTOR_S1
                 np_data_dict["S1"] = (normalized_s1 + 1) / 2 + EPSILON
             if "S2" in np_data_dict:
+                # range before normalization and scaling: [0.0, 1.0e-4]
                 normalized_s2 = np_data_dict["S2"] * NORMALIZING_FACTOR_S2
                 np_data_dict["S2"] = normalized_s2 * (1 - EPSILON) + EPSILON
 
