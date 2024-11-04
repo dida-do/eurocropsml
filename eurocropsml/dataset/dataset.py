@@ -16,7 +16,12 @@ from eurocropsml.dataset.config import (
     EuroCropsDatasetPreprocessConfig,
 )
 from eurocropsml.dataset.preprocess import find_clouds
-from eurocropsml.dataset.utils import MMapStore, _pad_missing_dates, pad_seq_to_366
+from eurocropsml.dataset.utils import (
+    MMapStore,
+    _pad_missing_dates,
+    _unique_dates,
+    pad_seq_to_366,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -165,19 +170,14 @@ class EuroCropsDataset(Dataset[LabelledData]):
                 np_data_dict[satellite] = pad_seq_to_366(
                     value_array, meta_data["dates"][satellite]  # type: ignore[index]
                 )
-            meta_data["dates"] = cast(
-                torch.Tensor,
-                torch.unique(
-                    torch.cat(
-                        [meta_data["dates"][satellite] for satellite in f]  # type: ignore[index]
-                    )
-                ),
+            meta_data["dates"] = _unique_dates(
+                cast(dict[str, torch.Tensor], meta_data["dates"]), list(f.keys())
             )
             np_data: np.ndarray = np.hstack(list(np_data_dict.values()))
 
         elif len(f) == 2:  # if both S1 and S2 are used and no padding to 366 day
-            all_dates: torch.Tensor = torch.unique(
-                torch.cat([meta_data["dates"][satellite] for satellite in f])  # type: ignore[index]
+            all_dates: torch.Tensor = _unique_dates(
+                cast(dict[str, torch.Tensor], meta_data["dates"]), list(f.keys())
             )
             np_data = _pad_missing_dates(
                 np_data_dict,
