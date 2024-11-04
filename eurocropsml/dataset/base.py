@@ -91,7 +91,7 @@ class LabelledData(NamedTuple):
 
 
 def custom_collate_fn(
-    batch: Sequence[LabelledData], padding_value: float | int = -999.0
+    batch: Sequence[LabelledData], padding_value_data: float = 0.0, padding_value_no_data: int = -1
 ) -> LabelledData:
     """Collate function for batch creation within data loader.
 
@@ -99,7 +99,8 @@ def custom_collate_fn(
 
     Args:
         batch: List of DataItem from dataset
-        padding_value: Value used for padding.
+        padding_value_data: Value used for padding the data series.
+        padding_value_no_data: Value used for padding tensors except for data.
 
     Returns:
         New DataItem with batched data.
@@ -118,7 +119,13 @@ def custom_collate_fn(
         tensor_name: (
             torch.stack(tensors)
             if tensor_stackability[tensor_name]
-            else pad_sequence(tensors, batch_first=True, padding_value=padding_value)
+            else pad_sequence(
+                tensors,
+                batch_first=True,
+                padding_value=(
+                    padding_value_data if tensor_name == "data" else padding_value_no_data
+                ),
+            )
         )
         for tensor_name, tensors in batch_tensors.items()
     }
@@ -129,7 +136,7 @@ def custom_collate_fn(
     ):
         batched_tensors["label"] = torch.concat(batch_tensors["label"], 0)
 
-    if (pad_mask := batched_tensors["data"].eq(padding_value)).any():
+    if (pad_mask := batched_tensors["data"].eq(padding_value_data)).any():
         if (aug_mask := batched_tensors.get("mask")) is not None:
             # if pad_mask.dim (B, T, C) != aug_mask.dim (B, T, C) | (B, T)
             # => aug_mask.dim is (B, T), thus pad_mask need to be converted
@@ -145,7 +152,7 @@ def custom_collate_fn(
             batched_tensors["mask"] = torch.logical_or(aug_mask.bool(), pad_mask)
             batched_tensors["pad_mask"] = pad_mask
         else:
-            batched_tensors["mask"] = pad_mask
+            batched_tensors["mask"] = pad_mask.all(dim=-1)
     return LabelledData.from_tensor_dict(batched_tensors)
 
 
