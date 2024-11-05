@@ -309,7 +309,7 @@ def _pad_missing_dates(
     all_dates: torch.Tensor,
     s1_bands_len: int = 2,
     s2_bands_len: int = 13,
-    padding_value: float = -999.0,
+    padding_value: float = 0.0,
 ) -> np.ndarray:
     # Combined output array for S1 and S2 bands with padding values
     combined_data: np.ndarray = np.full(
