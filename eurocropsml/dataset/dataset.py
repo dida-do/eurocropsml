@@ -41,6 +41,7 @@ class EuroCropsDataset(Dataset[LabelledData]):
         config: EuroCropsDatasetConfig instance.
         pad_seq_to_366: If sequence should be padded to 366 days
             This is only used for TIML with an encoder.
+        padding_value: Padding value used for padding data sequences.
     """
 
     def __init__(
@@ -51,6 +52,7 @@ class EuroCropsDataset(Dataset[LabelledData]):
         config: EuroCropsDatasetConfig,
         preprocess_config: EuroCropsDatasetPreprocessConfig,
         pad_seq_to_366: bool = False,
+        padding_value: float = 0.0,
     ) -> None:
         super().__init__()
 
@@ -61,6 +63,7 @@ class EuroCropsDataset(Dataset[LabelledData]):
         self.config = config
         self.preprocess_config = preprocess_config
         self.pad_seq_to_366 = pad_seq_to_366
+        self.padding_value = padding_value
 
         if self.config.normalize is False:
             logger.warning(
@@ -176,7 +179,9 @@ class EuroCropsDataset(Dataset[LabelledData]):
         if self.pad_seq_to_366:
             for satellite, value_array in np_data_dict.items():
                 np_data_dict[satellite] = pad_seq_to_366(
-                    value_array, meta_data["dates"][satellite]  # type: ignore[index]
+                    value_array,
+                    meta_data["dates"][satellite],  # type: ignore[index]
+                    self.padding_value,
                 )
             meta_data["dates"] = _unique_dates(
                 cast(dict[str, torch.Tensor], meta_data["dates"]), f.keys()
@@ -193,6 +198,7 @@ class EuroCropsDataset(Dataset[LabelledData]):
                 all_dates,
                 len(self.s1_data_bands),  # type: ignore[arg-type]
                 len(self.s2_data_bands),  # type: ignore[arg-type]
+                self.padding_value,
             )
             meta_data["dates"] = all_dates  # only keep full range of dates
         else:
