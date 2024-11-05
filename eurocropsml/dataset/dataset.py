@@ -71,11 +71,11 @@ class EuroCropsDataset(Dataset[LabelledData]):
         if "S2" in self.config.satellite:
             band_names = cast(list[str], self.config.s2_bands)
 
-            if self.config.remove_bands is not None:
+            if self.config.remove_s2_bands is not None:
                 self.keep_band_idxs: list[int] | None = []
                 self.s2_data_bands: list[str] | None = []
                 for band_idx, band in enumerate(band_names):
-                    if band not in self.config.remove_bands:
+                    if band not in self.config.remove_s2_bands:
                         self.keep_band_idxs.append(band_idx)
                         self.s2_data_bands.append(band)
             else:
