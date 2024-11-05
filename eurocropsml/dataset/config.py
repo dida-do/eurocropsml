@@ -127,14 +127,16 @@ class EuroCropsDatasetConfig(BaseModel):
             num_channels += len(self.s1_bands)
         if "S2" in self.satellite:
             self.s2_bands = cast(list, self.s2_bands)
-            self.remove_s2_bands = cast(list, self.remove_s2_bands)
-            if any(item not in self.s2_bands for item in self.remove_s2_bands):
-                logger.error(
-                    "Some S2 band you want to remove are not valid. "
-                    "Please check that all of them are valid or leave the list empty "
-                    "if you do not want to remove any bands."
-                )
-            else:
-                num_channels += len(self.s2_bands) - len(self.remove_s2_bands)
+            num_channels += len(self.s2_bands)
+            if self.remove_s2_bands is not None:
+                self.remove_s2_bands = cast(list, self.remove_s2_bands)
+                if any(item not in self.s2_bands for item in self.remove_s2_bands):
+                    logger.error(
+                        "Some S2 band you want to remove are not valid. "
+                        "Please check that all of them are valid or leave the list empty "
+                        "if you do not want to remove any bands."
+                    )
+                else:
+                    num_channels -= len(self.remove_s2_bands)
 
         self.total_num_channels = num_channels
