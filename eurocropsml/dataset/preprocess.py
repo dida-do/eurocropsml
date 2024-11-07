@@ -153,7 +153,7 @@ def get_class_ids_to_names(raw_data_dir: Path) -> dict[str, str]:
 
 
 def _find_padding(array: np.ndarray) -> bool:
-    if np.array_equal(array, np.array([0.0] * len(array))):
+    if np.array_equal(array, np.array([-999] * len(array))):
         return False
     return True
 
@@ -218,7 +218,7 @@ def _save_row(
     parcel_id, parcel_data_series = row_data
     timestamps, observations = zip(*parcel_data_series.items())
 
-    if not np.all(observations == np.array([0.0] * num_bands)):
+    if not np.all(observations == np.array([-999] * num_bands)):
         data = np.stack(observations)
         dates = pd.to_datetime(timestamps).to_numpy(dtype="datetime64[D]")
         data, dates = _filter_padding(data, dates)
@@ -290,7 +290,9 @@ def preprocess(
                 # replacing single empty timesteps
 
                 region_data = region_data.apply(
-                    lambda x, b=len(bands): x.map(lambda y: np.array([0.0] * b) if y is None else y)
+                    lambda x, b=len(bands): x.map(
+                        lambda y: np.array([-999] * b) if y is None else y
+                    )
                 )
                 with Pool(processes=num_workers) as p:
                     func = partial(
