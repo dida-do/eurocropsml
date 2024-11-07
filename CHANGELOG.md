@@ -14,6 +14,8 @@ Changes from previous releases are listed below.
 - Add preprocessing of Sentinel-1 _(see #31)_
 - Renaming and moving of Sentinel-2 bands _(see #42)_
 - Adjusting split generation _(see #45)_
+- Fixing padding mask _(see #50)_
+- Fasten up padding to 366 days _(see #54)_
 - Radiometric calibration of Sentinel-1 _(see #47)_
 
 ## 0.3.1 (2024-07-29)

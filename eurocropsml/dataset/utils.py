@@ -472,7 +472,9 @@ def split_dataset_by_region(
     _save_to_json(split_dir.joinpath("meta", f"{split}_split.json"), meta_dict)
 
 
-def pad_seq_to_366(seq: torch.Tensor, dates: torch.Tensor, padding_value: int = -1) -> torch.Tensor:
+def pad_seq_to_366(
+    seq: torch.Tensor, dates: torch.Tensor, padding_value: float = -1.0
+) -> torch.Tensor:
     """Pad sequence to 366 days.
 
     Args:
@@ -486,17 +488,14 @@ def pad_seq_to_366(seq: torch.Tensor, dates: torch.Tensor, padding_value: int = 
             `padding_value`-mask value.
 
     """
-    rg = range(366)
 
-    df_data = pd.DataFrame(seq.T.tolist(), columns=dates.tolist())
-    df_dates = pd.DataFrame(columns=rg, dtype=int)
-    df_dates = pd.concat([df_dates, df_data])
+    padded_seq = torch.full((366, seq.size(-1)), padding_value, dtype=seq.dtype)
 
-    df_dates = df_dates.fillna(padding_value)
+    date_indices = dates.to(torch.int32)
 
-    pad_seq: np.ndarray = np.array([df_dates[col].to_numpy() for col in rg])
+    padded_seq[date_indices] = seq
 
-    return torch.Tensor(pad_seq)
+    return padded_seq
 
 
 class MMapMetadata:
