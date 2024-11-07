@@ -472,30 +472,31 @@ def split_dataset_by_region(
     _save_to_json(split_dir.joinpath("meta", f"{split}_split.json"), meta_dict)
 
 
-def pad_seq_to_366(seq: np.ndarray, dates: torch.Tensor) -> np.ndarray:
+def pad_seq_to_366(seq: torch.Tensor, dates: torch.Tensor, padding_value: int = -1) -> torch.Tensor:
     """Pad sequence to 366 days.
 
     Args:
-        seq: Array containing sequence data to be padded.
-        dates: Array of matching size specifying the dates
+        seq: Tensor containing sequence data to be padded.
+        dates: Tensor of matching size specifying the dates
             associated to each the sequences data point.
+        padding_value: Value used for padding.
 
     Returns:
-        A padded sequence data array with all missing dates
-        filled in by a `-1` mask value.
+        A padded sequence data array with all missing dates filled in by a
+            `padding_value`-mask value.
 
     """
     rg = range(366)
 
-    df_data = pd.DataFrame(np.array(seq).T.tolist(), columns=dates.tolist())
+    df_data = pd.DataFrame(seq.T.tolist(), columns=dates.tolist())
     df_dates = pd.DataFrame(columns=rg, dtype=int)
     df_dates = pd.concat([df_dates, df_data])
 
-    df_dates = df_dates.fillna(-1)
+    df_dates = df_dates.fillna(padding_value)
 
-    pad_seq: list = [df_dates[col].to_numpy() for col in rg]
+    pad_seq: np.ndarray = np.array([df_dates[col].to_numpy() for col in rg])
 
-    return np.array(pad_seq)
+    return torch.Tensor(pad_seq)
 
 
 class MMapMetadata:
