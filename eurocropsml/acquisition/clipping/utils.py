@@ -2,7 +2,7 @@
 
 import logging
 from pathlib import Path
-from typing import Literal
+from typing import Literal, cast
 
 import geopandas as gpd
 import numpy as np
@@ -83,7 +83,7 @@ def mask_polygon_raster(
         Dataframe with clipped values.
     """
 
-    parcels_dict: dict[int, list[int | None]] = {
+    parcels_dict: dict[int, list[float | None]] = {
         parcel_id: [] for parcel_id in polygon_df[parcel_id_name].unique()
     }
 
@@ -137,7 +137,7 @@ def mask_polygon_raster(
 def _process_row(
     row: pd.Series,
     raster_tile: DatasetReader,
-    parcels_dict: dict[int, list[int | None]],
+    parcels_dict: dict[int, list[float | None]],
     parcel_id_name: str,
     sigma_nought: xr.DataArray | None = None,
     noise_vector: xr.DataArray | None = None,
@@ -153,7 +153,7 @@ def _process_row(
         not_zero = masked_img[:, :, 0] != 0
 
         if not not_zero.any():
-            patch_median: int = 0
+            patch_median: float | None = None
         else:
             # Apply calibration to raw digital numbers (DN) in order to receive backscatter in dB
             if sigma_nought is not None:
@@ -192,7 +192,7 @@ def _process_row(
                 patch_median = np.median(masked_img[not_zero]).astype(np.int16)
 
                 # Ensure the median value is non-negative
-                patch_median = max(0, patch_median)
+                patch_median = max(0, cast(float, patch_median))
 
         parcels_dict[parcel_id].append(patch_median)
     except ValueError:
