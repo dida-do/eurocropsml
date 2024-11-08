@@ -225,7 +225,7 @@ def _save_row(
 
         if preprocess_config.satellite == "S2" and preprocess_config.filter_clouds:
             data, dates = _filter_clouds(data, dates, preprocess_config)
-        if not np.all(data == np.array([0.0] * num_bands)):
+        if not np.all(data == np.array([-999] * num_bands)):
             label = labels[parcel_id]
             center = points[parcel_id]
             file_dir = preprocess_dir / f"{region}_{str(parcel_id)}_{str(label)}.npz"
