@@ -152,11 +152,11 @@ def _process_row(
         # third dimension has index 0 since we only have one band
         not_zero = masked_img[:, :, 0] != 0
 
-        if not not_zero.any():
-            patch_median: float | None = None
-        else:
-            # Apply calibration to raw digital numbers (DN) in order to receive backscatter in dB
-            if sigma_nought is not None:
+        # Apply calibration to raw digital numbers (DN) in order to receive backscatter in dB
+        if sigma_nought is not None:
+            if not not_zero.any():
+                patch_median: float | None = None
+            else:
                 band_data = masked_img[:, :, 0]
 
                 # Get the position (row and pixel_col) of the geometry in the original raster
@@ -186,6 +186,9 @@ def _process_row(
                 )
                 patch_median = np.median(backscatter_db[not_zero])
 
+        else:
+            if not not_zero.any():
+                patch_median = 0.0
             else:
                 # If no calibration data is available (Sentinel-2), use masked values directly
                 # Calculate the median of each patch where the clipped values are not zero
