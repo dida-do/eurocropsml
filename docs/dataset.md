@@ -36,7 +36,7 @@ However, since we are only relying on the median pixel value and not on individu
 Furthermore, the $\texttt{EuroCrops}$ sometimes contains duplicate parcel geometries. If this is the case, only one entry is kept.
 :::
 
-![Data Acquisition Pipeline.](_static/acquisition-pipeline.png)
+![Data Acquisition Pipeline.](_static/acquisition-pipeline-s1s2.png)
 
 
 We provide all scripts that are necessary to perform the above steps. 
