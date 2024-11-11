@@ -109,12 +109,12 @@ def _get_lut_value(
 ) -> xr.DataArray:
     lut_mean = available_lut.mean()
     if np.allclose(lut_mean, available_lut, **kwargs):
-        lut: xr.DataArray = lut_mean.astype(np.float32)
+        lut: xr.DataArray = lut_mean.astype(np.float64)
     else:
         lut = available_lut.interp(
             line=digital_number.line,
             pixel=digital_number.pixel,
-        ).astype(np.float32)
+        ).astype(np.float64)
         if digital_number.chunks is not None:
             lut = lut.chunk(digital_number.chunksizes)
 
