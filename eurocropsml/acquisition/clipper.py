@@ -123,7 +123,7 @@ def _get_arguments(
 
         # productIdentifier has the following format:
         # eodata/Sentinel-1/SAR/GRD/2021/01/08/S1A_IW_GRDH_1SDV_20210108T051818_20210108T051843_036042_04393F_C9C1.SAFE
-        # We extract the month (2 digits) following by year (4 digits)
+        # We extract the 4 digit year (e.g., 2021) and the two digit month (e.g., 01)
         band_images = band_images[
             (
                 band_images["productIdentifier"].str.extract(r"/\d{4}/(\d{2})/")[0].astype(int)

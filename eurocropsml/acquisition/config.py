@@ -42,7 +42,7 @@ class CollectorConfig(BaseModel):
         processing_level: Sentinel-1 processing level.
         operational_mode: Sentinel-1 operational mode.
         max_cloud_cover: Maximum cloud cover (only used for Sentinel-2).
-        bands: Radar (Sentinel-1) or pectral (Sentinel-2) bands to consider.
+        bands: Radar (Sentinel-1) or spectral (Sentinel-2) bands to consider.
         max_requested_products: Maximum requested products during API call.
             It is only possible to process up to 2000 products at once.
             If there are more than max_requested_products available, the products
