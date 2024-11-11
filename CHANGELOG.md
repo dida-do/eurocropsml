@@ -16,6 +16,7 @@ Changes from previous releases are listed below.
 - Adjusting split generation _(see #45)_
 - Fixing padding mask _(see #50)_
 - Fasten up padding to 366 days _(see #54)_
+- Radiometric calibration of Sentinel-1 _(see #47)_
 
 ## 0.3.1 (2024-07-29)
 - Remove country_code variable in collector downloader _(see #33)_
