@@ -44,8 +44,8 @@ def add_nuts_regions(
         "statistical-units/territorial-units-statistics"
     )
 
-    label_dir = raw_data_dir.joinpath("labels")
-    geom_dir = raw_data_dir.joinpath("geometries")
+    label_dir = final_output_dir.joinpath("labels")
+    geom_dir = final_output_dir.joinpath("geometries")
 
     if not (
         label_dir.joinpath(f"{config.country}_labels.parquet").exists()
