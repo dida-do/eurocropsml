@@ -86,7 +86,7 @@ def build_dataset(
     logger.info("Finished step 3: Clipping parcels from raster tiles.")
     region.add_nuts_regions(
         ct_config,
-        output_dir,
+        config.raw_data_dir,
         satellite_output_dir,
         shape_dir_clean,
         nuts_dir,
