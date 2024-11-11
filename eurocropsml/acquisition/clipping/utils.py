@@ -184,7 +184,7 @@ def _process_row(
                 backscatter_db: np.ndarray = _calibrate_digital_number_in_db(
                     cropped_data, sigma_nought, noise_vector
                 )
-                patch_median = np.median(backscatter_db[not_zero])
+                patch_median = np.median(backscatter_db[not_zero]).astype(np.float32)
 
         else:
             if not not_zero.any():
@@ -192,10 +192,10 @@ def _process_row(
             else:
                 # If no calibration data is available (Sentinel-2), use masked values directly
                 # Calculate the median of each patch where the clipped values are not zero
-                patch_median = np.median(masked_img[not_zero]).astype(np.int16)
+                patch_median = np.median(masked_img[not_zero]).astype(np.float32)
 
                 # Ensure the median value is non-negative
-                patch_median = max(0, cast(float, patch_median))
+                patch_median = max(0.0, cast(float, patch_median))
 
         parcels_dict[parcel_id].append(patch_median)
     except ValueError:
