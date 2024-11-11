@@ -65,7 +65,7 @@ class CollectorConfig(BaseModel):
     processing_level: Literal[None, "LEVEL1", "LEVEL2"] = None
     operational_mode: Literal[None, "IW", "EW", "SM", "WF"] = None
     max_cloud_cover: int = 100
-    bands: list[str] = S1_BANDS
+    bands: list[str] = S2_BANDS
     max_requested_products: int = 1000
     country_code: str | None = None
     ec_filename: str | None = None
