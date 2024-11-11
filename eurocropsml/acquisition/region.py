@@ -148,14 +148,11 @@ def add_nuts_regions(
         geometry_df = shapefile[["parcel_id", "geometry"]]
         joined_final = joined_final.drop(columns="geometry", axis=1)
 
-        # Replace list of nan with None and convert floats to integers
+        # Replace list of nan with None
         joined_final[dates_strings] = joined_final[dates_strings].apply(
             lambda col: col.apply(
                 lambda x: (None if x is not None and all(pd.isna(val) for val in x) else x)
             )
-        )
-        joined_final[dates_strings] = joined_final[dates_strings].apply(
-            lambda col: col.apply(lambda x: [int(val) for val in x] if x is not None else x)
         )
 
         label_dir.mkdir(exist_ok=True, parents=True)
