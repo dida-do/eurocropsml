@@ -96,10 +96,10 @@ def select_version(versions: list[dict]) -> tuple[dict, list[str]]:
         if selected_id >= 8:
 
             logger.warning(
-                "Please be aware that for Zenodo version 8 or older and this package version "
+                "Please be aware that Zenodo version 8 or older and this package version "
                 "(eurocropsml>=0.4.0) are not compatible anymore in terms of "
                 "eurocropsml.preprocess.preprocess. The already peprocessed version of Sentinel-2 "
-                "can still be used, but re-running the preprocessng will will not filter out all "
+                "can still be used, but re-running the preprocessing will will not filter out all "
                 "outliers from the raw data."
                 "\n"
                 "Furthermore, the folder structure of Zenodo version 8 or older is not supported "
