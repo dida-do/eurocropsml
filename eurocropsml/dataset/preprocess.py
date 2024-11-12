@@ -251,6 +251,12 @@ def preprocess(
                         lambda y: np.array([-999] * b) if y is None else y
                     )
                 )
+                if satellite == "S2":
+                    region_data = region_data.apply(
+                        lambda x, b=len(bands): x.map(
+                            lambda y: np.array([-999] * b) if y == [0] * b else y
+                        )
+                    )
                 with Pool(processes=num_workers) as p:
                     func = partial(
                         _save_row,
