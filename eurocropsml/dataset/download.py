@@ -47,23 +47,19 @@ def _download_file(
         logger.info(f"{local_path} will not be downloaded again.")
 
 
-def get_user_choice() -> list[str]:
+def get_user_choice(files_to_download: list[str]) -> list[str]:
     """Get user choice for which files to download."""
-    choice = input(
-        "Would you like to download Sentinel-1 and/or Sentinel-2 data? Please enter "
-        " 'S1', 'S2', or 'both': "
-    )
-    if choice not in {"S1", "S2", "both"}:
+    print("Choose one or more of the following options by typing their numbers (e.g., 1 3):")
+    for i, file in enumerate(files_to_download, 1):
+        print(f"{i}. {file}")
+    choice = input("Enter your choices separated by spaces: ")
+    selected_indices = [int(choice) - 1 for choice in choice.split()]
+    if bool(set(selected_indices) - set(range(0, len(files_to_download)))):
         logger.error("Invalid input. Please enter 'S1', 'S2', or 'both'.")
         sys.exit(1)
-    elif choice == "both":
-        choice_list = ["S1", "S2"]
-        logger.info("Downloading both S1 and S2 data.")
-    else:
-        logger.info(f"Downloading only {choice} data.")
-        choice_list = [choice]
+    selected_options = [files_to_download[i] for i in selected_indices]
 
-    return choice_list
+    return selected_options
 
 
 def select_version(versions: list[dict]) -> tuple[dict, list[str]]:
@@ -96,9 +92,15 @@ def select_version(versions: list[dict]) -> tuple[dict, list[str]]:
         if selected_id >= 8:
 
             logger.warning(
-                "Please be aware that the folder structure of Zenodo version 8 or older is not "
-                "supported in this package version (eurocropsml>=0.4.0) and you need to manually "
-                "move the files after downloading as follows\n"
+                "Please be aware that Zenodo version 8 or older and this package version "
+                "(eurocropsml>=0.4.0) are not compatible anymore in terms of "
+                "eurocropsml.preprocess.preprocess. The already peprocessed version of Sentinel-2 "
+                "can still be used, but re-running the preprocessing will will not filter out all "
+                "outliers from the raw data."
+                "\n"
+                "Furthermore, the folder structure of Zenodo version 8 or older is not supported "
+                "in this package version (eurocropsml>=0.4.0) and you need to manually move the "
+                "files after downloading as follows\n"
                 "\n"
                 "path/to/data_dir\n"
                 "    ├── preprocess/\n"
@@ -154,19 +156,13 @@ def download_dataset(preprocess_config: EuroCropsDatasetPreprocessConfig) -> Non
         if versions:
             selected_version, files_to_download = select_version(versions)
 
-            # older version do only have S2 data
-            # if S1 data is available, let user decide
-            if "S1.zip" in files_to_download:
-                user_choice = get_user_choice()
-                if "S1" not in user_choice:
-                    files_to_download.remove("S1.zip")
-                if "S2" not in user_choice:
-                    files_to_download.remove("S2.zip")
+            # let user decide what data to download
+            selected_files = get_user_choice(files_to_download)
 
             for file_entry in selected_version["files"]:
                 file_url: str = file_entry["links"]["self"]
                 zip_file: str = file_entry["key"]
-                if zip_file in files_to_download:
+                if zip_file in selected_files:
                     local_path: Path = data_dir.joinpath(zip_file)
                     _download_file(zip_file, file_url, local_path, file_entry.get("checksum", ""))
                     logger.info(f"Unzipping {local_path}...")
