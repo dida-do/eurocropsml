@@ -1,5 +1,6 @@
 """Clipping parcel polygons from raster files."""
 
+import calendar
 import concurrent.futures
 import gc
 import logging
@@ -12,11 +13,10 @@ from typing import Literal, cast
 import geopandas as gpd
 import pandas as pd
 import pyogrio
-import typer
 from tqdm import tqdm
 
+from eurocropsml.acquisition.clipping.utils import _merge_clipper, mask_polygon_raster
 from eurocropsml.acquisition.config import CollectorConfig
-from eurocropsml.acquisition.utils import _merge_clipper, mask_polygon_raster
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +26,9 @@ def _merge_dataframe(
     clipped_output_dir: Path,
     output_dir: Path,
     parcel_id_name: str,
+    month: str,
     new_data: bool,
+    rebuild: bool,
 ) -> None:
     """Merging all clipped parcels into one final DataFrame.
 
@@ -34,37 +36,37 @@ def _merge_dataframe(
     clipped_output_dir: Directory where the individual clipped parcels are stored.
     output_dir: Directory to save the final output.
     parcel_id_name: Country-specific parcel ID name.
+    month: Month that is being processed.
     new_data: Whether new data has been processed.
+    rebuild: Whether to re-build the clipped parquet files for each month.
+        This will overwrite the existing ones.
 
     """
+    process: bool = True
     if not output_dir.joinpath("clipped.parquet").exists():
-        _merge_clipper(
-            full_df,
-            clipped_output_dir,
-            output_dir,
-            parcel_id_name,
-        )
-    else:
-        if new_data:
-            reprocess = typer.confirm(
-                f"{output_dir.joinpath('clipped.parquet')} already exists but new data has been "
-                "processed. Do you want to reprocess the file?"
+        process = True
+    elif not new_data:
+        if not rebuild:
+            process = False
+            logger.info(
+                f"{output_dir.joinpath('clipped.parquet')} already exists, no new data has "
+                "ben processed and rebuild set to False. Nothing to be done."
             )
         else:
-            reprocess = typer.confirm(
-                f"{output_dir.joinpath('clipped.parquet')} already exists and no new data has been"
-                " processed. Do you want to reprocess the file?"
-            )
-
-        if reprocess:
-            logger.info("File is being deleted and reprocessed.")
             output_dir.joinpath("clipped.parquet").unlink()
-            _merge_clipper(
-                full_df,
-                clipped_output_dir,
-                output_dir,
-                parcel_id_name,
+            logger.info(
+                f"{output_dir.joinpath('clipped.parquet')} already exists, no new data has "
+                "been processed but rebuild set to True. Redoing merge..."
             )
+    elif new_data:
+        output_dir.joinpath("clipped.parquet").unlink()
+        logger.info(
+            f"{output_dir.joinpath('clipped.parquet')} already exists and new data has "
+            "processed. Redoing merge..."
+        )
+
+    if process:
+        _merge_clipper(full_df, clipped_output_dir, output_dir, parcel_id_name, month)
 
 
 def _get_arguments(
@@ -83,8 +85,8 @@ def _get_arguments(
         shape_dir: Directory where EuroCrops shapefile is stored.
         output_dir: Directory to get the list of .SAFE files from and to store the
             argument list.
-        local_dir: Local directory where the .SAFE files were copied to.
         month: Month that is being processed.
+        local_dir: Local directory where the .SAFE files were copied to.
 
     Returns:
         - List of tuples of arguments for clipping raster tiles.
@@ -96,7 +98,7 @@ def _get_arguments(
     parcel_id_name: str = cast(str, config.parcel_id_name)
     bands: list[str] = cast(list[str], config.bands)
 
-    clipping_path = output_dir.joinpath("clipper").joinpath(f"{month}")
+    clipping_path = output_dir.joinpath("clipper", f"{month}")
     clipping_path.mkdir(exist_ok=True, parents=True)
 
     if clipping_path.joinpath("args.pkg").exists():
@@ -121,14 +123,9 @@ def _get_arguments(
         band_image_path: Path = output_dir.joinpath("copier", "band_images.pkg")
         band_images: pd.DataFrame = pd.read_pickle(band_image_path)
 
-        # productIdentifier has the following format:
-        # eodata/Sentinel-1/SAR/GRD/2021/01/08/S1A_IW_GRDH_1SDV_20210108T051818_20210108T051843_036042_04393F_C9C1.SAFE
-        # We extract the 4 digit year (e.g., 2021) and the two digit month (e.g., 01)
+        # filter out month
         band_images = band_images[
-            (
-                band_images["productIdentifier"].str.extract(r"/\d{4}/(\d{2})/")[0].astype(int)
-                == month
-            )
+            band_images["productIdentifier"].isin(full_images["productIdentifier"])
         ]
 
         max_workers = min(mp_orig.cpu_count(), max(1, min(len(band_images), workers)))
@@ -178,8 +175,10 @@ def _filter_args(
 
 def _process_raster_parallel(
     satellite: Literal["S1", "S2"],
+    denoise: bool,
     polygon_df: pd.DataFrame,
     parcel_id_name: str,
+    bands: list[str],
     filtered_images: gpd.GeoDataFrame,
     band_tiles: list[Path],
 ) -> pd.DataFrame:
@@ -187,9 +186,12 @@ def _process_raster_parallel(
 
     Args:
         satellite: S1 for Sentinel-1 and S2 for Sentinel-2.
+        denoise: Whether to perform thermal noise removal for Sentinel-1.
+            For Sentinel-2 this argument has no effect.
         polygon_df: Dataframe containing all parcel ids. Will be merged with the clipped values.
         parcel_id_name: The country's parcel ID name (varies from country to country).
         filtered_images: Dataframe containing all parcel ids that lie in this raster tile.
+        bands: (Sub-)set of Sentinel-1 (radar) or Sentinel-2 (spectral) bands.
         band_tiles: Paths to the raster's band tiles.
 
     Returns:
@@ -207,7 +209,7 @@ def _process_raster_parallel(
         filtered_geom = polygon_df[polygon_df[parcel_id_name].isin(parcel_ids)]
 
         result = mask_polygon_raster(
-            satellite, band_tiles, filtered_geom, parcel_id_name, product_date
+            satellite, band_tiles, bands, filtered_geom, parcel_id_name, product_date, denoise
         )
 
         if result is not None:
@@ -229,6 +231,7 @@ def clipping(
     chunk_size: int,
     multiplier: int,
     local_dir: Path | None = None,
+    rebuild: bool = False,
 ) -> None:
     """Main function to conduct polygon clipping.
 
@@ -240,9 +243,15 @@ def clipping(
         chunk_size: Chunk size used for multiprocessed raster clipping.
         multiplier: Intermediate results will be saved every multiplier steps.
         local_dir: Local directory where the .SAFE files were copied to.
+        rebuild: Whether to re-build the clipped parquet files for each month.
+            This will overwrite the existing ones.
     """
+    for month in tqdm(
+        range(config.months[0], config.months[1] + 1), desc="Clipping rasters on monthly basis"
+    ):
 
-    for month in range(config.months[0], config.months[1] + 1):
+        month_name = calendar.month_name[month]
+        logger.info(f"Starting process for {month_name.upper()}...")
 
         args_month, polygon_df_month, clipping_path = _get_arguments(
             config=config,
@@ -253,13 +262,13 @@ def clipping(
             local_dir=local_dir,
         )
 
+        max_workers = min(mp_orig.cpu_count(), max(1, min(len(args_month), workers)))
+
         clipped_dir = clipping_path.joinpath("clipped")
         clipped_dir.mkdir(exist_ok=True, parents=True)
 
-        max_workers = min(mp_orig.cpu_count(), max(1, min(len(args_month), workers)))
-
         # Process data in smaller chunks
-        file_counts = len(list(clipped_dir.rglob("Final_*.pkg")))
+        file_counts = len(list(clipping_path.rglob("Final_*.pkg")))
 
         processed = file_counts * multiplier * chunk_size
         save_files = multiplier * chunk_size
@@ -268,12 +277,13 @@ def clipping(
         polygon_df_month[config.parcel_id_name] = polygon_df_month[config.parcel_id_name].astype(
             int
         )
-
         func = partial(
             _process_raster_parallel,
             config.satellite,
+            config.denoise,
             polygon_df_month,
             cast(str, config.parcel_id_name),
+            config.bands,
         )
 
         polygon_df_month = polygon_df_month.drop(["geometry"], axis=1)
@@ -283,8 +293,9 @@ def clipping(
         new_data: bool = False
         if processed < len(args_month):
             new_data = True
-            logger.info(f"Starting parallel raster clipping for {month}...")
-            te = tqdm(total=len(args_month) - processed, desc=f"Clipping raster tiles for {month}.")
+            te = tqdm(
+                total=len(args_month) - processed, desc=f"Clipping raster tiles for {month_name}..."
+            )
             while processed < len(args_month):
                 chunk_args: list[tuple[pd.DataFrame, list]] = args_month[
                     processed : processed + chunk_size
@@ -304,11 +315,6 @@ def clipping(
                 # Process and save results
                 for result in results:
                     if result is not None and not result.empty:
-                        result.columns = [pd.to_datetime(result.columns[0]).strftime("%Y-%m-%d")]
-                        df_final_month.columns = [
-                            pd.to_datetime(col).strftime("%Y-%m-%d")
-                            for col in df_final_month.columns
-                        ]
                         df_final_month = df_final_month.fillna(result)
                     te.update(n=1)
 
@@ -328,7 +334,24 @@ def clipping(
         _merge_dataframe(
             polygon_df_month,
             clipped_dir,
-            clipped_dir,
+            clipping_path,
             cast(str, config.parcel_id_name),
+            month_name,
             new_data,
+            rebuild,
         )
+
+
+if __name__ == "__main__":
+    config = CollectorConfig(country="Latvia", year="2021", satellite="S1")
+    config.post_init(vector_data_dir=Path("/processeurocrops/data/meta_data/vector_data"))
+    shape_dir_clean = Path("/processeurocrops/data/meta_data/vector_data/LV_2021_clean")
+    clipping(
+        config=config,
+        output_dir=Path("/processeurocrops/data/output_data/Latvia/S1"),
+        shape_dir=shape_dir_clean,
+        workers=1,
+        chunk_size=20,
+        multiplier=15,
+        local_dir=Path("/processeurocrops/data/safe_files"),
+    )

@@ -1,11 +1,15 @@
 """Handling configurations for the dataset creation."""
 
+import logging
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal, cast
 
 from pydantic import BaseModel, field_validator
 
+from eurocropsml.acquisition.config import S1_BANDS, S2_BANDS
 from eurocropsml.settings import Settings
+
+logger = logging.getLogger(__name__)
 
 
 class EuroCropsDatasetPreprocessConfig(BaseModel):
@@ -33,7 +37,7 @@ class EuroCropsDatasetPreprocessConfig(BaseModel):
 
     """
 
-    download_url: str = "https://zenodo.org/api/records/10629610/versions/latest"
+    download_url: str = "https://zenodo.org/api/records/10629610/versions"
     raw_data_dir: Path
     preprocess_dir: Path
     band4_t1: float = 0.07
@@ -65,6 +69,10 @@ class EuroCropsSplit(BaseModel):
 
     meadow_class: int | None = None
 
+    satellite: list[Literal["S1", "S2"]] = ["S2"]
+
+    benchmark: bool = True
+
     pretrain_classes: dict[str, list[int]]
     finetune_classes: dict[str, list[int]] = {}
 
@@ -90,10 +98,13 @@ class EuroCropsConfig(BaseModel):
 class EuroCropsDatasetConfig(BaseModel):
     """Configuration for the EuroCrops dataset."""
 
-    remove_bands: list[str] | None = None
+    remove_s2_bands: list[str] | None = None
     date_type: Literal["day", "month"] = "day"
     filter_clouds: bool = True
     normalize: bool = True
+    satellite: list[Literal["S1", "S2"]] = ["S2"]
+    s1_bands: list[str] | None = S1_BANDS
+    s2_bands: list[str] | None = S2_BANDS
     # max_samples corresponds to maximum number of samples per class for finetune training data.
     # If ["all"], all samples are used, if e.g. [1, 2, "all"], three use-cases are created where
     # number of samples per class are 1 or 2 respectively, or where all samples are used.
@@ -101,3 +112,31 @@ class EuroCropsDatasetConfig(BaseModel):
     metrics: list[str] = ["Acc"]
 
     split: Literal["class", "regionclass", "region"]
+
+    total_num_channels: int = 0
+
+    def __init__(self, **data: Any):
+        super().__init__(**data)
+        self.post_init()
+
+    def post_init(self) -> None:
+        """Make dynamic config based on initialized params."""
+        num_channels: int = 0
+        if "S1" in self.satellite:
+            self.s1_bands = cast(list, self.s1_bands)
+            num_channels += len(self.s1_bands)
+        if "S2" in self.satellite:
+            self.s2_bands = cast(list, self.s2_bands)
+            num_channels += len(self.s2_bands)
+            if self.remove_s2_bands is not None:
+                self.remove_s2_bands = cast(list, self.remove_s2_bands)
+                if any(item not in self.s2_bands for item in self.remove_s2_bands):
+                    logger.error(
+                        "Some S2 band you want to remove are not valid. "
+                        "Please check that all of them are valid or leave the list empty "
+                        "if you do not want to remove any bands."
+                    )
+                else:
+                    num_channels -= len(self.remove_s2_bands)
+
+        self.total_num_channels = num_channels

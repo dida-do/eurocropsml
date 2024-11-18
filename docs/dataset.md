@@ -18,14 +18,14 @@ In order to obtain the observation data for a given country and year, the follow
 
 2.  Clipping of satellite data and calculation of median pixel values.
 
-    {any}`Polygon clipping<eurocropsml.acquisition.clipper>`: Clip parcels from the `.SAFE` files to obtain time series of corresponding reflectance data. As the dataset is intended to be used for crop type classification, we aggregated the collected pixel values. For every parcel and each available time step observation, we calculated the median pixel value for each of the two polarization bands of the Sentinel-1 or 13 spectral bands of the Sentinel-2 raster tiles, as also done in the [tiny EuroCrops dataset](https://arxiv.org/abs/2106.08151). 
+    {any}`Polygon clipping<eurocropsml.acquisition.clipping.clipper>`: Clip parcels from the `.SAFE` files to obtain time series of corresponding reflectance data. As the dataset is intended to be used for crop type classification, we aggregated the collected pixel values. For every parcel and each available time step observation, we calculated the median pixel value for each of the two polarization bands of the Sentinel-1 or 13 spectral bands of the Sentinel-2 raster tiles, as also done in the [tiny EuroCrops dataset](https://arxiv.org/abs/2106.08151).
 
 3.  Regional mapping: To enhance the precision of geographical data and facilitate the effective partitioning of the dataset, we utilized the [Eurostat GISCO database](https://ec.europa.eu/eurostat/de/web/gisco/geodata/statistical-units/territorial-units-statistics) to link the $\texttt{EuroCrops}$ parcels with their corresponding NUTS region. 
 
     {any}`NUTS regions<eurocropsml.acquisition.region>`: Add NUTS1-NUTS3 regions. The shapefiles for the NUTS-regions have been obtained from [Eurostat](https://ec.europa.eu/eurostat/de/web/gisco/geodata/statistical-units/territorial-units-statistics).
 
 :::{note}
-By default, the Sentinel-1 data is acquired at processing level LEVEL1, utilizing the IW operational mode. Additionally, the observations are selected for the VH and VV polarization.
+By default, the Sentinel-1 data is acquired at processing level LEVEL1, utilizing the IW operational mode. Additionally, the observations are selected for the VH and VV polarization. The pipeline provides the median pixel value of radar backscatter in decibels (dB). For information on how to to remove thermal noise, please see {doc}`Examples<examples>`.
 :::
 
 :::{note}
@@ -36,7 +36,7 @@ However, since we are only relying on the median pixel value and not on individu
 Furthermore, the $\texttt{EuroCrops}$ sometimes contains duplicate parcel geometries. If this is the case, only one entry is kept.
 :::
 
-![Data Acquisition Pipeline.](_static/acquisition-pipeline.png)
+![Data Acquisition Pipeline.](_static/acquisition-pipeline-s1s2.png)
 
 
 We provide all scripts that are necessary to perform the above steps. 

@@ -4,7 +4,8 @@ import logging
 from pathlib import Path
 from typing import cast
 
-from eurocropsml.acquisition import clipper, collector, copier, region
+from eurocropsml.acquisition import collector, copier, region
+from eurocropsml.acquisition.clipping import clipper
 from eurocropsml.acquisition.config import AcquisitionConfig
 from eurocropsml.settings import Settings
 
@@ -80,11 +81,13 @@ def build_dataset(
         config.chunk_size,
         config.multiplier,
         local_dir,
+        config.rebuild,
     )
 
     logger.info("Finished step 3: Clipping parcels from raster tiles.")
     region.add_nuts_regions(
         ct_config,
+        config.raw_data_dir,
         satellite_output_dir,
         shape_dir_clean,
         nuts_dir,

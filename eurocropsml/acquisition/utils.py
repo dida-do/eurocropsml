@@ -4,175 +4,23 @@ import logging
 import sys
 import time
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any
 
 import bs4
-import geopandas as gpd
-import numpy as np
 import pandas as pd
-import rasterio
 import requests
 import typer
-from rasterio.io import DatasetReader
-from rasterio.mask import mask
-from rasterio.plot import reshape_as_image
-from rasterio.transform import Affine
 from selenium import webdriver
 from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.ui import WebDriverWait
-from shapely.geometry import MultiPolygon, Polygon
-from tqdm import tqdm
 from webdriver_manager.chrome import ChromeDriverManager
 
 logger = logging.getLogger(__name__)
 
 pd.options.mode.chained_assignment = None
-
-
-def _transform_polygon(
-    polygon: Polygon | MultiPolygon, inv_transform: Affine
-) -> Polygon | MultiPolygon:
-    if isinstance(polygon, MultiPolygon):
-        # transform MultiPolygons Polygon by Polygon
-        transformed_polygons = []
-        for single_polygon in polygon.geoms:
-            # transformation of exterior coordinates
-            transformed_exterior = [
-                inv_transform * (x, y) for x, y in single_polygon.exterior.coords
-            ]
-            # transformation of interior coordinates
-            transformed_interiors = [
-                [inv_transform * (x, y) for x, y in interior.coords]
-                for interior in single_polygon.interiors
-            ]
-
-            transformed_polygons.append(Polygon(transformed_exterior, transformed_interiors))
-
-        return MultiPolygon(transformed_polygons)
-
-    else:
-        # transform Polygons
-        transformed_exterior = [inv_transform * (x, y) for x, y in polygon.exterior.coords]
-        transformed_interiors = [
-            [inv_transform * (x, y) for x, y in interior.coords] for interior in polygon.interiors
-        ]
-
-        return Polygon(transformed_exterior, transformed_interiors)
-
-
-def mask_polygon_raster(
-    satellite: Literal["S1", "S2"],
-    tilepaths: list[Path],
-    polygon_df: pd.DataFrame,
-    parcel_id_name: str,
-    product_date: str,
-) -> pd.DataFrame:
-    """Clipping parcels from raster files (per band) and calculating median pixel value per band.
-
-    Args:
-        satellite: S1 for Sentinel-1 and S2 for Sentinel-2.
-        tilepaths: Paths to the raster's band tiles.
-        polygon_df: GeoDataFrame of all parcels to be clipped.
-        parcel_id_name: The country's parcel ID name (varies from country to country).
-        product_date: Date on which the raster tile was obtained.
-
-    Returns:
-        Dataframe with clipped values.
-    """
-
-    parcels_dict: dict[int, list[int | None]] = {
-        parcel_id: [] for parcel_id in polygon_df[parcel_id_name].unique()
-    }
-
-    # removing any self-intersections or inconsistencies in geometries
-    polygon_df["geometry"] = polygon_df["geometry"].buffer(0)
-    polygon_df = polygon_df.reset_index(drop=True)
-
-    for b, band_path in enumerate(tilepaths):
-        with rasterio.open(band_path, "r") as raster_tile:
-            if b == 0:
-                if satellite == "S2" and polygon_df.crs.srs != raster_tile.crs.data["init"]:
-                    # transforming shapefile into CRS of raster tile
-                    polygon_df = polygon_df.to_crs(raster_tile.crs.data["init"])
-                elif satellite == "S1":
-
-                    gcps, tile_crs = raster_tile.get_gcps()
-
-                    if polygon_df.crs.srs != tile_crs.data["init"]:
-                        polygon_df = polygon_df.to_crs(tile_crs.data["init"])
-
-                    transform = rasterio.transform.from_gcps(gcps)
-
-                    inv_transform = ~transform  # Invert the affine transformation matrix
-
-                    polygon_df["geometry"] = polygon_df["geometry"].apply(
-                        lambda poly, i_trans=inv_transform: _transform_polygon(poly, i_trans)
-                    )
-            # clipping geometry out of raster tile and saving in dictionary
-            polygon_df.apply(
-                lambda row: _process_row(row, raster_tile, parcels_dict, parcel_id_name),
-                axis=1,
-            )
-
-    parcels_df = pd.DataFrame(list(parcels_dict.items()), columns=[parcel_id_name, product_date])
-
-    return parcels_df
-
-
-def _process_row(
-    row: pd.Series,
-    raster_tile: DatasetReader,
-    parcels_dict: dict[int, list[int | None]],
-    parcel_id_name: str,
-) -> None:
-    """Masking geometry from raster tiles and calculating median pixel value."""
-    parcel_id: int = row[parcel_id_name]
-    geom = row["geometry"]
-    try:
-        masked_img, _ = mask(raster_tile, [geom], crop=True, nodata=0)
-        masked_img = reshape_as_image(masked_img)
-
-        # Calculate the median of each patch where the clipped values are not zero
-        # third dimension has index 0 since we only have one band
-        not_zero = masked_img[:, :, 0] != 0
-        if not not_zero.any():
-            patch_median: int = 0
-        else:
-            patch_median = np.median(masked_img[:, :, 0][not_zero]).astype(np.int16)
-            patch_median = max(0, patch_median)
-        parcels_dict[parcel_id].append(patch_median)
-    except ValueError:
-        # in case geometry is not inside raster tile
-        parcels_dict[parcel_id].append(None)
-
-
-def _merge_clipper(
-    full_df: gpd.GeoDataFrame,
-    clipped_output_dir: Path,
-    output_dir: Path,
-    parcel_id_name: str,
-) -> None:
-
-    logger.info("Starting merging of DataFrames...")
-    df_list: list = [file for file in clipped_output_dir.iterdir() if "Final_" in file.name]
-
-    full_df.columns = [full_df.columns[0]] + [
-        pd.to_datetime(col).strftime("%Y-%m-%d") for col in full_df.columns[1:]
-    ]
-
-    # setting parcel_id column to index
-    full_df.set_index(parcel_id_name, inplace=True)
-    for file in tqdm(df_list):
-        full_df = full_df.fillna(pd.read_pickle(file))
-
-    # reset index column
-    full_df = full_df.reset_index()
-
-    full_df.to_parquet(output_dir.joinpath("clipped.parquet"))
-    logger.info("Saved final clipped file.")
 
 
 def _get_options_from_field(url: str, field_id: str) -> bs4.element.ResultSet:
