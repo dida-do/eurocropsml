@@ -117,27 +117,27 @@ def add_nuts_regions(
         shapefile[parcel_id_name] = shapefile[parcel_id_name].astype(int)
         cols_shapefile = cols_shapefile + [f"nuts{nuts_level+1}"]
 
-        label_dir = raw_data_dir.joinpath("labels")
-        geom_dir = raw_data_dir.joinpath("geometries")
+    label_dir = raw_data_dir.joinpath("labels")
+    geom_dir = raw_data_dir.joinpath("geometries")
 
-        label_dir.mkdir(exist_ok=True, parents=True)
-        geom_dir.mkdir(exist_ok=True, parents=True)
+    label_dir.mkdir(exist_ok=True, parents=True)
+    geom_dir.mkdir(exist_ok=True, parents=True)
 
-        classes_df = shapefile[[f"{parcel_id_name}", "EC_hcat_c", "EC_hcat_n"]]
-        geometry_df = shapefile[[f"{parcel_id_name}", "geometry"]]
+    classes_df = shapefile[[f"{parcel_id_name}", "EC_hcat_c", "EC_hcat_n"]]
+    geometry_df = shapefile[[f"{parcel_id_name}", "geometry"]]
 
-        classes_df = classes_df.rename(columns={f"{parcel_id_name}": "parcel_id"})
-        geometry_df = geometry_df.rename(columns={f"{parcel_id_name}": "parcel_id"})
+    classes_df = classes_df.rename(columns={f"{parcel_id_name}": "parcel_id"})
+    geometry_df = geometry_df.rename(columns={f"{parcel_id_name}": "parcel_id"})
 
-        classes_df.to_parquet(
-            label_dir.joinpath(f"{config.ec_filename}_{config.year}_labels.parquet"),
-            index=False,
-        )
+    classes_df.to_parquet(
+        label_dir.joinpath(f"{config.ec_filename}_{config.year}_labels.parquet"),
+        index=False,
+    )
 
-        geometry_df.to_file(
-            geom_dir.joinpath(f"{config.ec_filename}_{config.year}.geojson"),
-            driver="GeoJSON",
-        )
+    geometry_df.to_file(
+        geom_dir.joinpath(f"{config.ec_filename}_{config.year}.geojson"),
+        driver="GeoJSON",
+    )
 
     for month in tqdm(
         range(config.months[0], config.months[1] + 1), desc="Adding NUTS regions to data..."
