@@ -268,7 +268,7 @@ def clipping(
         clipped_dir.mkdir(exist_ok=True, parents=True)
 
         # Process data in smaller chunks
-        file_counts = len(list(clipping_path.rglob("Final_*.pkg")))
+        file_counts = len(list(clipped_dir.rglob("Final_*.pkg")))
 
         processed = file_counts * multiplier * chunk_size
         save_files = multiplier * chunk_size
