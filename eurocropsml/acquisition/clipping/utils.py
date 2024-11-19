@@ -101,10 +101,10 @@ def mask_polygon_raster(
                     # transforming shapefile into CRS of raster tile
                     polygon_df = polygon_df.to_crs(raster_tile.crs.data["init"])
                 elif satellite == "S1":
-                    gcps, tile_crs = raster_tile.get_gcps()
+                    gcps, gcps_crs = raster_tile.get_gcps()
 
-                    if polygon_df.crs.srs != tile_crs.data["init"]:
-                        polygon_df = polygon_df.to_crs(tile_crs.data["init"])
+                    if polygon_df.crs.srs != gcps_crs.to_string():
+                        polygon_df = polygon_df.to_crs(gcps_crs.to_string())
 
                     transform = rasterio.transform.from_gcps(gcps)
 
