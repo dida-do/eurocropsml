@@ -340,18 +340,3 @@ def clipping(
             new_data,
             rebuild,
         )
-
-
-if __name__ == "__main__":
-    config = CollectorConfig(country="Latvia", year="2021", satellite="S1")
-    config.post_init(vector_data_dir=Path("/processeurocrops/data/meta_data/vector_data"))
-    shape_dir_clean = Path("/processeurocrops/data/meta_data/vector_data/LV_2021_clean")
-    clipping(
-        config=config,
-        output_dir=Path("/processeurocrops/data/output_data/Latvia/S1"),
-        shape_dir=shape_dir_clean,
-        workers=1,
-        chunk_size=20,
-        multiplier=15,
-        local_dir=Path("/processeurocrops/data/safe_files"),
-    )
