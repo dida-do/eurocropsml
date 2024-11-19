@@ -214,7 +214,7 @@ def _merge_clipper(
     parcel_id_name: str,
     month: str,
 ) -> None:
-    logger.info("Starting merging of DataFrames for ...")
+    logger.info(f"Starting merging of DataFrames for {month}...")
     df_list: list = [file for file in clipped_output_dir.iterdir() if "Final_" in file.name]
 
     full_df.columns = [full_df.columns[0]] + [
