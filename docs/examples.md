@@ -134,7 +134,7 @@ The $\texttt{EuroCropsML}$ dataset allows users to customize options for various
 | `benchmark` | Whether to download the pre-existing benchmark split from Zenodo. For more information see {any}`split_dataset_by_region<eurocropsml.dataset.splits.split_dataset_by_region>` |
 | `meadow_class` | Class that represents the ${\texttt{pasture_meadow_grassland_grass}}$ class. If provided, then this class will be downsampled to the median frequency of all other classes for the pre-training dataset since it represents an imbalanced majority class. |
 | `pretrain_classes` | Classes that make up the pre-train dataset. |
-| `finetune_classes` | Classes that make up the pre-train dataset. |
+| `finetune_classes` | Classes that make up the fine-tune dataset. |
 | `pretrain_regions` | Regions that make up the pre-train dataset. |
 | `finetune_regions` | Regions that make up the fine-tune dataset. |
 
