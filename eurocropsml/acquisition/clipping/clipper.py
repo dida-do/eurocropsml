@@ -198,26 +198,22 @@ def _process_raster_parallel(
         Final DataFrame with clipped parcel reflectance values for this given raster tile.
     """
 
-    try:
-        # all parcel ids that match product Identifier
-        parcel_ids = list(filtered_images[parcel_id_name])
-        parcel_ids = [int(id) for id in parcel_ids]
-        # observation date
-        product_date = str(filtered_images["completionDate"].unique()[0])
+    # all parcel ids that match product Identifier
+    parcel_ids = list(filtered_images[parcel_id_name])
+    parcel_ids = [int(id) for id in parcel_ids]
+    # observation date
+    product_date = str(filtered_images["completionDate"].unique()[0])
 
-        # geometry information of all parcels
-        filtered_geom = polygon_df[polygon_df[parcel_id_name].isin(parcel_ids)]
+    # geometry information of all parcels
+    filtered_geom = polygon_df[polygon_df[parcel_id_name].isin(parcel_ids)]
 
-        result = mask_polygon_raster(
-            satellite, band_tiles, bands, filtered_geom, parcel_id_name, product_date, denoise
-        )
+    result = mask_polygon_raster(
+        satellite, band_tiles, bands, filtered_geom, parcel_id_name, product_date, denoise
+    )
 
-        if result is not None:
-            result.set_index(parcel_id_name, inplace=True)
-        else:
-            result = pd.DataFrame()
-
-    except Exception:
+    if result is not None:
+        result.set_index(parcel_id_name, inplace=True)
+    else:
         result = pd.DataFrame()
 
     return result
@@ -251,7 +247,7 @@ def clipping(
     ):
 
         month_name = calendar.month_name[month]
-        logger.info(f"Starting process for {month_name.upper()}...")
+        logger.info(f"Starting clipping process for {month_name.upper()}...")
 
         args_month, polygon_df_month, clipping_path = _get_arguments(
             config=config,
