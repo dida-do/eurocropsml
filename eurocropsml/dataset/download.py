@@ -26,7 +26,12 @@ def _get_zenodo_record(
     if versions:
         if version_number is not None:
             selected_version = next(
-                (v for v in versions if v["metadata"]["version"] == str(version_number)), None
+                (
+                    v
+                    for v in versions
+                    if v["metadata"]["relations"]["version"][0]["index"] + 1 == version_number
+                ),
+                None,
             )
             if selected_version is not None:
                 return selected_version
