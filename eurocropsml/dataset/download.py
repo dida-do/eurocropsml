@@ -15,6 +15,32 @@ from eurocropsml.utils import _create_md5_hash, _move_files, _unzip_file
 logger = logging.getLogger(__name__)
 
 
+def _get_zenodo_record(
+    base_url: str, version_number: int | None = None
+) -> tuple[dict, list[str]] | dict:
+    response: requests.models.Response = requests.get(base_url)
+    response.raise_for_status()
+    data = response.json()
+    versions: list[dict] = data["hits"]["hits"]
+
+    if versions:
+        if version_number is not None:
+            selected_version = next(
+                (v for v in versions if v["metadata"]["version"] == str(version_number)), None
+            )
+            if selected_version is not None:
+                return selected_version
+            else:
+                logger.error(f"Version {version_number} could not be found on Zenodo.")
+                sys.exit(1)
+        else:
+            selected_version, files_to_download = select_version(versions)
+            return selected_version, files_to_download
+    else:
+        logger.error("No data found on Zenodo. Please download manually.")
+        sys.exit(1)
+
+
 def _download_file(
     file_name: str, file_url: str, local_path: Path, downloadfile_md5_hash: str
 ) -> None:
@@ -146,40 +172,29 @@ def download_dataset(preprocess_config: EuroCropsDatasetPreprocessConfig) -> Non
     data_dir: Path = Path(preprocess_config.raw_data_dir.parent)
     data_dir.mkdir(exist_ok=True, parents=True)
 
-    response: requests.models.Response = requests.get(base_url)
-
     try:
-        response.raise_for_status()
-        data = response.json()
-        versions: list[dict] = data["hits"]["hits"]
+        selected_version, files_to_download = _get_zenodo_record(base_url)
+        # let user decide what data to download
+        selected_files = get_user_choice(files_to_download)
 
-        if versions:
-            selected_version, files_to_download = select_version(versions)
+        for file_entry in selected_version["files"]:
+            file_url: str = file_entry["links"]["self"]
+            zip_file: str = file_entry["key"]
+            if zip_file in selected_files:
+                local_path: Path = data_dir.parent.joinpath(zip_file)
+                _download_file(zip_file, file_url, local_path, file_entry.get("checksum", ""))
+                logger.info(f"Unzipping {local_path}...")
+                _unzip_file(local_path, data_dir)
 
-            # let user decide what data to download
-            selected_files = get_user_choice(files_to_download)
-
-            for file_entry in selected_version["files"]:
-                file_url: str = file_entry["links"]["self"]
-                zip_file: str = file_entry["key"]
-                if zip_file in selected_files:
-                    local_path: Path = data_dir.joinpath(zip_file)
-                    _download_file(zip_file, file_url, local_path, file_entry.get("checksum", ""))
-                    logger.info(f"Unzipping {local_path}...")
-                    _unzip_file(local_path, data_dir)
-
-                    # move S1 and S2 data
-                    if zip_file in ["S1.zip", "S2.zip"]:
-                        unzipped_path: Path = local_path.with_suffix("")
-                        for folder in unzipped_path.iterdir():
-                            rel_target_folder: Path = folder.relative_to(unzipped_path)
-                            _move_files(
-                                folder, data_dir.joinpath(rel_target_folder, zip_file.split(".")[0])
-                            )
-                        shutil.rmtree(unzipped_path)
-        else:
-            logger.error("No data found on Zenodo. Please download manually.")
-            sys.exit(1)
+                # move S1 and S2 data
+                if zip_file in ["S1.zip", "S2.zip"]:
+                    unzipped_path: Path = local_path.with_suffix("")
+                    for folder in unzipped_path.iterdir():
+                        rel_target_folder: Path = folder.relative_to(unzipped_path)
+                        _move_files(
+                            folder, data_dir.joinpath(rel_target_folder, zip_file.split(".")[0])
+                        )
+                    shutil.rmtree(unzipped_path)
 
     except requests.exceptions.HTTPError as err:
         logger.warning(f"There was an error when trying to access the Zenodo record: {err}")
