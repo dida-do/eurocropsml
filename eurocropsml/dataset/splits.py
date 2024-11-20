@@ -125,13 +125,13 @@ def _build_dataset_split(
         benchmark: Flag in order to build the same split as used in the EuroCropsML dataset
             (https://arxiv.org/abs/2407.17458). The split was created when only Sentinel-2 data
             was available. If benchmark is set to True, the split will be loaded from Zenodo
-            version 9. If 'S1' in satellite and the split_name matches one of the Zenodo splits,
-            then for pre-training the remaining Sentinel-1 parcels (which are not in the S2 data)
-            are distributed between train and validation. For fine-tuning, there are only 149
-            parcels in S1 which are not in S2. We therefore ignore them completely, s.t. the
-            fine-tuning split remains exactly the same. If the benchmark is set to False, a new
-            deterministic train-val(-test) split is created based on all parcels present in
-            the data.
+            version 9. If 'S1' in satellite and the EuroCropsSplit.base_name matches one of the
+            Zenodo splits, then for pre-training the remaining Sentinel-1 parcels (which are
+            not in the S2 data) are distributed between train and validation. For fine-tuning,
+            there are only 149 parcels in S1 which are not in S2. We therefore ignore them
+            completely, s.t. the fine-tuning split remains exactly the same. If the benchmark is
+            set to False, a new deterministic train-val(-test) split is created based on all
+            parcels present in the data.
             If split!="region", benchmark is set to False.
         zenodo_base_url: Base url for downloading benchmark region-split from Zenodo.
 
@@ -301,13 +301,13 @@ def split_dataset_by_region(
         benchmark: Flag in order to build the same split as used in the EuroCropsML dataset
             (https://arxiv.org/abs/2407.17458). The split was created when only Sentinel-2 data
             was available. If benchmark is set to True, the split will be loaded from Zenodo
-            version 9. If 'S1' in satellite and the split_name matches one of the Zenodo splits,
-            then for pre-training the remaining Sentinel-1 parcels (which are not in the S2 data)
-            are distributed between train and validation. For fine-tuning, there are only 149
-            parcels in S1 which are not in S2. We therefore ignore them completely, s.t. the
-            fine-tuning split remains exactly the same. If the benchmark is set to False, a new
-            deterministic train-val(-test) split is created based on all parcels present in
-            the data.
+            version 9. If 'S1' in satellite and the EuroCropsSplit.base_name matches one of the
+            Zenodo splits, then for pre-training the remaining Sentinel-1 parcels (which are
+            not in the S2 data) are distributed between train and validation. For fine-tuning,
+            there are only 149 parcels in S1 which are not in S2. We therefore ignore them
+            completely, s.t. the fine-tuning split remains exactly the same. If the benchmark is
+            set to False, a new deterministic train-val(-test) split is created based on all
+            parcels present in the data.
         zenodo_base_url: Base url for downloading benchmark region-split from Zenodo (version 9).
         pretrain_classes: Classes of the requested dataset split for
             hyperparameter tuning and pretraining.
