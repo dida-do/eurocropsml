@@ -43,7 +43,7 @@ def get_split_dir(split_dir: Path, split_name: str) -> Path:
 def create_splits(
     split_config: EuroCropsSplit,
     split_dir: Path,
-    download_url: str | None,
+    download_url: str | None = None,
 ) -> None:
     """Create EuroCrops dataset splits.
 
