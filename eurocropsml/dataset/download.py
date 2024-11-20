@@ -78,7 +78,7 @@ def get_user_choice(files_to_download: list[str]) -> list[str]:
     logger.info("Choose one or more of the following options by typing their numbers (e.g., 1 3):")
     for i, file in enumerate(files_to_download, 1):
         logger.info(f"{i}. {file}")
-    choice = input("Enter your choices separated by spaces: ")
+    choice = typer.prompt("Enter your choices separated by spaces: ")
     selected_indices = [int(choice) - 1 for choice in choice.split()]
     selected_options = [files_to_download[i] for i in selected_indices]
 
