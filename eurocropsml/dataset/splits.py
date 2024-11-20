@@ -341,6 +341,7 @@ def split_dataset_by_region(
     if benchmark is True:
         create_pretrain = _get_benchmark_dataset(
             data_dir,
+            split_dir.parent.parent,
             split_dir,
             zenodo_base_url,
             satellite,
@@ -414,6 +415,7 @@ def split_dataset_by_region(
 
 def _get_benchmark_dataset(
     data_dir: Path,
+    parent_split_dir: Path,
     split_dir: Path,
     zenodo_base_url: str,
     satellite: list[Literal["S1", "S2"]],
@@ -423,23 +425,24 @@ def _get_benchmark_dataset(
     seed: int = 42,
 ) -> bool:
     logger.info("Benchmark set to True. Downloading benchmark split from Zenodo version 9...")
-    selected_version = cast(dict, _get_zenodo_record(zenodo_base_url, version_number=9))
+    selected_version = cast(dict, _get_zenodo_record(zenodo_base_url, version_number=8))
     for file_entry in selected_version["files"]:
         if file_entry["key"] == "split.zip":
             file_url: str = file_entry["links"]["self"]
-            local_path: Path = data_dir.joinpath("split.zip")
+            local_path: Path = parent_split_dir.joinpath("split.zip")
             _download_file("split.zip", file_url, local_path, file_entry.get("checksum", ""))
             logger.info(f"Unzipping {local_path}...")
-            _unzip_file(local_path, data_dir)
-        break
+            _unzip_file(local_path, parent_split_dir)
+            break
 
     # if split equals one of the splits from Zenodo, we simply add S1 data (if requested) to
     # the existing pre-training split from Zenodo
-    if split_dir.name in ["latvia_vs_estonia", "latvia_portugal_vs_estonia"] and "S1" in satellite:
-        filtered_s1: list[str] = []
-        s1_files: set = read_files(data_dir.joinpath("S1"))
-        with open(split_dir.joinpath("pretrain", "region_split.json"), "r") as file:
-            pretrain_dataset = json.load(file)
+    if split_dir.name in ["latvia_vs_estonia", "latvia_portugal_vs_estonia"]:
+        if "S1" in satellite:
+            filtered_s1: list[str] = []
+            s1_files: set = read_files(data_dir.joinpath("S1"))
+            with open(split_dir.joinpath("pretrain", "region_split.json"), "r") as file:
+                pretrain_dataset = json.load(file)
             train = pretrain_dataset["train"]
             val = pretrain_dataset["val"]
             # get the files that are not present in S2 (only for pretraining)
@@ -450,33 +453,55 @@ def _get_benchmark_dataset(
                 if file not in pretrain_dataset.values()
                 and file.startswith(tuple(pretrain_regions))
             ]
-            # sorting list to make train_test_split deterministic
-            filtered_s1.sort()
-            s1_train, s1_val = train_test_split(filtered_s1, test_size=test_size, random_state=seed)
-            train.extend(s1_train)
-            val.extend(s1_val)
+            if not filtered_s1:
+                logger.info(
+                    f"Split {split_dir.name} was downloaded from Zenodo and no additional "
+                    "Sentinel-1 pre-training data found. Pre-training and fine-tuning split are "
+                    "copied from Zenodo for benchmarking."
+                )
+            else:
+                logger.info(
+                    f"Split {split_dir.name} was downloaded from Zenodo. Additional "
+                    "Sentinel-1 pre-training data will be added. Fine-tuning split is copied from "
+                    "Zenodo for benchmarking."
+                )
+                # sorting list to make train_test_split deterministic
+                filtered_s1.sort()
+                s1_train, s1_val = train_test_split(
+                    filtered_s1, test_size=test_size, random_state=seed
+                )
+                train.extend(s1_train)
+                val.extend(s1_val)
 
-        pretrain_dict = _save_to_dict(train, val)
+                pretrain_dict = _save_to_dict(train, val)
 
-        pretrain_list = list(pretrain_dict.values())
+                pretrain_list = list(pretrain_dict.values())
 
-        _save_to_json(split_dir.joinpath("pretrain", f"{split}_split.json"), pretrain_dict)
+                _save_to_json(split_dir.joinpath("pretrain", f"{split}_split.json"), pretrain_dict)
 
-        _save_counts_to_csv(pretrain_list, split_dir.joinpath("counts", "pretrain"), split)
+                _save_counts_to_csv(pretrain_list, split_dir.joinpath("counts", "pretrain"), split)
 
-        meta_dict: dict = {
-            "train": _create_final_dict(train, pretrain_regions),
-            "val": _create_final_dict(val, pretrain_regions),
-        }
+                meta_dict: dict = {
+                    "train": _create_final_dict(train, pretrain_regions),
+                    "val": _create_final_dict(val, pretrain_regions),
+                }
 
-        _save_to_json(split_dir.joinpath("meta", f"{split}_split.json"), meta_dict)
+                _save_to_json(split_dir.joinpath("meta", f"{split}_split.json"), meta_dict)
 
+        else:
+            logger.info(
+                f"Split {split_dir.name} was downloaded from Zenodo. Nothing else to be done."
+            )
         return False
 
     # if split is different, meaning the pre-training data is different, we only copy the
     # fine-tuning split for benchmarking and create a new pre-training split
     else:
-        finetune_dir: Path = data_dir.joinpath("split", "latvia_vs_estonia", "finetune")
-        shutil.copytree(finetune_dir, split_dir)
+        logger.info(
+            f"Split {split_dir.name} does not exist, yet. A new pre-training split is "
+            "created. The fine-tuning split is copied from Zenodo for benchmarking."
+        )
+        finetune_dir: Path = parent_split_dir.joinpath("split", "latvia_vs_estonia", "finetune")
+        shutil.copytree(finetune_dir, split_dir.joinpath("finetune"))
 
         return True
