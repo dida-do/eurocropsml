@@ -41,13 +41,14 @@ def read_files(data_dir: Path) -> set[str]:
 def _split_dataset(
     data_dir: Path,
     satellite: list[Literal["S1", "S2"]],
+    year: str,
     pretrain_classes: set[int],
     finetune_classes: set[int] | None = None,
     regions: set[str] | None = None,
 ) -> tuple[dict[int, list[str]], dict[int, list[str]] | None]:
     file_set: set = set()
     for s in satellite:
-        file_set.update(read_files(data_dir.joinpath(s)))
+        file_set.update(read_files(data_dir.joinpath(s, year)))
 
     # pre-filter by regions for region and regionclass split
     if regions is not None:

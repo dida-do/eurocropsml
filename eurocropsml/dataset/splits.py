@@ -51,6 +51,7 @@ def create_splits(split_config: EuroCropsSplit, split_dir: Path) -> None:
             data_dir=split_config.data_dir,
             split=split,  # type: ignore[arg-type]
             satellite=split_config.satellite,
+            year=str(split_config.year),
             split_dir=split_dir,
             pretrain_classes=set(split_config.pretrain_classes[split]),
             finetune_classes=(
@@ -73,6 +74,7 @@ def _build_dataset_split(
     split_dir: Path,
     split: Literal["class", "regionclass", "region"],
     satellite: list[Literal["S1", "S2"]],
+    year: str,
     num_samples: dict[str, str | int | list[int | str]],
     seed: int,
     pretrain_classes: set,
@@ -90,6 +92,7 @@ def _build_dataset_split(
         split_dir: Directory where split file is going to be saved to.
         split: Kind of data split to apply.
         satellite: Whether to build the splits using Sentinel-1 or Sentinel-2 or both.
+        year: Year for which data are to be processed.
         num_samples: Number of samples to sample for finetuning.
         seed: Randoms seed,
         pretrain_classes: Classes of the requested dataset split for
@@ -141,6 +144,7 @@ def _build_dataset_split(
             data_dir,
             split_dir,
             satellite,
+            year=year,
             num_samples=num_samples,
             pretrain_classes=pretrain_classes,
             finetune_classes=finetune_classes,
@@ -161,6 +165,7 @@ def _build_dataset_split(
             split_dir,
             split,
             satellite,
+            year=year,
             num_samples=num_samples,
             pretrain_classes=pretrain_classes,
             finetune_classes=finetune_classes,
@@ -176,6 +181,7 @@ def split_dataset_by_class(
     data_dir: Path,
     split_dir: Path,
     satellite: list[Literal["S1", "S2"]],
+    year: str,
     num_samples: dict[str, str | int | list[int | str]],
     seed: int,
     pretrain_classes: set[int],
@@ -189,6 +195,7 @@ def split_dataset_by_class(
         data_dir: Path that contains `.npy` files where labels and data are stored.
         split_dir: Directory where splits are going to be saved to.
         satellite: Whether to build the splits using Sentinel-1 or Sentinel-2 or both.
+        year: Year for which data are to be processed.
         num_samples: Number of samples to sample for finetuning.
         seed: Random seed for data split.
         pretrain_classes: List with classes used for filtering the data.
@@ -208,6 +215,7 @@ def split_dataset_by_class(
     pretrain_dataset, finetune_dataset = _split_dataset(
         data_dir=data_dir,
         satellite=satellite,
+        year=year,
         pretrain_classes=pretrain_classes,
         finetune_classes=finetune_classes,
     )
@@ -255,6 +263,7 @@ def split_dataset_by_region(
     split_dir: Path,
     split: Literal["region", "regionclass"],
     satellite: list[Literal["S1", "S2"]],
+    year: str,
     num_samples: dict[str, str | int | list[int | str]],
     seed: int,
     benchmark: bool,
@@ -272,6 +281,7 @@ def split_dataset_by_region(
         split_dir: Directory where splits are going to be saved to.
         split: Kind of data split to apply.
         satellite: Whether to build the splits using Sentinel-1 or Sentinel-2 or both.
+        year: Year for which data are to be processed.
         num_samples: Number of samples to sample for finetuning.
         seed: Random seed for data split.
         benchmark: Flag in order to build the same split as used in the EuroCropsML dataset
@@ -311,6 +321,7 @@ def split_dataset_by_region(
     pretrain_dataset, finetune_dataset = _split_dataset(
         data_dir=data_dir,
         satellite=satellite if benchmark is False else ["S2"],
+        year=year,
         pretrain_classes=classes,
         finetune_classes=finetune_classes if split == "regionclass" else None,
         regions=set(regions),

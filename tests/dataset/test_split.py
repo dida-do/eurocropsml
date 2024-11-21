@@ -84,8 +84,8 @@ def test_create_splits(
 
     # create subdirs
     for satellite in config.satellite:
-        satellite_path: Path = config.data_dir / satellite
-        satellite_path.mkdir()
+        satellite_path: Path = config.data_dir / satellite / str(config.year)
+        satellite_path.mkdir(exist_ok=True, parents=True)
         for file_name in test_data:
             file_path = satellite_path / file_name
             array1 = np.random.rand(5)
