@@ -62,7 +62,7 @@ def _download_file(
                 " Do you want to delete it and redownload the file?"
             )
     if download:
-        logger.info(f"Downloading {local_path}...")
+        logger.info(f"Downloading to {local_path}...")
         try:
             response = requests.get(file_url)
             response.raise_for_status()
