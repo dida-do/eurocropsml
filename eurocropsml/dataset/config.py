@@ -34,6 +34,7 @@ class EuroCropsDatasetPreprocessConfig(BaseModel):
             These are also the ones available in the ready-to-use EuroCropsML dataset.
             If during your own data acquisition not all bands or different bands were acquired,
             please define them here.
+        year: Year for which data are to be processed.
 
     """
 
@@ -49,6 +50,7 @@ class EuroCropsDatasetPreprocessConfig(BaseModel):
     keep_classes: list[int] = []
     satellite: Literal["S1", "S2"] = "S2"
     bands: list[str] | None = None
+    year: int = 2021
 
     @field_validator("raw_data_dir", "preprocess_dir")
     @classmethod
@@ -71,7 +73,9 @@ class EuroCropsSplit(BaseModel):
 
     satellite: list[Literal["S1", "S2"]] = ["S2"]
 
-    benchmark: bool = True
+    year: int = 2021
+
+    benchmark: bool = False
 
     pretrain_classes: dict[str, list[int]]
     finetune_classes: dict[str, list[int]] = {}
@@ -105,6 +109,7 @@ class EuroCropsDatasetConfig(BaseModel):
     satellite: list[Literal["S1", "S2"]] = ["S2"]
     s1_bands: list[str] | None = S1_BANDS
     s2_bands: list[str] | None = S2_BANDS
+    year: int = 2021
     # max_samples corresponds to maximum number of samples per class for finetune training data.
     # If ["all"], all samples are used, if e.g. [1, 2, "all"], three use-cases are created where
     # number of samples per class are 1 or 2 respectively, or where all samples are used.
