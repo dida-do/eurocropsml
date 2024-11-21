@@ -472,6 +472,9 @@ def _get_benchmark_dataset(
                 )
                 train.extend(s1_train)
                 val.extend(s1_val)
+                # sort train and validation list s.t. S1 data is not just appended at the end
+                train.sort()
+                val.sort()
 
                 pretrain_dict = _save_to_dict(train, val)
 
