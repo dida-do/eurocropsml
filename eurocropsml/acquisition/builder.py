@@ -29,7 +29,7 @@ def build_dataset(
     config.country_config.post_init(vector_data_dir)
     ct_config = config.country_config
 
-    final_output_dir = config.raw_data_dir.joinpath(ct_config.satellite)
+    final_output_dir = config.raw_data_dir.joinpath(ct_config.satellite, str(ct_config.year))
     output_dir = config.output_dir
     local_dir = config.local_dir
 
