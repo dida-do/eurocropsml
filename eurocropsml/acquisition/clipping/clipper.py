@@ -326,6 +326,7 @@ def clipping(
                 gc.collect()
 
             df_final_month.to_pickle(clipped_dir.joinpath(f"Final_{file_counts}.pkg"))
+            te.close()
 
         _merge_dataframe(
             polygon_df_month,
