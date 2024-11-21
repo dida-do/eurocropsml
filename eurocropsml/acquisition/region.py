@@ -1,7 +1,6 @@
 """Adding NUTS region information to dataset."""
 
 import logging
-import sys
 from pathlib import Path
 from typing import cast
 
@@ -37,7 +36,8 @@ def add_nuts_regions(
             This depends on the satellite.
 
     Raises:
-        ValueError: If NUTS-files are not available.
+        FileNotFoundError: If NUTS-files are not available.
+        FileNotFoundError: If the merged clipped file from clipping module does not exist.
 
     """
     url: str = (
@@ -62,12 +62,11 @@ def add_nuts_regions(
             url, nuts_dir, crs, config.year, [file.name for file in nuts_dir.iterdir()]
         )
 
-    if len(list((nuts_dir.iterdir()))) == 0:
-        logger.info(
+    if not any(nuts_dir.iterdir()):
+        raise FileNotFoundError(
             "There are no NUTS region files available."
             f" Please download them manually from {url}."
         )
-        sys.exit()
     try:
         nuts: gpd.GeoDataFrame = pyogrio.read_dataframe(nuts_regions_file)
 
@@ -117,8 +116,8 @@ def add_nuts_regions(
         shapefile[parcel_id_name] = shapefile[parcel_id_name].astype(int)
         cols_shapefile = cols_shapefile + [f"nuts{nuts_level+1}"]
 
-    label_dir = raw_data_dir.joinpath("labels")
-    geom_dir = raw_data_dir.joinpath("geometries")
+    label_dir = raw_data_dir.joinpath("labels", str(config.year))
+    geom_dir = raw_data_dir.joinpath("geometries", str(config.year))
 
     label_dir.mkdir(exist_ok=True, parents=True)
     geom_dir.mkdir(exist_ok=True, parents=True)
@@ -130,12 +129,12 @@ def add_nuts_regions(
     geometry_df = geometry_df.rename(columns={f"{parcel_id_name}": "parcel_id"})
 
     classes_df.to_parquet(
-        label_dir.joinpath(f"{config.ec_filename}_{config.year}_labels.parquet"),
+        label_dir.joinpath(f"{config.ec_filename}_labels.parquet"),
         index=False,
     )
 
     geometry_df.to_file(
-        geom_dir.joinpath(f"{config.ec_filename}_{config.year}.geojson"),
+        geom_dir.joinpath(f"{config.ec_filename}.geojson"),
         driver="GeoJSON",
     )
 
@@ -143,13 +142,19 @@ def add_nuts_regions(
         range(config.months[0], config.months[1] + 1), desc="Adding NUTS regions to data..."
     ):
         month_dir: Path = final_output_dir.joinpath(f"{month}")
-        if not month_dir.joinpath(f"{config.ec_filename}_{config.year}.parquet").exists():
+        if not month_dir.joinpath(f"{config.ec_filename}.parquet").exists():
             month_dir.mkdir(exist_ok=True, parents=True)
             # add nuts region to final reflectance dataframe
-            full_df: pd.DataFrame = pd.read_parquet(
-                output_dir.joinpath("clipper", f"{month}", "clipped.parquet")
-            )
-
+            try:
+                full_df: pd.DataFrame = pd.read_parquet(
+                    output_dir.joinpath("clipper", f"{month}", "clipped.parquet")
+                )
+            except FileNotFoundError:
+                raise FileNotFoundError(
+                    f"{output_dir.joinpath('clipper', f'{month}', 'clipped.parquet')} does not "
+                    "exist. Run the clipping process again or change the acquisition month in "
+                    "acquisiton.config.CollectorConfig.months"
+                )
             full_df.columns = [full_df.columns[0]] + [
                 pd.to_datetime(col).strftime("%Y-%m-%d") for col in full_df.columns[1:]
             ]
@@ -175,19 +180,23 @@ def add_nuts_regions(
                 lambda col: col.apply(
                     lambda x: (
                         None
-                        if (x is None or (isinstance(x, float) and pd.isna(x)))
-                        or (isinstance(x, list) and all(pd.isna(val) for val in x))
+                        if (
+                            x is None
+                            or (isinstance(x, float) and pd.isna(x))
+                            or (isinstance(x, list) and all(pd.isna(val) for val in x))
+                        )
                         else x
                     )
                 )
             )
 
             joined_final.to_parquet(
-                month_dir.joinpath(f"{config.ec_filename}_{config.year}.parquet"),
+                month_dir.joinpath(f"{config.ec_filename}.parquet"),
                 index=False,
             )
 
-    else:
-        logger.info(
-            "Raw_data files already exists. Please delete them if you want to recreate them."
-        )
+        else:
+            logger.info(
+                f"{month_dir.joinpath(f'{config.ec_filename}.parquet')} already exists. "
+                "Please delete it if you want to recreate it."
+            )
