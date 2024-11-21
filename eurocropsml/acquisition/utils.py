@@ -113,7 +113,7 @@ def _nuts_region_downloader(
         driver = webdriver.Chrome(service=service, options=options)
         driver.get(url)
     except WebDriverException:
-        _manual_download(url, files)
+        _manual_download(url, [])
 
     field_format: webdriver.remote.webelement.WebElement = driver.find_element(By.ID, "format")
     driver.execute_script("arguments[0].value = 'geojson';", field_format)
@@ -200,7 +200,7 @@ def _manual_download(url: str, files: list[str]) -> None:
     else:
         manual_download = typer.confirm(
             f"Only {', '.join(files)} could be downloaded. Do you want to download the missing "
-            f" ones manually from {url}? This will exit the script. If manually downloaded, "
+            f"ones manually from {url}? This will exit the script. If manually downloaded, "
             "the folder sturcture should look like this:\n"
             "path/to/data/directory\n"
             "└── meta_data/\n"
@@ -212,6 +212,8 @@ def _manual_download(url: str, files: list[str]) -> None:
         )
         if manual_download:
             sys.exit()
+        else:
+            return
 
 
 def _get_dict_value_by_name(
