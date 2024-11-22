@@ -33,9 +33,19 @@ def _get_options_from_field(url: str, field_id: str) -> bs4.element.ResultSet:
     return options
 
 
-def _get_closest_year(url: str, year: int) -> str:
-    """Get available years and select the one closest to the acquisition year."""
+def _get_closest_year(year_options: list[int], year: int) -> str:
     selected_year: int
+    for number in year_options:
+        if number == year:
+            return str(year)
+        elif number < year:
+            selected_year = number
+
+    return str(selected_year)
+
+
+def _select_year_from_url(url: str, year: int) -> str:
+    """Get available years and select the one closest to the acquisition year."""
 
     try:
         options: bs4.element.ResultSet = _get_options_from_field(url, "year")
@@ -44,13 +54,7 @@ def _get_closest_year(url: str, year: int) -> str:
             [int(option.get("value")) for option in options if len(option.get("value")) > 0]
         )
 
-        for number in year_options:
-            if number == year:
-                return str(year)
-            elif number < year:
-                selected_year = number
-
-        return str(selected_year)
+        return _get_closest_year(year_options, year)
 
     except ValueError:
         logger.warning(
@@ -106,7 +110,7 @@ def _nuts_region_downloader(
     # Setup ChromeDriver service using webdriver_manager
     service = Service(ChromeDriverManager().install())
 
-    selected_year: str = _get_closest_year(url, year)
+    selected_year: str = _select_year_from_url(url, year)
     projections: list[str] = _get_proj_options(url)
 
     try:
