@@ -143,8 +143,7 @@ def add_nuts_regions(
     )
 
     for month in tqdm(
-        range(1, 8)
-        # range(config.months[0], config.months[1] + 1), desc="Adding NUTS regions to data..."
+        range(config.months[0], config.months[1] + 1), desc="Adding NUTS regions to data..."
     ):
         month_dir: Path = final_output_dir.joinpath(f"{month}")
         if not month_dir.joinpath(f"{config.ec_filename}.parquet").exists():
