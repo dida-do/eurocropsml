@@ -2,7 +2,10 @@
 
 import calendar
 import logging
+import shutil
 import sys
+from collections import defaultdict
+from concurrent.futures import ProcessPoolExecutor
 from functools import cache, partial
 from multiprocessing import Pool
 from pathlib import Path
@@ -161,6 +164,35 @@ def _filter_clouds(
     return data[cloud_mask], dates[cloud_mask]
 
 
+def _merge_npz_files(file_name: str, file_paths: list[str], output_dir: Path) -> None:
+    combined_data = []
+    combined_dates = []
+    combined_center = []
+
+    for file_path in file_paths:
+        with np.load(file_path) as npz:
+            combined_data.append(npz["data"])
+            combined_dates.append(npz["dates"])
+            combined_center.append(npz["center"])
+
+    merged_data = np.concatenate(combined_data, axis=0)
+    merged_dates = np.concatenate(combined_dates, axis=0)
+    merged_center = np.concatenate(combined_center, axis=0)
+
+    # Sort by dates and ensure unique dates
+    sorted_indices = np.argsort(merged_dates)
+    merged_dates = merged_dates[sorted_indices]
+    merged_data = merged_data[sorted_indices]
+
+    unique_indices = np.unique(merged_dates, return_index=True)[1]
+    merged_dates = merged_dates[unique_indices]
+    merged_data = merged_data[unique_indices]
+
+    output_path = output_dir.joinpath(file_name)
+
+    np.savez(output_path, data=merged_data, dates=merged_dates, center=merged_center)
+
+
 def _save_row(
     preprocess_config: EuroCropsDatasetPreprocessConfig,
     preprocess_dir: Path,
@@ -194,10 +226,15 @@ def preprocess(
 ) -> None:
     """Run preprocessing."""
 
-    raw_data_dir = preprocess_config.raw_data_dir
-    num_workers = preprocess_config.num_workers
-    satellite = preprocess_config.satellite
-    preprocess_dir = preprocess_config.preprocess_dir / satellite
+    num_workers: int | None = preprocess_config.num_workers
+    satellite: str = preprocess_config.satellite
+    raw_data_dir: Path = preprocess_config.raw_data_dir
+    final_raw_data_dir: Path = (
+        preprocess_config.raw_data_dir / satellite / str(preprocess_config.year)
+    )
+    preprocess_dir: Path = (
+        preprocess_config.preprocess_dir / satellite / str(preprocess_config.year)
+    )
 
     if preprocess_config.bands is None:
         if satellite == "S2":
@@ -207,23 +244,28 @@ def preprocess(
     else:
         bands = preprocess_config.bands
 
-    if preprocess_dir.exists() and len(list((preprocess_dir.iterdir()))) > 0:
+    if preprocess_dir.exists() and any(item.is_file() for item in preprocess_dir.iterdir()):
         logger.info(
             f"Preprocessing directory {preprocess_dir} already exists and contains data. "
             "Nothing to do."
         )
         sys.exit(0)
 
-    if raw_data_dir.exists():
+    if final_raw_data_dir.exists():
         logger.info("Raw data directory exists. Skipping download.")
 
-        logger.info("Starting preprocessing. Compiling labels and centerpoints of parcels")
+        logger.info(f"Starting preprocessing of {satellite} data for {preprocess_config.year}...")
         preprocess_dir.mkdir(exist_ok=True, parents=True)
-        raw_data_dir = raw_data_dir / satellite
 
-        for month_data_dir in raw_data_dir.iterdir():
-            month_name = calendar.month_name[int(month_data_dir.name)]
-            logger.info(f"Processing data for {month_name}")
+        for month_data_dir in final_raw_data_dir.iterdir():
+            if month_data_dir.stem != "allyear":
+                month_name: str = calendar.month_name[int(month_data_dir.stem)]
+                logger.info(f"Processing data for {month_name}:")
+            else:
+                month_name = "allyear"
+                logger.info("Processing data for full year:")
+            month_preprocess_dir: Path = preprocess_dir.joinpath(month_data_dir.stem)
+            month_preprocess_dir.mkdir(exist_ok=True, parents=True)
 
             for file_path in month_data_dir.glob("*.parquet"):
                 country_file: pd.DataFrame = pd.read_parquet(file_path).set_index("parcel_id")
@@ -231,9 +273,13 @@ def preprocess(
                 cols = cols[5:]
                 # filter nan-values
                 country_file = country_file[~country_file[f"nuts{nuts_level}"].isna()]
-                points = _get_latlons(month_data_dir.joinpath("geometries"), file_path.stem)
+                points = _get_latlons(
+                    raw_data_dir.joinpath("geometries", str(preprocess_config.year)), file_path.stem
+                )
                 labels = _get_labels(
-                    month_data_dir.joinpath("labels"), file_path.stem, preprocess_config
+                    raw_data_dir.joinpath("labels", str(preprocess_config.year)),
+                    file_path.stem,
+                    preprocess_config,
                 )
 
                 # country_file.set_index("parcel_id", inplace=True)
@@ -263,7 +309,7 @@ def preprocess(
                         func = partial(
                             _save_row,
                             preprocess_config,
-                            preprocess_dir,
+                            month_preprocess_dir,
                             labels,
                             points,
                             region,
@@ -277,13 +323,38 @@ def preprocess(
                         te.update(n=1)
                 te.close()
 
+        monthly_groups = defaultdict(list)
+        for folder in tqdm(preprocess_dir.iterdir(), desc="Merging time series..."):
+            for npz_file in folder.glob("*.npz"):
+                monthly_groups[npz_file.name].append(npz_file)
+
+        te = tqdm(total=len(monthly_groups), desc="Merging time series...")
+        with ProcessPoolExecutor() as executor:
+            futures = [
+                executor.submit(_merge_npz_files, file_name, file_paths, preprocess_dir)
+                for file_name, file_paths in monthly_groups.items()
+            ]
+
+            for _ in futures:
+                te.update(n=1)
+
+        for folder in preprocess_dir.iterdir():
+            if folder.is_dir():
+                shutil.rmtree(folder)
+
         logger.info(f"Data has been preprocessed and saved under {preprocess_dir}.")
     else:
-        download = typer.confirm(
-            "Could not find raw data to preprocess. "
-            "Would you like to download it? This will also download a preprocessed version "
-            " of the dataset. "
-        )
+        if preprocess_config.year in [2021]:
+            download = typer.confirm(
+                "Could not find raw data to preprocess. Would you like to download it?"
+            )
+        else:
+            download = typer.confirm(
+                "Could not find raw data to preprocess and Zenodo only has "
+                "data for 2021. Do you want to download data for 2021? Otherwise you need "
+                "to collect the raw data yourself using the acquisition pipeline."
+            )
+
         if download:
             logger.info("Downloading dataset...")
             download_dataset(preprocess_config)
