@@ -10,7 +10,7 @@ import pyogrio
 from tqdm import tqdm
 
 from eurocropsml.acquisition.config import CollectorConfig
-from eurocropsml.acquisition.utils import _nuts_region_downloader
+from eurocropsml.acquisition.utils import _get_closest_year, _nuts_region_downloader
 
 logger = logging.getLogger(__name__)
 
@@ -70,13 +70,17 @@ def add_nuts_regions(
     try:
         nuts: gpd.GeoDataFrame = pyogrio.read_dataframe(nuts_regions_file)
 
-    except Exception:
+    except FileNotFoundError:
         available_crs: list[str] = []
+        available_years: list[int] = []
         for file in nuts_dir.iterdir():
             available_crs.append(file.stem.split("_")[-1])
-        crs = available_crs[0]
-        shapefile = shapefile.to_crs(crs)
-        nuts_region_filename = f"NUTS_RG_01M_{config.year}_{crs}.geojson"
+            available_years.append(int(file.stem.split("_")[-2]))
+        nuts_year = _get_closest_year(available_years, config.year)
+        new_crs = available_crs[0]
+        logger.info(f"NUTS-file with CRS {crs} could not be found. Using CRS {new_crs}.")
+        shapefile = shapefile.to_crs(new_crs)
+        nuts_region_filename = f"NUTS_RG_01M_{nuts_year}_{new_crs}.geojson"
         nuts_regions_file = nuts_dir.joinpath(nuts_region_filename)
 
         nuts = pyogrio.read_dataframe(nuts_regions_file)
@@ -139,7 +143,8 @@ def add_nuts_regions(
     )
 
     for month in tqdm(
-        range(config.months[0], config.months[1] + 1), desc="Adding NUTS regions to data..."
+        range(1, 8)
+        # range(config.months[0], config.months[1] + 1), desc="Adding NUTS regions to data..."
     ):
         month_dir: Path = final_output_dir.joinpath(f"{month}")
         if not month_dir.joinpath(f"{config.ec_filename}.parquet").exists():
