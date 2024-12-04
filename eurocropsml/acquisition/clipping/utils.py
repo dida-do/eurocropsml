@@ -81,6 +81,9 @@ def mask_polygon_raster(
 
     Returns:
         Dataframe with clipped values.
+
+    Raises:
+        FileNotFoundError: If the raster file cannot be found.
     """
 
     parcels_dict: dict[int, list[float | None]] = {
@@ -95,40 +98,49 @@ def mask_polygon_raster(
     noise_vector: xr.DataArray | None = None
 
     for b, band_path in enumerate(tilepaths):
-        with rasterio.open(band_path, "r") as raster_tile:
-            if b == 0:
-                if satellite == "S2" and polygon_df.crs.srs != raster_tile.crs.data["init"]:
-                    # transforming shapefile into CRS of raster tile
-                    polygon_df = polygon_df.to_crs(raster_tile.crs.data["init"])
-                elif satellite == "S1":
-                    gcps, gcps_crs = raster_tile.get_gcps()
+        try:
+            with rasterio.open(band_path, "r") as raster_tile:
+                if b == 0:
+                    if satellite == "S2" and polygon_df.crs.srs != raster_tile.crs.data["init"]:
+                        # transforming shapefile into CRS of raster tile
+                        polygon_df = polygon_df.to_crs(raster_tile.crs.data["init"])
+                    elif satellite == "S1":
+                        gcps, gcps_crs = raster_tile.get_gcps()
 
-                    if polygon_df.crs.srs != gcps_crs.to_string():
-                        polygon_df = polygon_df.to_crs(gcps_crs.to_string())
+                        if polygon_df.crs.srs != gcps_crs.to_string():
+                            polygon_df = polygon_df.to_crs(gcps_crs.to_string())
 
-                    transform = rasterio.transform.from_gcps(gcps)
+                        transform = rasterio.transform.from_gcps(gcps)
 
-                    inv_transform = ~transform  # Invert the affine transformation matrix
+                        inv_transform = ~transform  # Invert the affine transformation matrix
 
-                    polygon_df["geometry"] = polygon_df["geometry"].apply(
-                        lambda poly, i_trans=inv_transform: _transform_polygon(poly, i_trans)
-                    )
+                        polygon_df["geometry"] = polygon_df["geometry"].apply(
+                            lambda poly, i_trans=inv_transform: _transform_polygon(poly, i_trans)
+                        )
 
-                    calibration_data = _open_calibration_dataset(
-                        Path(band_path).parent.parent, bands[b]
-                    )
-                    sigma_nought = calibration_data.data_vars["sigmaNought"]
+                        calibration_data = _open_calibration_dataset(
+                            Path(band_path).parent.parent, bands[b]
+                        )
+                        sigma_nought = calibration_data.data_vars["sigmaNought"]
 
-                    if denoise:
-                        noise_data = _open_noise_dataset(Path(band_path).parent.parent, bands[b])
-                        noise_vector = noise_data.data_vars["noiseRangeLut"]
+                        if denoise:
+                            noise_data = _open_noise_dataset(
+                                Path(band_path).parent.parent, bands[b]
+                            )
+                            noise_vector = noise_data.data_vars["noiseRangeLut"]
 
-            # clipping geometry out of raster tile and saving in dictionary
-            polygon_df.apply(
-                lambda row, sigma_nought=sigma_nought, noise_vector=noise_vector: _process_row(
-                    row, raster_tile, parcels_dict, parcel_id_name, sigma_nought, noise_vector
-                ),
-                axis=1,
+                # clipping geometry out of raster tile and saving in dictionary
+                polygon_df.apply(
+                    lambda row, sigma_nought=sigma_nought, noise_vector=noise_vector: _process_row(
+                        row, raster_tile, parcels_dict, parcel_id_name, sigma_nought, noise_vector
+                    ),
+                    axis=1,
+                )
+        except FileNotFoundError:
+            raise FileNotFoundError(
+                f"{band_path} could not be found. Please make sure it is "
+                "present, delete all clipped files and rerun the whole "
+                "clipping process."
             )
 
     parcels_df = pd.DataFrame(list(parcels_dict.items()), columns=[parcel_id_name, product_date])
@@ -200,6 +212,7 @@ def _process_row(
                 patch_median = max(0.0, cast(float, patch_median))
 
         parcels_dict[parcel_id].append(patch_median)
+
     except ValueError:
         # Since we are cropping to the extent of the geometry, if none of the raster pixels is
         # fully contained inside the geometry, rasterio.mask will throw an error that the shapes
