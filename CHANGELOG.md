@@ -13,11 +13,14 @@ Changes from previous releases are listed below.
 - Add documentation of acquiring and processing Sentinel-1 data _(see #38)_
 - Add preprocessing of Sentinel-1 _(see #31)_
 - Renaming and moving of Sentinel-2 bands _(see #42)_
+- Process clipping of Sentinel tiles on monthly basis _(see #29)_
+- Adjust the shapefile CRS transformation for Sentinel-1 _(see #49)_
 - Adjusting split generation _(see #45)_
 - Fixing padding mask _(see #50)_
 - Fasten up padding to 366 days _(see #54)_
 - Radiometric calibration of Sentinel-1 _(see #47)_
 - Downloading Sentinel-1 data and make it usable together with Sentinel-2 _(see #43)_
+- Map noise vector to full set of pixels if pixel indices are not equal _(see #60)_ 
 
 ## 0.3.1 (2024-07-29)
 - Remove country_code variable in collector downloader _(see #33)_
