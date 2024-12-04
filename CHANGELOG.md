@@ -20,6 +20,7 @@ Changes from previous releases are listed below.
 - Fasten up padding to 366 days _(see #54)_
 - Radiometric calibration of Sentinel-1 _(see #47)_
 - Downloading Sentinel-1 data and make it usable together with Sentinel-2 _(see #43)_
+- Map noise vector to full set of pixels if pixel indices are not equal _(see #60)_ 
 
 ## 0.3.1 (2024-07-29)
 - Remove country_code variable in collector downloader _(see #33)_
