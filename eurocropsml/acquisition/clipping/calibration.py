@@ -11,7 +11,11 @@ import xmlschema
 
 def _get_xml_file(filepath: Path, band: str, identifier: str = "calibration") -> Path:
     files: list[Path] = list(filepath.iterdir())
-    return [file for file in files if f"{band.lower()}" in str(file) and identifier in str(file)][0]
+    return [
+        file
+        for file in files
+        if f"{band.lower()}" in str(file.stem) and identifier in str(file.stem)
+    ][0]
 
 
 def _parse_tag_as_list(
