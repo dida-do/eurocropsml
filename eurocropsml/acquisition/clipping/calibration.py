@@ -7,7 +7,6 @@ from xml.etree import ElementTree
 import numpy as np
 import xarray as xr
 import xmlschema
-from scipy.interpolate import griddata
 
 
 def _get_xml_file(filepath: Path, band: str, identifier: str = "calibration") -> Path:
@@ -47,8 +46,6 @@ def _open_noise_dataset(safe_dir: Path, band: str) -> xr.Dataset:
     This reads the NADS (Noise Annotation Data Set) file.
 
     Adjusted from xarray-sentinel (https://github.com/bopen/xarray-sentinel).
-    If the pixels indices vary, a list of all available indices is created and for each line,
-    missing LUT values are padded with nan to later be masked out.
     """
     xml_dir: Path = safe_dir / "annotation" / "calibration"
     schema_dir: Path = safe_dir / "support" / "s1-level-1-noise.xsd"
@@ -58,7 +55,6 @@ def _open_noise_dataset(safe_dir: Path, band: str) -> xr.Dataset:
     pixel_list = []
     line_list = []
     noise_range_lut_list = []
-
     for vector in noise_vectors:
         line_list.append(vector["line"])
         pixel = np.fromstring(vector["pixel"]["$"], dtype=int, sep=" ")
@@ -66,33 +62,13 @@ def _open_noise_dataset(safe_dir: Path, band: str) -> xr.Dataset:
         noise_range_lut = np.fromstring(vector["noiseRangeLut"]["$"], dtype=np.float32, sep=" ")
         noise_range_lut_list.append(noise_range_lut)
 
-    if all(np.array_equal(item, pixel_list[0]) for item in pixel_list[1:]):
-        unique_pixels = pixel_list[0]
-        noise_range_lut_grid: np.ndarray | list = noise_range_lut_list
-
-    else:
-        # noise vector can have different pixel indices
-        # we therefore map them to the full list of indices
-        # and pad with nan s.t. these get interpolated
-        unique_pixels = np.sort(np.unique(np.concatenate(pixel_list)))
-        noise_range_lut_grid = cast(
-            np.ndarray, np.full((len(line_list), len(unique_pixels)), np.nan, dtype=np.float32)
-        )
-
-        # Fill the LUT grid by mapping each noise vector's data
-        for i, (pixels, noise_lut) in enumerate(zip(pixel_list, noise_range_lut_list)):
-            pixel_indices = np.searchsorted(
-                unique_pixels, pixels
-            )  # Map pixel indices to the unified grid
-            noise_range_lut_grid[i, pixel_indices] = (
-                noise_lut  # Insert the LUT values at the mapped positions
-            )
-
+    pixel = np.array(pixel_list)
+    if (pixel - pixel[0]).any():
+        raise ValueError("Unable to organize noise vectors in a regular line-pixel grid")
     data_vars = {
-        "noiseRangeLut": (("line", "pixel"), noise_range_lut_grid),
+        "noiseRangeLut": (("line", "pixel"), noise_range_lut_list),
     }
-
-    coords = {"line": line_list, "pixel": unique_pixels}
+    coords = {"line": line_list, "pixel": pixel_list[0]}
 
     return xr.Dataset(data_vars=data_vars, coords=coords)
 
@@ -132,13 +108,9 @@ def _open_calibration_dataset(safe_dir: Path, band: str) -> xr.Dataset:
     return xr.Dataset(data_vars=data_vars, coords=coords)
 
 
-def _get_calibration_lut_value(
+def _get_lut_value(
     digital_number: xr.DataArray, available_lut: xr.DataArray, **kwargs: Any
 ) -> xr.DataArray:
-    """Function to get calibarion LUT value for certain area of the tile.
-
-    Adjusted from xarray-sentinel (https://github.com/bopen/xarray-sentinel).
-    """
     lut_mean = available_lut.mean()
     if np.allclose(lut_mean, available_lut, **kwargs):
         lut: xr.DataArray = lut_mean.astype(np.float64)
@@ -147,60 +119,6 @@ def _get_calibration_lut_value(
             line=digital_number.line,
             pixel=digital_number.pixel,
         ).astype(np.float64)
-        if digital_number.chunks is not None:
-            lut = lut.chunk(digital_number.chunksizes)
-
-    return lut
-
-
-def _get_noise_lut_value(
-    digital_number: xr.DataArray, available_lut: xr.DataArray, **kwargs: Any
-) -> xr.DataArray:
-    """Function to get noise LUT value for certain area of the tile.
-
-    This function uses scipy.griddata since potential nan values need to be ignored
-    during interpolation and therefore be masked out.
-    """
-    lut_mean = available_lut.mean()
-    if np.allclose(lut_mean, available_lut, **kwargs):
-        lut: xr.DataArray = lut_mean.astype(np.float64)
-    else:
-        lut_line = available_lut.coords["line"].values
-        lut_pixel = available_lut.coords["pixel"].values
-        lut_values = available_lut.values  # 2D-array of noise LUT values
-
-        # Flatten the LUT and filter out NaN values
-        lut_line_grid, lut_pixel_grid = np.meshgrid(lut_line, lut_pixel, indexing="ij")
-        valid_mask = ~np.isnan(lut_values)  # Mask for non-NaN values
-        points = np.column_stack((lut_line_grid[valid_mask], lut_pixel_grid[valid_mask]))
-        values = lut_values[valid_mask]
-
-        # Generate the query grid from the digital number
-        query_line = digital_number.coords["line"].values
-        query_pixel = digital_number.coords["pixel"].values
-        query_line_grid, query_pixel_grid = np.meshgrid(query_line, query_pixel, indexing="ij")
-        # generate grid from flattened lines and pixels
-        query_points = np.column_stack((query_line_grid.ravel(), query_pixel_grid.ravel()))
-
-        # Perform bilinear interpolation
-        interpolated_values = griddata(
-            points=points,
-            values=values,
-            xi=query_points,
-            method="linear",
-            fill_value=np.nan,  # Fill with NaN if outside the convex hull
-        )
-
-        # Reshape interpolated values to the shape of the digital number
-        interpolated_values = interpolated_values.reshape(digital_number.shape)
-
-        # Creat xr.DataArray with meta data from digital number
-        lut = xr.DataArray(
-            interpolated_values.astype(np.float64),
-            coords=digital_number.coords,
-            dims=digital_number.dims,
-        )
-
         if digital_number.chunks is not None:
             lut = lut.chunk(digital_number.chunksizes)
 
@@ -223,11 +141,9 @@ def _calibrate(
     thermal_noise_lut: Thermal noise LUT to remove sensor noise.
     """
     radar_intensity = digital_number**2
-    backscatter_calibration = _get_calibration_lut_value(
-        digital_number, backscatter_calibration_lut, **kwargs
-    )
+    backscatter_calibration = _get_lut_value(digital_number, backscatter_calibration_lut, **kwargs)
     if thermal_noise_lut is not None:
-        thermal_noise = _get_noise_lut_value(digital_number, thermal_noise_lut, **kwargs)
+        thermal_noise = _get_lut_value(digital_number, thermal_noise_lut, **kwargs)
         radar_intensity = radar_intensity - thermal_noise
     sigma_nought: xr.DataArray = radar_intensity / backscatter_calibration**2
     return abs(sigma_nought)
