@@ -1,27 +1,36 @@
 """Utilities for clipping polygons from raster tiles."""
 
 import logging
+import os
+import re
+import sys
+import traceback
 from pathlib import Path
 from typing import Literal, cast
 
+import esa_snappy as snappy
 import geopandas as gpd
 import numpy as np
 import pandas as pd
 import rasterio
-import xarray as xr
 from affine import Affine
-from rasterio.features import geometry_window
+from esa_snappy import Product, ProductIO
+from pyproj import CRS
 from rasterio.io import DatasetReader
 from rasterio.mask import mask
 from rasterio.plot import reshape_as_image
 from shapely.geometry import MultiPolygon, Polygon
 from tqdm import tqdm
 
-from eurocropsml.acquisition.clipping.calibration import (
-    _calibrate_digital_number_in_db,
-    _open_calibration_dataset,
-    _open_noise_dataset,
+from eurocropsml.acquisition.clipping.s1_preprocessing import (
+    do_apply_orbit_file,
+    do_calibration,
+    do_speckle_filtering,
+    do_subset,
+    do_terrain_correction,
+    do_thermal_noise_removal,
 )
+from eurocropsml.acquisition.config import CollectorConfig
 
 logger = logging.getLogger(__name__)
 
@@ -62,22 +71,19 @@ def _transform_polygon(
 def mask_polygon_raster(
     satellite: Literal["S1", "S2"],
     tilepaths: list[Path],
-    bands: list[str],
     polygon_df: pd.DataFrame,
     parcel_id_name: str,
     product_date: str,
-    denoise: bool = True,
 ) -> pd.DataFrame:
     """Clipping parcels from raster files (per band) and calculating median pixel value per band.
 
     Args:
         satellite: S1 for Sentinel-1 and S2 for Sentinel-2.
         tilepaths: Paths to the raster's band tiles.
-        bands: (Sub-)set of Sentinel-1 (radar) or Sentinel-2 (spectral) bands.
+        config: CollectorConfig used for pre-processing Sentinel-1
         polygon_df: GeoDataFrame of all parcels to be clipped.
         parcel_id_name: The country's parcel ID name (varies from country to country).
         product_date: Date on which the raster tile was obtained.
-        denoise: Whether to perform thermal noise removal for Sentinel-1.
 
     Returns:
         Dataframe with clipped values.
@@ -94,113 +100,140 @@ def mask_polygon_raster(
     polygon_df["geometry"] = polygon_df["geometry"].buffer(0)
     polygon_df = polygon_df.reset_index(drop=True)
 
-    sigma_nought: xr.DataArray | None = None
-    noise_vector: xr.DataArray | None = None
-
     for b, band_path in enumerate(tilepaths):
-        try:
-            with rasterio.open(band_path, "r") as raster_tile:
-                if b == 0:
-                    if satellite == "S2" and polygon_df.crs.srs != raster_tile.crs.data["init"]:
-                        # transforming shapefile into CRS of raster tile
-                        polygon_df = polygon_df.to_crs(raster_tile.crs.data["init"])
-                    elif satellite == "S1":
-                        gcps, gcps_crs = raster_tile.get_gcps()
+        if satellite == "S2":
+            try:
+                with rasterio.open(band_path, "r") as raster_tile:
+                    if b == 0:
+                        if polygon_df.crs.srs != raster_tile.crs.data["init"]:
+                            # transforming shapefile into CRS of raster tile
+                            polygon_df = polygon_df.to_crs(raster_tile.crs.data["init"])
 
-                        if polygon_df.crs.srs != gcps_crs.to_string():
-                            polygon_df = polygon_df.to_crs(gcps_crs.to_string())
-
-                        transform = rasterio.transform.from_gcps(gcps)
-
-                        inv_transform = ~transform  # Invert the affine transformation matrix
-
-                        polygon_df["geometry"] = polygon_df["geometry"].apply(
-                            lambda poly, i_trans=inv_transform: _transform_polygon(poly, i_trans)
-                        )
-
-                        calibration_data = _open_calibration_dataset(
-                            Path(band_path).parent.parent, bands[b]
-                        )
-                        sigma_nought = calibration_data.data_vars["sigmaNought"]
-
-                        if denoise:
-                            noise_data = _open_noise_dataset(
-                                Path(band_path).parent.parent, bands[b]
-                            )
-                            noise_vector = noise_data.data_vars["noiseRangeLut"]
-
-                # clipping geometry out of raster tile and saving in dictionary
-                polygon_df.apply(
-                    lambda row, sigma_nought=sigma_nought, noise_vector=noise_vector: _process_row(
-                        row, raster_tile, parcels_dict, parcel_id_name, sigma_nought, noise_vector
-                    ),
-                    axis=1,
+            except FileNotFoundError:
+                raise FileNotFoundError(
+                    f"{band_path} could not be found. Please make sure it is "
+                    "present, delete all clipped files and rerun the whole "
+                    "clipping process."
                 )
-        except FileNotFoundError:
-            raise FileNotFoundError(
-                f"{band_path} could not be found. Please make sure it is "
-                "present, delete all clipped files and rerun the whole "
-                "clipping process."
+
+            polygon_df.apply(
+                lambda row: _process_row(row, raster_tile, parcels_dict, parcel_id_name, satellite),
+                axis=1,
             )
+
+        else:
+            safe_file = Path(band_path).parent.parent
+
+            manifest_path = str(safe_file) + "/manifest.safe"
+            sentinel_1 = ProductIO.readProduct(str(manifest_path))
+
+            wkt = sentinel_1.getSceneCRS().toWKT()
+            authority_start = wkt.find('AUTHORITY["EPSG",')
+            epsg_start = wkt.find('"', authority_start) + 1
+            epsg_end = wkt.find("]", epsg_start)
+            epsg_code = wkt[epsg_start:epsg_end].split(",")[1].strip('"')
+            crs = f"EPSG:{epsg_code}"
+
+            polarization = "DV"
+            pols = "VV,VH"
+
+            orbit_applied = do_apply_orbit_file(sentinel_1)
+            thermal_removed = do_thermal_noise_removal(orbit_applied)
+            calibrated = do_calibration(thermal_removed, polarization, pols)
+            down_filtered = do_speckle_filtering(calibrated)
+            down_tercorrected = do_terrain_correction(down_filtered, 1)
+
+            del orbit_applied, thermal_removed, calibrated
+
+            band = "VV" if "vv" in band_path else "VH"
+
+            if band == "VV":
+                if polygon_df.crs.srs != crs:
+                    # transforming shapefile into CRS of band product
+                    polygon_df = polygon_df.to_crs(crs)
+
+                # TODO: change to esa-snappy getPixelPos
+                with rasterio.open(band_path, "r") as raster_tile:
+
+                    gcps, gcps_crs = raster_tile.get_gcps()
+
+                    transform = rasterio.transform.from_gcps(gcps)
+
+                    inv_transform = ~transform  # Invert the affine transformation matrix
+
+                    polygon_df["geometry_new"] = polygon_df["geometry"].apply(
+                        lambda poly, i_trans=inv_transform: _transform_polygon(poly, i_trans)
+                    )
+
+            polygon_df.apply(
+                lambda row: _process_row(
+                    row, down_tercorrected, parcels_dict, parcel_id_name, satellite, band
+                ),
+                axis=1,
+            )
+            del down_tercorrected
 
     parcels_df = pd.DataFrame(list(parcels_dict.items()), columns=[parcel_id_name, product_date])
 
     return parcels_df
 
 
+def suppress_output(func, *args, **kwargs):
+    with open(os.devnull, "w") as fnull:
+        # Save original file descriptors
+        original_stdout_fd = os.dup(1)
+        original_stderr_fd = os.dup(2)
+        try:
+            # Redirect stdout and stderr to /dev/null
+            os.dup2(fnull.fileno(), 1)
+            os.dup2(fnull.fileno(), 2)
+            return func(*args, **kwargs)
+        finally:
+            # Restore original file descriptors
+            os.dup2(original_stdout_fd, 1)
+            os.dup2(original_stderr_fd, 2)
+
+
 def _process_row(
     row: pd.Series,
-    raster_tile: DatasetReader,
+    band_tile: DatasetReader | ProductIO,
     parcels_dict: dict[int, list[float | None]],
     parcel_id_name: str,
-    sigma_nought: xr.DataArray | None = None,
-    noise_vector: xr.DataArray | None = None,
+    satellite: Literal["S1", "S2"],
+    band: str = "",
 ) -> None:
     """Masking geometry from raster tiles and calculating median pixel value."""
     parcel_id: int = row[parcel_id_name]
-    geom = row["geometry"]
+    geom = row["geometry_new"]
 
     try:
-        masked_img, _ = mask(raster_tile, [geom], crop=True, nodata=0)
-        masked_img = reshape_as_image(masked_img)
-        # third dimension has index 0 since we only have one band
-        not_zero = masked_img[:, :, 0] != 0
+        if satellite == "S1":
+            cropped_img = suppress_output(do_subset, band_tile, row["geometry"].wkt)
+            band_img = cropped_img.getBand(f"Sigma0_{band}")
 
-        # Apply calibration to raw digital numbers (DN) in order to receive backscatter in dB
-        if sigma_nought is not None:
+            raster_width = band_img.getRasterWidth()
+            raster_height = band_img.getRasterHeight()
+            buffer = np.zeros(raster_width * raster_height, dtype=np.float32)
+
+            band_img.loadRasterData()
+            pixels = band_img.getPixels(0, 0, raster_width, raster_height, buffer)
+            pixels = np.array(pixels, dtype=np.float32).reshape((raster_height, raster_width))
+            not_zero = pixels[:, :] != 0
+            del cropped_img
+
             if not not_zero.any():
                 patch_median: float | None = None
             else:
-                band_data = masked_img[:, :, 0]
+                patch_median = np.median(pixels[not_zero]).astype(np.float32)
 
-                # Get the position (row and pixel_col) of the geometry in the original raster
-                # 1. create window around geometry in terms of pixel/line coordinates
-                window = geometry_window(raster_tile, [geom])
-
-                # 2. Extract start_row, start_col
-                start_row, start_col = window.toslices()[0].start, window.toslices()[1].start
-
-                start_row = int(np.floor(start_row))
-                start_col = int(np.floor(start_col))
-
-                # 3. Compute the pixel and line coordinates in the original raster's space
-                pixel_coords = np.arange(start_col, start_col + band_data.shape[1])
-                line_coords = np.arange(start_row, start_row + band_data.shape[0])
-
-                cropped_data = xr.DataArray(
-                    data=band_data,
-                    dims=("line", "pixel"),
-                    coords={"line": line_coords, "pixel": pixel_coords},
-                    name="cropped_image",
-                )
-
-                # get backscatter in decibels
-                backscatter_db: np.ndarray = _calibrate_digital_number_in_db(
-                    cropped_data, sigma_nought, noise_vector
-                )
-                patch_median = np.median(backscatter_db[not_zero]).astype(np.float32)
+            parcels_dict[parcel_id].append(patch_median)
 
         else:
+            masked_img, masked_transform = mask(band_tile, [geom], crop=True, nodata=0)
+            masked_img = reshape_as_image(masked_img)
+            # third dimension has index 0 since we only have one band
+            not_zero = masked_img[:, :, 0] != 0
+
             if not not_zero.any():
                 patch_median = 0.0
             else:
@@ -211,7 +244,7 @@ def _process_row(
                 # Ensure the median value is non-negative
                 patch_median = max(0.0, cast(float, patch_median))
 
-        parcels_dict[parcel_id].append(patch_median)
+            parcels_dict[parcel_id].append(patch_median)
 
     except ValueError:
         # Since we are cropping to the extent of the geometry, if none of the raster pixels is

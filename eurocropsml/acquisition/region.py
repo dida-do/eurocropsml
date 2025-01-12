@@ -70,7 +70,7 @@ def add_nuts_regions(
     try:
         nuts: gpd.GeoDataFrame = pyogrio.read_dataframe(nuts_regions_file)
 
-    except FileNotFoundError:
+    except Exception:
         available_crs: list[str] = []
         available_years: list[int] = []
         for file in nuts_dir.iterdir():

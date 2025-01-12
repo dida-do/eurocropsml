@@ -174,7 +174,6 @@ def _filter_args(
 
 def _process_raster_parallel(
     satellite: Literal["S1", "S2"],
-    denoise: bool,
     polygon_df: pd.DataFrame,
     parcel_id_name: str,
     bands: list[str],
@@ -206,9 +205,7 @@ def _process_raster_parallel(
     # geometry information of all parcels
     filtered_geom = polygon_df[polygon_df[parcel_id_name].isin(parcel_ids)]
 
-    result = mask_polygon_raster(
-        satellite, band_tiles, bands, filtered_geom, parcel_id_name, product_date, denoise
-    )
+    result = mask_polygon_raster(satellite, band_tiles, filtered_geom, parcel_id_name, product_date)
 
     if result is not None:
         result.set_index(parcel_id_name, inplace=True)
@@ -275,7 +272,6 @@ def clipping(
         func = partial(
             _process_raster_parallel,
             config.satellite,
-            config.denoise,
             polygon_df_month,
             cast(str, config.parcel_id_name),
             config.bands,
