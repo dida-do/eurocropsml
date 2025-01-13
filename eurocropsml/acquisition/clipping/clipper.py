@@ -163,7 +163,6 @@ def _filter_args(
 
 def _process_raster_parallel(
     satellite: Literal["S1", "S2"],
-    denoise: bool,
     polygon_df: pd.DataFrame,
     parcel_id_name: str,
     bands: list[str],
@@ -174,8 +173,6 @@ def _process_raster_parallel(
 
     Args:
         satellite: S1 for Sentinel-1 and S2 for Sentinel-2.
-        denoise: Whether to perform thermal noise removal for Sentinel-1.
-            For Sentinel-2 this argument has no effect.
         polygon_df: Dataframe containing all parcel ids. Will be merged with the clipped values.
         parcel_id_name: The country's parcel ID name (varies from country to country).
         filtered_images: Dataframe containing all parcel ids that lie in this raster tile.
@@ -197,7 +194,7 @@ def _process_raster_parallel(
         filtered_geom = polygon_df[polygon_df[parcel_id_name].isin(parcel_ids)]
 
         result = mask_polygon_raster(
-            satellite, band_tiles, bands, filtered_geom, parcel_id_name, product_date, denoise
+            satellite, band_tiles, filtered_geom, parcel_id_name, product_date
         )
 
         if result is not None:
@@ -255,7 +252,6 @@ def clipping(
     func = partial(
         _process_raster_parallel,
         config.satellite,
-        config.denoise,
         polygon_df,
         cast(str, config.parcel_id_name),
         config.bands,
