@@ -2,20 +2,15 @@
 
 import logging
 import os
-import re
-import sys
-import traceback
 from pathlib import Path
-from typing import Literal, cast
+from typing import Any, Callable, Literal, cast
 
-import esa_snappy as snappy
 import geopandas as gpd
 import numpy as np
 import pandas as pd
 import rasterio
 from affine import Affine
-from esa_snappy import Product, ProductIO
-from pyproj import CRS
+from esa_snappy import ProductIO
 from rasterio.io import DatasetReader
 from rasterio.mask import mask
 from rasterio.plot import reshape_as_image
@@ -30,7 +25,6 @@ from eurocropsml.acquisition.clipping.s1_preprocessing import (
     do_terrain_correction,
     do_thermal_noise_removal,
 )
-from eurocropsml.acquisition.config import CollectorConfig
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +74,6 @@ def mask_polygon_raster(
     Args:
         satellite: S1 for Sentinel-1 and S2 for Sentinel-2.
         tilepaths: Paths to the raster's band tiles.
-        config: CollectorConfig used for pre-processing Sentinel-1
         polygon_df: GeoDataFrame of all parcels to be clipped.
         parcel_id_name: The country's parcel ID name (varies from country to country).
         product_date: Date on which the raster tile was obtained.
@@ -104,10 +97,9 @@ def mask_polygon_raster(
         if satellite == "S2":
             try:
                 with rasterio.open(band_path, "r") as raster_tile:
-                    if b == 0:
-                        if polygon_df.crs.srs != raster_tile.crs.data["init"]:
-                            # transforming shapefile into CRS of raster tile
-                            polygon_df = polygon_df.to_crs(raster_tile.crs.data["init"])
+                    if b == 0 and polygon_df.crs.srs != raster_tile.crs.data["init"]:
+                        # transforming shapefile into CRS of raster tile
+                        polygon_df = polygon_df.to_crs(raster_tile.crs.data["init"])
 
             except FileNotFoundError:
                 raise FileNotFoundError(
@@ -145,7 +137,7 @@ def mask_polygon_raster(
 
             del orbit_applied, thermal_removed, calibrated
 
-            band = "VV" if "vv" in band_path else "VH"
+            band = "VV" if "vv" in str(band_path) else "VH"
 
             if band == "VV":
                 if polygon_df.crs.srs != crs:
@@ -166,8 +158,8 @@ def mask_polygon_raster(
                     )
 
             polygon_df.apply(
-                lambda row: _process_row(
-                    row, down_tercorrected, parcels_dict, parcel_id_name, satellite, band
+                lambda row, product=down_tercorrected, band_name=band: _process_row(
+                    row, product, parcels_dict, parcel_id_name, satellite, band_name
                 ),
                 axis=1,
             )
@@ -178,7 +170,17 @@ def mask_polygon_raster(
     return parcels_df
 
 
-def suppress_output(func, *args, **kwargs):
+def suppress_output(func: Callable, *args: Any, **kwargs: Any) -> Any:
+    """Suppress the stdout and stderr of a given function during its execution.
+
+    Args:
+        func (Callable): The function to execute with suppressed output.
+        *args (Any): Positional arguments to pass to the function.
+        **kwargs (Any): Keyword arguments to pass to the function.
+
+    Returns:
+        Any: The return value of the executed function.
+    """
     with open(os.devnull, "w") as fnull:
         # Save original file descriptors
         original_stdout_fd = os.dup(1)
@@ -200,7 +202,7 @@ def _process_row(
     parcels_dict: dict[int, list[float | None]],
     parcel_id_name: str,
     satellite: Literal["S1", "S2"],
-    band: str = "",
+    band_name: str = "",
 ) -> None:
     """Masking geometry from raster tiles and calculating median pixel value."""
     parcel_id: int = row[parcel_id_name]
@@ -209,7 +211,7 @@ def _process_row(
     try:
         if satellite == "S1":
             cropped_img = suppress_output(do_subset, band_tile, row["geometry"].wkt)
-            band_img = cropped_img.getBand(f"Sigma0_{band}")
+            band_img = cropped_img.getBand(f"Sigma0_{band_name}")
 
             raster_width = band_img.getRasterWidth()
             raster_height = band_img.getRasterHeight()
