@@ -263,7 +263,7 @@ def clipping(
 
     new_data: bool = False
     if processed < len(args):
-        mp_orig.set_start_method('spawn', force=True)
+        mp_orig.set_start_method("spawn", force=True)
         new_data = True
         logger.info("Starting parallel raster clipping...")
         te = tqdm(total=len(args) - processed, desc="Clipping raster tiles.")
