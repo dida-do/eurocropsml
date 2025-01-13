@@ -263,6 +263,7 @@ def clipping(
 
     new_data: bool = False
     if processed < len(args):
+        mp_orig.set_start_method('spawn', force=True)
         new_data = True
         logger.info("Starting parallel raster clipping...")
         te = tqdm(total=len(args) - processed, desc="Clipping raster tiles.")
@@ -270,7 +271,7 @@ def clipping(
             chunk_args: list[tuple[pd.DataFrame, list]] = args[processed : processed + chunk_size]
             results: list[pd.DataFrame] = []
 
-            with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+            with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
                 futures = [executor.submit(func, *arg) for arg in chunk_args]
 
                 for future in concurrent.futures.as_completed(futures):
