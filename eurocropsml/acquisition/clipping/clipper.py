@@ -270,7 +270,7 @@ def clipping(
             chunk_args: list[tuple[pd.DataFrame, list]] = args[processed : processed + chunk_size]
             results: list[pd.DataFrame] = []
 
-            with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
                 futures = [executor.submit(func, *arg) for arg in chunk_args]
 
                 for future in concurrent.futures.as_completed(futures):
