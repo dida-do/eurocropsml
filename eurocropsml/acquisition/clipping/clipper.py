@@ -165,7 +165,6 @@ def _process_raster_parallel(
     satellite: Literal["S1", "S2"],
     polygon_df: pd.DataFrame,
     parcel_id_name: str,
-    bands: list[str],
     filtered_images: gpd.GeoDataFrame,
     band_tiles: list[Path],
 ) -> pd.DataFrame:
@@ -176,7 +175,6 @@ def _process_raster_parallel(
         polygon_df: Dataframe containing all parcel ids. Will be merged with the clipped values.
         parcel_id_name: The country's parcel ID name (varies from country to country).
         filtered_images: Dataframe containing all parcel ids that lie in this raster tile.
-        bands: (Sub-)set of Sentinel-1 (radar) or Sentinel-2 (spectral) bands.
         band_tiles: Paths to the raster's band tiles.
 
     Returns:
@@ -254,7 +252,6 @@ def clipping(
         config.satellite,
         polygon_df,
         cast(str, config.parcel_id_name),
-        config.bands,
     )
 
     polygon_df = polygon_df.drop(["geometry"], axis=1)
@@ -263,7 +260,9 @@ def clipping(
 
     new_data: bool = False
     if processed < len(args):
-        mp_orig.set_start_method("spawn", force=True)
+        if config.satellite == "S1":
+            # needed for esa_snappy
+            mp_orig.set_start_method("spawn", force=True)
         new_data = True
         logger.info("Starting parallel raster clipping...")
         te = tqdm(total=len(args) - processed, desc="Clipping raster tiles.")
