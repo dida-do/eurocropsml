@@ -18,13 +18,15 @@ from shapely.geometry import MultiPolygon, Polygon
 from tqdm import tqdm
 
 from eurocropsml.acquisition.clipping.s1_preprocessing import (
-    do_apply_orbit_file,
-    do_calibration,
-    do_speckle_filtering,
-    do_subset,
-    do_terrain_correction,
-    do_thermal_noise_removal,
+    apply_orbit_file,
+    calibration,
+    convert_to_db,
+    speckle_filtering,
+    subset,
+    terrain_correction,
+    thermal_noise_removal,
 )
+from eurocropsml.acquisition.config import S1_BANDS
 
 logger = logging.getLogger(__name__)
 
@@ -93,8 +95,8 @@ def mask_polygon_raster(
     polygon_df["geometry"] = polygon_df["geometry"].buffer(0)
     polygon_df = polygon_df.reset_index(drop=True)
 
-    for b, band_path in enumerate(tilepaths):
-        if satellite == "S2":
+    if satellite == "S2":
+        for b, band_path in enumerate(tilepaths):
             try:
                 with rasterio.open(band_path, "r") as raster_tile:
                     if b == 0 and polygon_df.crs.srs != raster_tile.crs.data["init"]:
@@ -113,57 +115,40 @@ def mask_polygon_raster(
                 axis=1,
             )
 
-        else:
-            safe_file = Path(band_path).parent.parent
+    else:
+        band_path = tilepaths[0]
+        safe_file = Path(band_path).parent.parent
 
-            manifest_path = str(safe_file) + "/manifest.safe"
-            sentinel_1 = ProductIO.readProduct(str(manifest_path))
+        manifest_path = str(safe_file) + "/manifest.safe"
+        sentinel_1 = ProductIO.readProduct(str(manifest_path))
 
-            wkt = sentinel_1.getSceneCRS().toWKT()
-            authority_start = wkt.find('AUTHORITY["EPSG",')
-            epsg_start = wkt.find('"', authority_start) + 1
-            epsg_end = wkt.find("]", epsg_start)
-            epsg_code = wkt[epsg_start:epsg_end].split(",")[1].strip('"')
-            crs = f"EPSG:{epsg_code}"
+        wkt = sentinel_1.getSceneCRS().toWKT()
+        authority_start = wkt.find('AUTHORITY["EPSG",')
+        epsg_start = wkt.find('"', authority_start) + 1
+        epsg_end = wkt.find("]", epsg_start)
+        epsg_code = wkt[epsg_start:epsg_end].split(",")[1].strip('"')
+        product_crs = f"EPSG:{epsg_code}"
 
-            polarization = "DV"
-            pols = "VV,VH"
+        pols = ",".join(S1_BANDS)
 
-            orbit_applied = do_apply_orbit_file(sentinel_1)
-            thermal_removed = do_thermal_noise_removal(orbit_applied)
-            calibrated = do_calibration(thermal_removed, polarization, pols)
-            down_filtered = do_speckle_filtering(calibrated)
-            down_tercorrected = do_terrain_correction(down_filtered, 1)
+        orbit_applied = apply_orbit_file(sentinel_1)
+        thermal_removed = thermal_noise_removal(orbit_applied)
+        calibrated = calibration(thermal_removed, pols)
+        down_filtered = speckle_filtering(calibrated)
+        down_tercorrected = terrain_correction(down_filtered)
 
-            del orbit_applied, thermal_removed, calibrated
+        del orbit_applied, thermal_removed, calibrated
 
-            band = "VV" if "vv" in str(band_path) else "VH"
+        if polygon_df.crs != product_crs:
+            polygon_df = polygon_df.to_crs(product_crs)
 
-            if band == "VV":
-                if polygon_df.crs.srs != crs:
-                    # transforming shapefile into CRS of band product
-                    polygon_df = polygon_df.to_crs(crs)
-
-                # TODO: change to esa-snappy getPixelPos
-                with rasterio.open(band_path, "r") as raster_tile:
-
-                    gcps, gcps_crs = raster_tile.get_gcps()
-
-                    transform = rasterio.transform.from_gcps(gcps)
-
-                    inv_transform = ~transform  # Invert the affine transformation matrix
-
-                    polygon_df["geometry_new"] = polygon_df["geometry"].apply(
-                        lambda poly, i_trans=inv_transform: _transform_polygon(poly, i_trans)
-                    )
-
-            polygon_df.apply(
-                lambda row, product=down_tercorrected, band_name=band: _process_row(
-                    row, product, parcels_dict, parcel_id_name, satellite, band_name
-                ),
-                axis=1,
-            )
-            del down_tercorrected
+        polygon_df.apply(
+            lambda row: _process_row(
+                row, down_tercorrected, parcels_dict, parcel_id_name, satellite
+            ),
+            axis=1,
+        )
+        del down_tercorrected
 
     parcels_df = pd.DataFrame(list(parcels_dict.items()), columns=[parcel_id_name, product_date])
 
@@ -202,36 +187,43 @@ def _process_row(
     parcels_dict: dict[int, list[float | None]],
     parcel_id_name: str,
     satellite: Literal["S1", "S2"],
-    band_name: str = "",
 ) -> None:
     """Masking geometry from raster tiles and calculating median pixel value."""
     parcel_id: int = row[parcel_id_name]
-    geom = row["geometry_new"]
+    geom = row["geometry"]
 
     try:
         if satellite == "S1":
-            cropped_img = suppress_output(do_subset, band_tile, row["geometry"].wkt)
-            band_img = cropped_img.getBand(f"Sigma0_{band_name}")
+            cropped_img = suppress_output(subset, band_tile, geom.wkt)
 
-            raster_width = band_img.getRasterWidth()
-            raster_height = band_img.getRasterHeight()
-            buffer = np.zeros(raster_width * raster_height, dtype=np.float32)
+            band_values = []
+            for band_name in [
+                f"Sigma0_{S1_BANDS[0]}",
+                f"Sigma0_{S1_BANDS[1]}",
+            ]:
+                band_img = cropped_img.getBand(band_name)
+                width = band_img.getRasterWidth()
+                height = band_img.getRasterHeight()
 
-            band_img.loadRasterData()
-            pixels = band_img.getPixels(0, 0, raster_width, raster_height, buffer)
-            pixels = np.array(pixels, dtype=np.float32).reshape((raster_height, raster_width))
-            not_zero = pixels[:, :] != 0
-            del cropped_img
+                pixels = np.zeros(width * height, dtype=np.float32)
+                band_img.readPixels(0, 0, width, height, pixels)
+                pixels = pixels.reshape((height, width))
 
-            if not not_zero.any():
-                patch_median: float | None = None
-            else:
-                patch_median = np.median(pixels[not_zero]).astype(np.float32)
+                pixels = convert_to_db(pixels)
+
+                not_zero = pixels != 0
+                if not not_zero.any():
+                    patch_median: float | None = None
+                else:
+                    patch_median = np.median(pixels[not_zero]).astype(np.float32)
+
+                band_values.append(patch_median)
+            cropped_img.dispose()
 
             parcels_dict[parcel_id].append(patch_median)
 
         else:
-            masked_img, masked_transform = mask(band_tile, [geom], crop=True, nodata=0)
+            masked_img, _ = mask(band_tile, [geom], crop=True, nodata=0)
             masked_img = reshape_as_image(masked_img)
             # third dimension has index 0 since we only have one band
             not_zero = masked_img[:, :, 0] != 0
