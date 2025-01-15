@@ -1,130 +1,158 @@
-"""Code taken from https://github.com/wajuqi/Sentinel-1-preprocessing-using-Snappy."""
+"""Utilities for pre-processing Sentinel-1 data.
 
-from typing import Optional
+esa_snappy code taken from https://github.com/wajuqi/Sentinel-1-preprocessing-using-Snappy.
+Slightly adjusted by Ekaterina Gikalo, Joana Reuss (TUM), 2025.
+
+"""
+
+import logging
+from typing import cast
 
 import jpy
+import numpy as np
 from esa_snappy import GPF, HashMap, Product
 
+logger = logging.getLogger(__name__)
 
-def do_apply_orbit_file(source: Product) -> Product:
+
+def apply_orbit_file(prdct: Product) -> Product:
     """Apply orbit file correction to the source data.
 
     Args:
-        source (Product): The input product to which the orbit file correction will be applied.
+        prdct: The input product to which the orbit file correction will be applied.
 
     Returns:
         Product: The product with the orbit file correction applied.
     """
-    print("\tApply orbit file...")
+    logger.info("Apply orbit file...")
     parameters = HashMap()
     parameters.put("Apply-Orbit-File", True)
-    output = GPF.createProduct("Apply-Orbit-File", parameters, source)
+    output = GPF.createProduct("Apply-Orbit-File", parameters, prdct)
     return output
 
 
-def do_thermal_noise_removal(source: Product) -> Product:
+def thermal_noise_removal(prdct: Product) -> Product:
     """Perform thermal noise removal on the source data.
 
     Args:
-        source (Product): The input product on which thermal noise removal will be performed.
+        prdct: The input product on which thermal noise removal will be performed.
 
     Returns:
-        Product: The product with thermal noise removed.
+        The product with thermal noise removed.
     """
-    print("\tThermal noise removal...")
+    logger.info("Remove thermal noise...")
     parameters = HashMap()
     parameters.put("removeThermalNoise", True)
-    output = GPF.createProduct("ThermalNoiseRemoval", parameters, source)
+    output = GPF.createProduct("ThermalNoiseRemoval", parameters, prdct)
     return output
 
 
-def do_calibration(source: Product, polarization: str, pols: str) -> Product:
+def calibration(prdct: Product, pols: str) -> Product:
     """Perform radiometric calibration on the source data.
 
     Args:
-        source (Product): The input product to calibrate.
-        polarization (str): The type of polarization (e.g., "DH", "DV", "SH").
-        pols (str): The selected polarizations.
+        prdct: The input product to calibrate.
+        pols: The selected polarizations.
 
     Returns:
-        Product: The calibrated product.
+        Product converted to backscatter values.
     """
-    print("\tCalibration...")
+    logger.info("Apply radiometric calibration...")
     parameters = HashMap()
-    parameters.put("outputSigmaBand", True)
-    if polarization == "DH":
-        parameters.put("sourceBands", "Intensity_HH,Intensity_HV")
-    elif polarization == "DV":
-        parameters.put("sourceBands", "Intensity_VH,Intensity_VV")
-    elif polarization == "SH" or polarization == "HH":
-        parameters.put("sourceBands", "Intensity_HH")
-    elif polarization == "SV":
-        parameters.put("sourceBands", "Intensity_VV")
-    else:
-        print("different polarization!")
+    parameters.put("outputSigmaBand", True)  # output sigma0
+    parameters.put("sourceBands", f"Intensity_{pols.split(',')[0]},Intensity_{pols.split(',')[1]}")
     parameters.put("selectedPolarisations", pols)
     parameters.put("outputImageScaleInDb", False)
-    output = GPF.createProduct("Calibration", parameters, source)
+    output = GPF.createProduct("Calibration", parameters, prdct)
     return output
 
 
-def do_speckle_filtering(source: Product) -> Product:
+def convert_to_db(
+    sigma_nought: np.ndarray, min_db: float | None = -50.0, max_db: float | None = 0.0
+) -> np.ndarray:
+    """Convert Sigma Nought linear values into decibels.
+
+    Args:
+        sigma_nought: Sigma nought linear values.
+        min_db: Minimum value to clip db values to.
+        max_db: Maximum value to clip db values to.
+
+    Returns:
+        Sigma Nought values in decibel.
+    """
+    logger.info("Convert to decibel...")
+    sigma_nought_db = 10.0 * np.log10(np.maximum(sigma_nought, 1e-10))  # prevent division by 0
+    if min_db is not None:
+        sigma_nought_db = np.maximum(sigma_nought_db, min_db)
+    if max_db is not None:
+        sigma_nought_db = np.minimum(sigma_nought_db, max_db)
+
+    return cast(np.ndarray, sigma_nought_db)
+
+
+def speckle_filtering(prdct: Product) -> Product:
     """Perform speckle filtering on the source data.
 
     Args:
-        source (Product): The input product on which speckle filtering will be performed.
+        prdct: The input product on which speckle filtering will be performed.
 
     Returns:
         Product: The product with speckle filtering applied.
     """
-    print("\tSpeckle filtering...")
+    logger.info("Speckle filtering...")
     java_integer = jpy.get_type("java.lang.Integer")
     parameters = HashMap()
     parameters.put("filter", "Lee")
     parameters.put("filterSizeX", java_integer(5))
     parameters.put("filterSizeY", java_integer(5))
-    output = GPF.createProduct("Speckle-Filter", parameters, source)
+    output = GPF.createProduct("Speckle-Filter", parameters, prdct)
     return output
 
 
-def do_terrain_correction(source: Product, downsample: int, proj: Optional[str] = None) -> Product:
+def terrain_correction(
+    prdct: Product,
+    dem_name: str = "SRTM 1Sec HGT",
+    pixel_spacing: float | None = None,
+    proj: str | None = None,
+) -> Product:
     """
-    Perform terrain correction on the source data.
+    Perform terrain correction (orthorectification) on the source data.
 
     Args:
-        source (Product): The input product to process.
-        downsample (int): Whether to downsample (1 for yes, 0 for no).
-        proj (Optional[str]): The projection system (e.g., UTM or WGS84).
+        prdct: The input product to process.
+        dem_name: Name of the DEM to use for terrain correction.
+        pixel_spacing: Pixel spacing used for (optional) spatial downsamplng.
+        proj: The projection system (e.g., UTM or WGS84).
 
     Returns:
         Product: The product with terrain correction applied.
     """
-    print("\tTerrain correction...")
+    logger.info("Apply terrain correction...")
     parameters = HashMap()
-    parameters.put("demName", "GETASSE30")
+    parameters.put("demName", dem_name)
     parameters.put("imgResamplingMethod", "BILINEAR_INTERPOLATION")
-    # comment this line if no need to convert to UTM/WGS84, default is WGS84
-    # parameters.put('mapProjection', proj)
+    # if need to convert to UTM/WGS84, default is WGS84
+    if proj is not None:
+        parameters.put("mapProjection", proj)
     parameters.put("saveProjectedLocalIncidenceAngle", True)
     parameters.put("saveSelectedSourceBand", True)
-    while downsample == 1:  # downsample: 1 -- need downsample to 40m, 0 -- no need to downsample
-        parameters.put("pixelSpacingInMeter", 40.0)
-        break
-    output = GPF.createProduct("Terrain-Correction", parameters, source)
+    if pixel_spacing is not None:
+        parameters.put("pixelSpacingInMeter", pixel_spacing)
+    output = GPF.createProduct("Terrain-Correction", parameters, prdct)
     return output
 
 
-def do_subset(source: Product, wkt: str) -> Product:
+def subset(prdct: Product, wkt: str) -> Product:
     """Perform a subset operation on the source data based on a geographic region.
 
     Args:
-        source (Product): The input product to subset.
-        wkt (str): The Well-Known Text (WKT) string defining the geographic region.
+        prdct: The input product to subset.
+        wkt: The Well-Known Text (WKT) string defining the geographic region.
 
     Returns:
         Product: The subset product.
     """
     parameters = HashMap()
     parameters.put("geoRegion", wkt)
-    output = GPF.createProduct("Subset", parameters, source)
+    output = GPF.createProduct("Subset", parameters, prdct)
     return output
