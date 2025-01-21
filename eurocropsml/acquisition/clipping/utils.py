@@ -129,11 +129,9 @@ def mask_polygon_raster(
         epsg_code = wkt[epsg_start:epsg_end].split(",")[1].strip('"')
         product_crs = f"EPSG:{epsg_code}"
 
-        pols = ",".join(S1_BANDS)
-
         orbit_applied = apply_orbit_file(sentinel_1)
         thermal_removed = thermal_noise_removal(orbit_applied)
-        calibrated = calibration(thermal_removed, pols)
+        calibrated = calibration(thermal_removed, S1_BANDS)
         down_filtered = speckle_filtering(calibrated)
         down_tercorrected = terrain_correction(down_filtered)
 

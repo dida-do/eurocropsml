@@ -47,20 +47,23 @@ def thermal_noise_removal(prdct: Product) -> Product:
     return output
 
 
-def calibration(prdct: Product, pols: str) -> Product:
+def calibration(prdct: Product, s1_bands: list[str]) -> Product:
     """Perform radiometric calibration on the source data.
 
     Args:
         prdct: The input product to calibrate.
-        pols: The selected polarizations.
+        s1_bands: Sentnel-1 polarization bands.
 
     Returns:
         Product converted to backscatter values.
     """
+    intensity_bands: str = ",".join(f"Intensity_{band}" for band in s1_bands)
+    pols: str = ",".join(s1_bands)
+
     logger.info("Apply radiometric calibration...")
     parameters = HashMap()
     parameters.put("outputSigmaBand", True)  # output sigma0
-    parameters.put("sourceBands", f"Intensity_{pols.split(',')[0]},Intensity_{pols.split(',')[1]}")
+    parameters.put("sourceBands", intensity_bands)
     parameters.put("selectedPolarisations", pols)
     parameters.put("outputImageScaleInDb", False)
     output = GPF.createProduct("Calibration", parameters, prdct)
