@@ -206,10 +206,9 @@ def _process_row(
                 pixels = np.zeros(width * height, dtype=np.float32)
                 band_img.readPixels(0, 0, width, height, pixels)
                 pixels = pixels.reshape((height, width))
-
+                not_zero = pixels != 0
                 pixels = convert_to_db(pixels)
 
-                not_zero = pixels != 0
                 if not not_zero.any():
                     patch_median: float | None = None
                 else:
