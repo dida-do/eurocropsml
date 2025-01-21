@@ -51,7 +51,7 @@ The recommended installation method is [pip](https://pip.pypa.io/en/stable/)-ins
 $ python -Im pip install eurocropsml
 ```
 
-#### Installation of esa_snappy
+#### Installation of esa-snappy
 During Sentinel-1 pre-processing, we make use of the Python plugin `esa-snappy` which enables us to use the SNAP Java API from Python.
 In order to be able to import `esa-snappy` into Python, please follow the following steps:
 ##### 1. Download your matching `Sentinel Toolboxes` [installation file](https://step.esa.int/main/download/snap-download/).
