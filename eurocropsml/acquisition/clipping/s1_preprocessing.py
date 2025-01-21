@@ -6,7 +6,7 @@ Slightly adjusted by Ekaterina Gikalo, Joana Reuss (TUM), 2025.
 """
 
 import logging
-from typing import cast
+from typing import Literal, cast
 
 import jpy
 import numpy as np
@@ -114,7 +114,7 @@ def speckle_filtering(prdct: Product) -> Product:
 
 def terrain_correction(
     prdct: Product,
-    dem_name: str = "SRTM 1Sec HGT",
+    dem_name: Literal["ACE2_5min", "ACE30", "GETASSE30", "SRTM 1Sec HGT"] = "SRTM 1Sec HGT",
     pixel_spacing: float | None = None,
     proj: str | None = None,
 ) -> Product:
