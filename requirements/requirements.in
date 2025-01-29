@@ -12,3 +12,8 @@ scikit-learn
 torch>=2.0
 typer[all]
 types-requests
+bs4
+selenium
+xarray
+webdriver_manager
+xmlschema

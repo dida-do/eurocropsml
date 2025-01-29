@@ -2,7 +2,6 @@
 
 import logging
 import sys
-import zipfile
 from functools import cache, partial
 from multiprocessing import Pool
 from pathlib import Path
@@ -11,63 +10,14 @@ from typing import Literal
 import geopandas as gpd
 import numpy as np
 import pandas as pd
-import requests
 import typer
 from tqdm import tqdm
 
+from eurocropsml.acquisition.config import S1_BANDS, S2_BANDS
 from eurocropsml.dataset.config import EuroCropsDatasetPreprocessConfig
+from eurocropsml.dataset.download import download_dataset
 
 logger = logging.getLogger(__name__)
-
-
-def _unzip_file(zip_filepath: Path, extract_to_path: Path) -> None:
-    with zipfile.ZipFile(zip_filepath, "r") as zip_ref:
-        zip_ref.extractall(extract_to_path)
-
-
-def download_dataset(preprocess_config: EuroCropsDatasetPreprocessConfig) -> None:
-    """Download EuroCropsML dataset from Zenodo.
-
-    Args:
-        preprocess_config: Config used to access the Zenodo URL.
-
-    Raises:
-        requests.exceptions.HTTPError: If Zenodo records could not be accessed.
-    """
-
-    response = requests.get(preprocess_config.download_url)
-
-    data_dir: Path = preprocess_config.raw_data_dir.parent
-    data_dir.mkdir(exist_ok=True, parents=True)
-
-    try:
-        response.raise_for_status()
-        data = response.json()
-
-        for file_entry in data["files"]:
-            file_url = file_entry["links"]["self"]
-            file_name = file_entry["key"]
-
-            filepath: Path = data_dir.joinpath(file_name)
-
-            if not filepath.exists():
-
-                response = requests.get(file_url)
-                response.raise_for_status()
-                with open(filepath, "wb") as file:
-                    file.write(response.content)
-                logger.info(f"{filepath.name} downloaded.")
-            else:
-                logger.info(f"{filepath.name} already exists. Skipping downloading.")
-            file_dir: Path = filepath.with_suffix("")
-            if not file_dir.exists():
-                file_dir = filepath.parent
-                _unzip_file(data_dir.joinpath(file_name), file_dir)
-                logger.info(f"{filepath.name} unzipped.")
-            else:
-                logger.info(f"{file_dir} already exists. Skipping unzipping.")
-    except requests.exceptions.HTTPError as err:
-        logger.info(f"There was an error when trying to get the Zenodo record: {err}")
 
 
 def _read_geojson_file(metadata_file_path: Path, country: str) -> gpd.GeoDataFrame:
@@ -157,7 +107,9 @@ def get_class_ids_to_names(raw_data_dir: Path) -> dict[str, str]:
 
 
 def _find_padding(array: np.ndarray) -> bool:
-    return not np.array_equal(array, np.array([0] * len(array)))
+    if np.array_equal(array, np.array([-999] * len(array))):
+        return False
+    return True
 
 
 def _filter_padding(data: np.ndarray, dates: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
@@ -214,18 +166,20 @@ def _save_row(
     labels: dict[int, int],
     points: dict[int, np.ndarray],
     region: str,
+    num_bands: int,
     row_data: tuple[int, pd.Series],
 ) -> None:
     parcel_id, parcel_data_series = row_data
     timestamps, observations = zip(*parcel_data_series.items())
-    if not np.all(observations == np.array([0] * 13)):
+
+    if not np.all(observations == np.array([-999] * num_bands)):
         data = np.stack(observations)
         dates = pd.to_datetime(timestamps).to_numpy(dtype="datetime64[D]")
         data, dates = _filter_padding(data, dates)
 
-        if preprocess_config.filter_clouds:
+        if preprocess_config.satellite == "S2" and preprocess_config.filter_clouds:
             data, dates = _filter_clouds(data, dates, preprocess_config)
-        if not np.all(data == np.array([0] * 13)):
+        if not np.all(data == np.array([-999] * num_bands)):
             label = labels[parcel_id]
             center = points[parcel_id]
             file_dir = preprocess_dir / f"{region}_{str(parcel_id)}_{str(label)}.npz"
@@ -240,19 +194,32 @@ def preprocess(
     """Run preprocessing."""
 
     raw_data_dir = preprocess_config.raw_data_dir
-    preprocess_dir = preprocess_config.preprocess_dir
     num_workers = preprocess_config.num_workers
+    satellite = preprocess_config.satellite
+    preprocess_dir = preprocess_config.preprocess_dir / satellite
+
+    if preprocess_config.bands is None:
+        if satellite == "S2":
+            bands = S2_BANDS
+        else:
+            bands = S1_BANDS
+    else:
+        bands = preprocess_config.bands
 
     if preprocess_dir.exists() and len(list((preprocess_dir.iterdir()))) > 0:
-        logger.info("Preprocessing directory already exists. Nothing to do.")
+        logger.info(
+            f"Preprocessing directory {preprocess_dir} already exists and contains data. "
+            "Nothing to do."
+        )
         sys.exit(0)
 
     if raw_data_dir.exists():
-        logger.info("Download directory exists. Skipping download.")
+        logger.info("Raw data directory exists. Skipping download.")
 
         logger.info("Starting preprocessing. Compiling labels and centerpoints of parcels")
         preprocess_dir.mkdir(exist_ok=True, parents=True)
-        for file_path in raw_data_dir.glob("*.parquet"):
+        raw_data_dir_satellite: Path = raw_data_dir / satellite
+        for file_path in raw_data_dir_satellite.glob("*.parquet"):
             country_file: pd.DataFrame = pd.read_parquet(file_path).set_index("parcel_id")
             cols = country_file.columns.tolist()
             cols = cols[5:]
@@ -278,8 +245,11 @@ def preprocess(
                 # removing empty parcels
                 region_data = region_data.dropna(how="all")
                 # replacing single empty timesteps
+
                 region_data = region_data.apply(
-                    lambda x: x.map(lambda y: np.array([0] * 13) if y is None else y)
+                    lambda x, b=len(bands): x.map(
+                        lambda y: np.array([-999] * b) if y is None else y
+                    )
                 )
                 with Pool(processes=num_workers) as p:
                     func = partial(
@@ -289,6 +259,7 @@ def preprocess(
                         labels,
                         points,
                         region,
+                        len(bands),
                     )
                     process_iter = p.imap(func, region_data.iterrows(), chunksize=1000)
                     ti = tqdm(total=len(region_data), desc=f"Processing {region}")
@@ -302,14 +273,19 @@ def preprocess(
     else:
         download = typer.confirm(
             "Could not find raw data to preprocess. "
-            "Would you like to download it? This will also download a preprocessed version."
+            "Would you like to download it? This will also download a preprocessed version "
+            " of the dataset. "
         )
         if download:
-            logger.info("Downloading dataset.")
+            logger.info("Downloading dataset...")
             download_dataset(preprocess_config)
             logger.info(
                 f"Data has been downloaded and saved under {preprocess_config.raw_data_dir.parent}."
             )
         else:
-            logger.info("Cannot preprocess without raw data.")
+            logger.info(
+                "Cannot preprocess without raw data. If you have your own raw data, "
+                f"please move it into {preprocess_config.raw_data_dir.parent} and "
+                "restart the preprocessing afterwards."
+            )
             sys.exit(1)

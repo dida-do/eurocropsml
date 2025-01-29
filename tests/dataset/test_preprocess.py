@@ -18,7 +18,7 @@ def config() -> EuroCropsDatasetPreprocessConfig:
 def test_arrays() -> tuple[np.ndarray, np.ndarray]:
     test_data = np.stack(
         [
-            np.array([0] * 4),
+            np.array([-999] * 4),
             np.array([0, 0, 0, 2600]),
             np.array([0, 0, 0, 2400]),
             np.array([0, 0, 0, 600]),

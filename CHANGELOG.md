@@ -7,6 +7,29 @@ Changes for the upcoming release can be found (and will be added on merging feat
 Changes from previous releases are listed below.
 
 ## Upcoming Release
+- Include hidden coverage report files in CI as Github action artifacts _(see #40)_
+- Exit script if automatic acquisition of NUTS files wasn't successful _(see #37)_
+- Add acquisition of Sentinel-1 data _(see #35)_
+- Add documentation of acquiring and processing Sentinel-1 data _(see #38)_
+- Add preprocessing of Sentinel-1 _(see #31)_
+- Renaming and moving of Sentinel-2 bands _(see #42)_
+- Adjusting split generation _(see #45)_
+- Fixing padding mask _(see #50)_
+- Fasten up padding to 366 days _(see #54)_
+- Radiometric calibration of Sentinel-1 _(see #47)_
+- Downloading Sentinel-1 data and make it usable together with Sentinel-2 _(see #43)_
+
+## 0.3.1 (2024-07-29)
+- Remove country_code variable in collector downloader _(see #33)_
+
+## 0.3.0 (2024-07-29)
+- Ensure that parcel_id column is integer _(see #30)_
+- Improve EuroCrops filename definition _(see #27)_
+- Ensure that parcel_id_name column is string _(see #25)_
+- Remove crs argument from Pyogrio GeoDataFrame when saving to file _(see #24)_
+- Fix country code for region module _(see #22)_
+- Implement automatic downloading for Eurostat GISCO NUTS files _(see #15)_
+- Update Eurostat GISCO NUTS files URL _(see #15)_
 - Replace EOLab Finder with EOLab Data Explorer _(see #9)_
 - Adjust `shape_dir` for Spain and `shapefile_dir_clean` in general _(see #16)_
 - Add `eodata_dir` argument to make Sentinel-2 directory customizable (default is `eodata`) _(see #7)_

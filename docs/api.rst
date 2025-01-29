@@ -16,12 +16,12 @@ The second is used for building ready-to-use machine learning datasets from the 
 
 The usage of individual sub-packages and modules within our data processing is illustrated below.
 
-.. image:: _static/acquisition-pipeline.jpg
+.. image:: _static/acquisition-pipeline-s1s2.png
    :height: 300px
    :alt: Data Acquisition Pipeline.
    :align: center
 
-We also have a separate :doc:`CLI Reference<cli>` giving an overview of how to interact with the eurocropsml package via a command line interface.
+We also have a separate :doc:`CLI Reference<cli>` giving an overview of how to interact with the `eurocropsml` package via a command line interface.
 
 
 .. rubric:: Package Content

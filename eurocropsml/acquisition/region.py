@@ -1,6 +1,7 @@
 """Adding NUTS region information to dataset."""
 
 import logging
+import sys
 from pathlib import Path
 from typing import cast
 
@@ -9,12 +10,14 @@ import pandas as pd
 import pyogrio
 
 from eurocropsml.acquisition.config import CollectorConfig
+from eurocropsml.acquisition.utils import _nuts_region_downloader
 
 logger = logging.getLogger(__name__)
 
 
 def add_nuts_regions(
     config: CollectorConfig,
+    raw_data_dir: Path,
     output_dir: Path,
     shape_dir: Path,
     nuts_dir: Path,
@@ -22,23 +25,27 @@ def add_nuts_regions(
 ) -> None:
     """Get NUTS regions for parcels.
 
-    NUTS regions are obtained from
-    https://ec.europa.eu/eurostat/de/web/gisco/geodata/reference-data/administrative-units-statistical-units/nuts
-
     Args:
         config: Country-specific configuration for acquiring EuroCrops reflectance data.
+        raw_data_dir: Directory where raw data that is independent of the satellite
+            is stored. This concerns the labels and geometries.
         output_dir: Directory path where intermediate results will be stored.
         shape_dir: File path of EuroCrops shapefile.
         nuts_dir: Directory where NUTS-region shapefiles are stored.
         final_output_dir: Directory where the final DataFrame will be stored.
+            This depends on the satellite.
 
     Raises:
         ValueError: If NUTS-files are not available.
 
     """
+    url: str = (
+        "https://ec.europa.eu/eurostat/de/web/gisco/geodata/"
+        "statistical-units/territorial-units-statistics"
+    )
 
-    label_dir = final_output_dir.joinpath("labels")
-    geom_dir = final_output_dir.joinpath("geometries")
+    label_dir = raw_data_dir.joinpath("labels")
+    geom_dir = raw_data_dir.joinpath("geometries")
 
     if not (
         label_dir.joinpath(f"{config.country}_labels.parquet").exists()
@@ -53,26 +60,32 @@ def add_nuts_regions(
         crs: str = str(shapefile.crs).split(":")[-1]
 
         # get nuts regions
-        if not nuts_dir.exists() or len(list((nuts_dir.iterdir()))) == 0:
-            raise ValueError(
-                f"{nuts_dir} does not exist or is empty. "
-                "Please first download the NUTS region files."
-            )
-        try:
-            nuts_region_filename = f"NUTS_RG_01M_{config.year}_{crs}"
-            nuts_regions_file = nuts_dir.joinpath(
-                nuts_region_filename, f"{nuts_region_filename}.shp"
+        nuts_region_filename = f"NUTS_RG_01M_{config.year}_{crs}.geojson"
+        nuts_regions_file = nuts_dir.joinpath(nuts_region_filename)
+
+        if not nuts_dir.exists() or len(list((nuts_dir.iterdir()))) < 3:
+            nuts_dir.mkdir(exist_ok=True, parents=True)
+            _nuts_region_downloader(
+                url, nuts_dir, crs, config.year, [file.name for file in nuts_dir.iterdir()]
             )
 
+        if len(list((nuts_dir.iterdir()))) == 0:
+            logger.info(
+                "There are no NUTS region files available."
+                f" Please download them manually from {url}."
+            )
+            sys.exit()
+        try:
             nuts: gpd.GeoDataFrame = pyogrio.read_dataframe(nuts_regions_file)
 
         except Exception:
-            crs = "4326"
+            available_crs: list[str] = []
+            for file in nuts_dir.iterdir():
+                available_crs.append(file.stem.split("_")[-1])
+            crs = available_crs[0]
             shapefile = shapefile.to_crs(crs)
-            nuts_region_filename = f"NUTS_RG_01M_{config.year}_{crs}"
-            nuts_regions_file = nuts_dir.joinpath(
-                nuts_region_filename, f"{nuts_region_filename}.shp"
-            )
+            nuts_region_filename = f"NUTS_RG_01M_{config.year}_{crs}.geojson"
+            nuts_regions_file = nuts_dir.joinpath(nuts_region_filename)
 
             nuts = pyogrio.read_dataframe(nuts_regions_file)
 
@@ -114,6 +127,7 @@ def add_nuts_regions(
         # add nuts region to final reflectance dataframe
         full_df: pd.DataFrame = pd.read_parquet(output_dir.joinpath("clipper", "clipped.parquet"))
 
+        shapefile[parcel_id_name] = shapefile[parcel_id_name].astype(int)
         joined_final = pd.merge(full_df, shapefile, on=parcel_id_name, how="left")
 
         # reorder columns
@@ -128,31 +142,33 @@ def add_nuts_regions(
 
         joined_final = joined_final.rename(columns={f"{parcel_id_name}": "parcel_id"})
 
-        classes_df = joined_final[["parcel_id", "EC_hcat_c", "EC_hcat_n"]]
-        geometry_df = joined_final[["parcel_id", "geometry"]]
-        geometry_df = gpd.GeoDataFrame(geometry_df, geometry=geometry_df["geometry"])
+        shapefile = shapefile.rename(columns={f"{parcel_id_name}": "parcel_id"})
+
+        classes_df = shapefile[["parcel_id", "EC_hcat_c", "EC_hcat_n"]]
+        geometry_df = shapefile[["parcel_id", "geometry"]]
         joined_final = joined_final.drop(columns="geometry", axis=1)
 
-        # Replace list of nan with None and convert floats to integers
+        # Replace list of nan with None
         joined_final[dates_strings] = joined_final[dates_strings].apply(
             lambda col: col.apply(
                 lambda x: (None if x is not None and all(pd.isna(val) for val in x) else x)
             )
         )
-        joined_final[dates_strings] = joined_final[dates_strings].apply(
-            lambda col: col.apply(lambda x: [int(val) for val in x] if x is not None else x)
-        )
 
         label_dir.mkdir(exist_ok=True, parents=True)
         geom_dir.mkdir(exist_ok=True, parents=True)
 
-        classes_df.to_parquet(label_dir.joinpath(f"{config.country}_labels.parquet"), index=False)
+        classes_df.to_parquet(
+            label_dir.joinpath(f"{config.ec_filename}_{config.year}_labels.parquet"), index=False
+        )
 
-        joined_final.to_parquet(final_output_dir.joinpath(f"{config.country}.parquet"), index=False)
+        joined_final.to_parquet(
+            final_output_dir.joinpath(f"{config.ec_filename}_{config.year}.parquet"), index=False
+        )
+
         geometry_df.to_file(
-            geom_dir.joinpath(f"{config.country}.geojson"),
+            geom_dir.joinpath(f"{config.ec_filename}_{config.year}.geojson"),
             driver="GeoJSON",
-            crs=shapefile.crs,
         )
 
     else:

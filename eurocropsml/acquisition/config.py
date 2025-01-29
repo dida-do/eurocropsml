@@ -7,42 +7,122 @@ from typing import Literal, cast
 from pydantic import BaseModel, field_validator
 
 from eurocropsml.settings import Settings
+from eurocropsml.utils import _unzip_file
 
 logger = logging.getLogger(__name__)
 
+S2_BANDS = [
+    "01",
+    "02",
+    "03",
+    "04",
+    "05",
+    "06",
+    "07",
+    "08",
+    "8A",
+    "09",
+    "10",
+    "11",
+    "12",
+]  # order is important
+
+S1_BANDS = ["VV", "VH"]  # order is important
+
 
 class CollectorConfig(BaseModel):
-    """Country-specific configuration for acquiring EuroCrops reflectance data."""
+    """Country-specific configuration for acquiring EuroCrops reflectance data.
+
+    Args:
+        country: Name of the country to collect the data for.
+        year: Year of observation to collect the data from.
+        months: Months of the year.
+        satellite: Satellite mission (Sentinel 1 (S1) or Sentinel 2(S2)).
+        denoise: Whether to perform thermal noise removal for Sentinel-1.
+        product_type: Satellite product type.
+        processing_level: Sentinel-1 processing level.
+        operational_mode: Sentinel-1 operational mode.
+        max_cloud_cover: Maximum cloud cover (only used for Sentinel-2).
+        bands: Radar (Sentinel-1) or pectral (Sentinel-2) bands to consider.
+        max_requested_products: Maximum requested products during API call.
+            It is only possible to process up to 2000 products at once.
+            If there are more than max_requested_products available, the products
+            will be processed on a monthly basis.
+        country_code: EuroCrops country code to identify shapefile.
+        ec_filename: EuroCrops zip-file name (without extension).
+        shapefile_folder: Path of the EuroCrops shapefile directory.
+        shapefile: Path of the final EuroCrops shapefile.
+        polygon: Country polygon encircling the entire country.
+        parcel_id_name: Identifier of parcel ID column (different for each country).
+            If no unique identifier is available in EuroCropsCountryConfig.parcel_ids,
+            one will be created in collector.py.
+    """
 
     country: str
     year: int
     months: tuple[int, int] = (1, 12)
-    processing_level: Literal["L1C", "L2A"] = "L1C"
+    satellite: Literal["S1", "S2"] = "S2"
+    denoise: bool = False
+    product_type: Literal["L1C", "L2A", "GRD"] = "L1C"
+    processing_level: Literal[None, "LEVEL1", "LEVEL2"] = None
+    operational_mode: Literal[None, "IW", "EW", "SM", "WF"] = None
     max_cloud_cover: int = 100
-    bands: list[str] = [
-        "01",
-        "02",
-        "03",
-        "04",
-        "05",
-        "06",
-        "07",
-        "08",
-        "8A",
-        "09",
-        "10",
-        "11",
-        "12",
-    ]
+    bands: list[str] = S2_BANDS
     max_requested_products: int = 1000
     country_code: str | None = None
-    id: str = ""
-    file_names: str | None = None
+    ec_filename: str | None = None
+    shapefile_folder: Path | None = None
+    shapefile: Path | None = None
     polygon: str | None = None
     parcel_id_name: str | None = None
 
-    def post_init(self) -> None:
+    def post_init(self, vector_data_dir: Path) -> None:
         """Make dynamic config based on initialized params."""
+        if self.satellite == "S2":
+            logger.info("Configuring settings for processing Sentinel-2 data...")
+
+            if self.max_cloud_cover is not None and self.max_cloud_cover > 100:
+                logger.info("Maximum cloud cover set to 100.")
+                self.max_cloud_cover = 100
+            if self.max_cloud_cover is not None and self.max_cloud_cover < 0:
+                self.max_cloud_cover = 0
+                logger.info("Maximum cloud cover set to 0.")
+
+            if self.product_type not in ["L1C", "L2A"]:
+                logger.info("Setting S2 product type to L1C.")
+                self.product_type = "L1C"
+
+            self.bands = [band for band in self.bands if band in S2_BANDS]
+
+        elif self.satellite == "S1":
+            logger.info("Configuring settings for processing Sentinel-1 data...")
+            # dual polarization used for agricultural analysis
+            logger.info("Setting Sentinel-1 bands to VV and VH dual polarization.")
+            self.bands = S1_BANDS
+
+            if self.processing_level not in ["LEVEL1", "LEVEL2"]:
+                logger.info(
+                    "Processing level did not match any S1 processing level. "
+                    "Setting processing level to LEVEL1."
+                )
+                self.processing_level = "LEVEL1"
+
+            if self.operational_mode not in ["IW", "EW", "SM", "WF"]:
+                logger.info(
+                    "Operational mode did not match any S1 mode. " "Setting operational mode to IW."
+                )
+                self.operational_mode = "IW"
+
+            if self.product_type not in ["GRD"]:
+                logger.info("Setting S1 product type to GRD.")
+                self.product_type = "GRD"
+
+        else:
+            raise ValueError(
+                "Satellite not available. Please use 'S1' for Sentinel-1 or 'S2' for Sentinel-2."
+            )
+
+        # general setting
         if len(self.months) != 2 or not (1 <= self.months[0] <= self.months[1] <= 12):
             logger.info(
                 "months should be a tuple of two integer values between 1 and 12,"
@@ -50,42 +130,78 @@ class CollectorConfig(BaseModel):
             )
             self.months = (1, 12)
 
-        if self.max_cloud_cover > 100:
-            logger.info("Maximum cloud cover set to 100.")
-            self.max_cloud_cover = 100
-
         if self.max_requested_products > 1000:
             logger.info("Maximum requested products set to 1000.")
             self.max_requested_products = 1000
 
+        # country-specific setting
         eurocrops_config: EuroCropsCountryConfig = EuroCropsCountryConfig()
 
         if self.country not in eurocrops_config.countries:
             raise ValueError(
-                f"{self.country} is not a valid country." "Please select one of the following "
+                f"{self.country} is not a valid country. "
+                f"Please use one of the following {', '.join(eurocrops_config.countries.keys())}"
             )
         else:
             eurocrops_countries = eurocrops_config.countries
             country_years: set[int] = set(cast(list, eurocrops_countries[self.country]["years"]))
             if self.year not in country_years:
                 raise ValueError(
-                    f"Year {self.year} not available."
-                    f"Please select one of the following {country_years}"
+                    f"Year {self.year} not available. Please select one of the following: "
+                    f"{', '.join(str(item) for item in country_years)}."
                 )
-            id: str = cast(str, eurocrops_countries[self.country]["ID"])  # noqa: A001
-            file_code: str = cast(str, eurocrops_countries[self.country]["file"])
+            self.country_code = cast(str, eurocrops_countries[self.country]["country_code"])
+            self.ec_filename = cast(str, eurocrops_countries[self.country]["ec_zipfolder"])
 
-            self.country_code = file_code[0]
-            self.id = id
-            if len(file_code) == 2:
-                # some countries have an additional EuroCrops identifier (e.g. EC21)
-                self.file_names = f"{file_code[0]}_{self.year}_{file_code[1]}"
+            if self.country_code == "ES" and self.year == 2021:
+                filename = f"{self.ec_filename}_2020"
+            elif self.country_code == "PT" and self.year == 2021:
+                filename = self.ec_filename
             else:
-                self.file_names = (
-                    f"{file_code[0]}_{self.year}"  # for Germany Brandenburg and Czechia
-                )
-            if self.country == "Spain NA":
-                self.file_names = f"{file_code[0]}_2020_{file_code[1]}"
+                filename = f"{self.ec_filename}_{self.year}"
+
+            # check if folder exists
+            shapefile_folder_list = [
+                item
+                for item in vector_data_dir.iterdir()
+                if item.is_dir() and item.name == filename
+            ]
+
+            if shapefile_folder_list == []:
+                # check if zip-file exists
+                zip_file = [item for item in vector_data_dir.glob("*.zip") if item.stem == filename]
+                if len(zip_file) == 1:
+                    unzip_folder = zip_file[0].parent
+                    if self.country_code == "PT":
+                        unzip_folder = unzip_folder.joinpath(zip_file[0].stem)
+                    _unzip_file(zip_file[0], unzip_folder)
+                    shapefile_folder_list = [
+                        item
+                        for item in vector_data_dir.iterdir()
+                        if item.is_dir() and item.name == filename
+                    ]
+                else:
+                    raise ValueError(
+                        "Vector data does not exist. "
+                        f"Please first download the EuroCrops reference data {filename}.zip."
+                    )
+
+            self.shapefile_folder = cast(Path, shapefile_folder_list[0])
+            # there should at max be one folder
+            for file in self.shapefile_folder.iterdir():
+                if file.is_dir():
+                    self.shapefile = cast(
+                        Path, [file for file in file.iterdir() if file.suffix == ".shp"][0]
+                    )
+                else:
+                    self.shapefile = cast(
+                        Path,
+                        [file for file in self.shapefile_folder.iterdir() if file.suffix == ".shp"][
+                            0
+                        ],
+                    )
+                    break
+
             self.polygon = eurocrops_config.polygon[self.country]
             self.parcel_id_name = eurocrops_config.parcel_ids[self.country]
 
@@ -122,24 +238,24 @@ class EuroCropsCountryConfig(BaseModel):
     """Configuration for EuroCrops vector data."""
 
     countries: dict[str, dict[str, str | list[str] | list[int]]] = {
-        "Austria": {"ID": "", "file": ["AT", "EC21"], "years": [2021]},
-        "Czechia": {"ID": "", "file": ["CZ"], "years": [2023]},
-        "Belgium": {"ID": "", "file": ["BE_VLG", "EC21"], "years": [2021]},
-        "Croatia": {"ID": "HR", "file": ["HR", "EC21"], "years": [2020]},
-        "Denmark": {"ID": "", "file": ["DK", "EC21"], "years": [2019]},
-        "Estonia": {"ID": "", "file": ["EE", "EC21"], "years": [2021]},
-        "France": {"ID": "", "file": ["FR", "EC21"], "years": [2018]},
-        "Germany LS": {"ID": "", "file": ["DE_LS", "EC21"], "years": [2021]},
-        "Germany NRW": {"ID": "", "file": ["DE_NRW", "EC21"], "years": [2021]},
-        "Germany BB": {"ID": "", "file": ["DE_BB"], "years": [2023]},
-        "Latvia": {"ID": "", "file": ["LV", "EC21"], "years": [2021]},
-        "Lithuania": {"ID": "", "file": ["LT", "EC"], "years": [2021]},
-        "Netherlands": {"ID": "", "file": ["NL", "EC21"], "years": [2020]},
-        "Portugal": {"ID": "", "file": ["PT", "EC21"], "years": [2021]},
-        "Slovakia": {"ID": "", "file": ["SK", "EC21"], "years": [2021]},
-        "Slovenia": {"ID": "", "file": ["SI", "EC21"], "years": [2021]},
-        "Spain NA": {"ID": "NA", "file": ["ES_NA", "EC21"], "years": [2021]},
-        "Sweden": {"ID": "SE", "file": ["SE", "EC21"], "years": [2021]},
+        "Austria": {"country_code": "AT", "ec_zipfolder": "AT", "years": [2021]},
+        "Czechia": {"country_code": "CZ", "ec_zipfolder": "CZ", "years": [2023]},
+        "Belgium VLG": {"country_code": "BE", "ec_zipfolder": "BE_VLG", "years": [2021]},
+        "Croatia": {"country_code": "HR", "ec_zipfolder": "HR", "years": [2020]},
+        "Denmark": {"country_code": "DK", "ec_zipfolder": "DK", "years": [2019]},
+        "Estonia": {"country_code": "EE", "ec_zipfolder": "EE", "years": [2021]},
+        "France": {"country_code": "FR", "ec_zipfolder": "FR", "years": [2018]},
+        "Germany LS": {"country_code": "DE", "ec_zipfolder": "DE_LS", "years": [2021]},
+        "Germany NRW": {"country_code": "DE", "ec_zipfolder": "DE_NRW", "years": [2021]},
+        "Germany BB": {"country_code": "DE", "ec_zipfolder": "DE_BB", "years": [2023]},
+        "Latvia": {"country_code": "LV", "ec_zipfolder": "LV", "years": [2021]},
+        "Lithuania": {"country_code": "LT", "ec_zipfolder": "LT", "years": [2021]},
+        "Netherlands": {"country_code": "NL", "ec_zipfolder": "NL", "years": [2020]},
+        "Portugal": {"country_code": "PT", "ec_zipfolder": "PT", "years": [2021]},
+        "Slovakia": {"country_code": "SK", "ec_zipfolder": "SK", "years": [2021]},
+        "Slovenia": {"country_code": "SI", "ec_zipfolder": "SL", "years": [2021]},
+        "Spain NA": {"country_code": "ES", "ec_zipfolder": "ES_NA", "years": [2021]},
+        "Sweden": {"country_code": "SE", "ec_zipfolder": "SE", "years": [2021]},
     }
 
     # If no unique identifier exists (empty string), one will be created.

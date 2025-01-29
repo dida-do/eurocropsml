@@ -24,6 +24,7 @@ nitpick_ignore = [
 # ones.
 extensions = [
     "myst_parser",
+    "sphinx.ext.mathjax",
     "sphinx_copybutton",
     "sphinx_design",
     "sphinx_tippy",
@@ -52,6 +53,8 @@ myst_enable_extensions = [
     "smartquotes",
     "deflist",
     "attrs_inline",
+    "dollarmath",
+    "amsmath", 
 ]
 
 # Exclude code and console prompts from copybuttons

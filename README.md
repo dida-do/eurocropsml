@@ -1,5 +1,5 @@
 # EuroCropsML
-*Ready-to-use benchmark dataset for few-shot crop type classification using Sentinel-2 imagery.*
+*Ready-to-use benchmark dataset for few-shot crop type classification using Sentinel-1 and Sentinel-2 imagery.*
 
 *Part of the [PreTrainAppEO](https://www.asg.ed.tum.de/en/lmf/pretrainappeo/) ("Pre-Training Applicability in Earth Observation") research project.*
 
@@ -15,21 +15,21 @@
 
 <!-- teaser-begin -->
 
-EuroCropsML is a pre-processed and ready-to-use machine learning dataset for crop type classification of agricultural parcels in Europe.
-It consists of a total of **706,683** multi-class labeled data points with a total of **176** distinct classes.
-Each data point contains an annual time series of per parcel median pixel values of Sentinel-2 L1C reflectance data for the year 2021.
-The dataset is based on [Version 9](https://zenodo.org/records/10118572) of [EuroCrops](https://github.com/maja601/EuroCrops), an open-source collection of remote sensing reference data.
+`EuroCropsML` is a pre-processed and ready-to-use machine learning dataset for crop type classification of agricultural parcels in Europe.
+It consists of a total of **706,683** Sentinel-2 and **176,055**  Sentinel-1 multi-class labeled data points with a total of **176** distinct classes.
+Each data point contains an annual time series of per parcel median pixel values of Sentinel-1 data and/or Sentinel-2 L1C (top-of-atmosphere) reflectance data for the year 2021. For Sentinel-1, we utilize the C-band Synthetic Aperture Radar (SAR) Ground Range Detected (GRD) data. Imagery is selected based on the orbit type available for the location, either ascending or descending. In terms of polarization, we use Interferometric Wide (IW) mode with VV (vertical polarization emission and reception) and VH (vertical polarization emission and horizontal reception) bands.
+The dataset is based on [Version 9](https://zenodo.org/records/10118572) of [`EuroCrops`](https://github.com/maja601/EuroCrops), an open-source collection of remote sensing reference data.
 
-For EuroCropsML we acquired and aggregated data for the following countries:
+For `EuroCropsML`, we acquired and aggregated data for the following countries:
 
-| Country      | Total number of datapoints  | Number of distinct classes | 
-|--------------|--------------------| -------------------------- |
-| Estonia      |  175,906 | 127 |
-| Latvia       | 431,143 | 103 |
-| Portugal     | 99,634 | 79 |
+| Country      | Number of distinct classes | Total number of datapoints for Sentinel-2 | Total number of datapoints for Sentinel-1 | 
+|--------------|----------------------------|-------------------------------------------|-------------------------------------------|
+| Estonia      | 127                        | 175,906                                   | 176,055                                   | 
+| Latvia       | 103                        | 431,143                                   | -                                         | 
+| Portugal     | 79                         | 99,634                                    | -                                         | 
 
-| ![Spatial distribution of labels within Estland and Latvia.](docs/_static/labels_spatial_distribution_EE_LV_nuts3.png) | ![Spatial distribution of labels within Portugal.](docs/_static/labels_spatial_distribution_portugal_nuts3.png) |
-| - | - |
+![Spatial distribution of labels within Estland and Latvia.](docs/_static/labels_spatial_distribution_EE_LV_nuts3_340.png)
+![Spatial distribution of labels within Portugal.](docs/_static/labels_spatial_distribution_PT_nuts3_340.png)
 
 The distribution of class labels differs substantially between the regions of Estonia, Latvia, and Portugal.
 This makes  transferring knowledge gained in one region to another region quite challenging, especially if only few labeled data points are available.
@@ -37,7 +37,7 @@ Therefore, this dataset is particularly suited to explore transfer-learning meth
 
 The data acquisition, aggregation, and pre-processing steps are schematically illustrated below. A more detailed description is given in the [dataset section](https://eurocropsml.readthedocs.io/en/latest/dataset.html) of our documentation.
 
-![Data Acquisition Pipeline.](docs/_static/acquisition-pipeline.jpg)
+![Data Acquisition Pipeline.](docs/_static/acquisition-pipeline-s1s2.png)
 <!-- teaser-end -->
 
 ## Getting Started
@@ -52,7 +52,7 @@ $ python -Im pip install eurocropsml
 ```
 
 ### Usage Guide
-The quickest way to interact with the `eurocropsml` package and get started is using the EuroCropsML dataset is via the provided command-line interface (CLI).
+The quickest way to interact with the `eurocropsml` package and get started is to use the `EuroCropsML` dataset is via the provided command-line interface (CLI).
 
 For example, to **get help** on available commands and options, use
 ```console
@@ -93,12 +93,12 @@ The goal of the project is to investigate methods that rely on the approach of p
 
 The ready-to-use EuroCopsML dataset is developed for the purpose of improving and benchmarking few-shot crop type classification methods.
 
-EuroCropsML is based on [Version 9](https://zenodo.org/records/10118572) of [EuroCrops](https://github.com/maja601/EuroCrops), an open-source collection of remote sensing reference data for agriculture from countries of the European Union.
+`EuroCropsML` is based on [Version 9](https://zenodo.org/records/10118572) of [`EuroCrops`](https://github.com/maja601/EuroCrops), an open-source collection of remote sensing reference data for agriculture from countries of the European Union.
 <!-- project-background-end -->
 
 <!-- further-info-begin -->
 ## Citation
-If you use the EuroCropsML dataset or `eurocropsml` code repository in your research, please cite our project as follows:
+If you use the `EuroCropsML` dataset or `eurocropsml` code repository in your research, please cite our project as follows:
 
 **Plain text**
 ```text

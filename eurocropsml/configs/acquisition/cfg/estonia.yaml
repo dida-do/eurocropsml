@@ -5,8 +5,9 @@ country_config:
   country: "Estonia"
   year: 2021
   months: [1,12]
-  processing_level: "L1C"
+  product_type: "L1C"
   max_requested_products: 1000
+  satellite: "S2"
 workers: 16
 chunk_size: 20
 multiplier: 20

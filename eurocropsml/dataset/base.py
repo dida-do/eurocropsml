@@ -24,7 +24,9 @@ class DataItem:
     """
 
     def __init__(
-        self, data: torch.Tensor, meta_data: dict[str, torch.Tensor] | None = None
+        self,
+        data: torch.Tensor,
+        meta_data: dict[str, torch.Tensor] | None = None,
     ) -> None:
         self.data = data
         if meta_data is None:
@@ -37,7 +39,7 @@ class DataItem:
         For more information consult https://pytorch.org/docs/stable/generated/torch.Tensor.to.html
         """
         data = self.data.to(*args, **kwargs)
-        meta_data = {}
+        meta_data: dict = {}
         for key, value in self.meta_data.items():
             meta_data[key] = value.to(*args, **kwargs)
         return DataItem(data, meta_data)
@@ -57,7 +59,7 @@ class LabelledData(NamedTuple):
     @property
     def meta_data(self) -> dict[str, torch.Tensor]:
         """Get meta_data from data_items."""
-        return self.data_item.meta_data
+        return cast(dict[str, torch.Tensor], self.data_item.meta_data)
 
     @classmethod
     def from_tensor_dict(cls, tensors: dict[str, torch.Tensor]) -> LabelledData:
@@ -72,6 +74,7 @@ class LabelledData(NamedTuple):
         Raises:
             KeyError: If tensors do not contain "data" or "label"
         """
+
         data = tensors.pop("data")
         label = tensors.pop("label")
         return LabelledData(DataItem(data, tensors), label)
@@ -87,13 +90,17 @@ class LabelledData(NamedTuple):
         return self.data_item, self.label
 
 
-def custom_collate_fn(batch: Sequence[LabelledData]) -> LabelledData:
+def custom_collate_fn(
+    batch: Sequence[LabelledData], padding_value_data: float = 0.0, padding_value_no_data: int = -1
+) -> LabelledData:
     """Collate function for batch creation within data loader.
 
     Used to create batches from a dataset's DataItem.
 
     Args:
         batch: List of DataItem from dataset
+        padding_value_data: Value used for padding the data series.
+        padding_value_no_data: Value used for padding tensors except for data.
 
     Returns:
         New DataItem with batched data.
@@ -112,7 +119,13 @@ def custom_collate_fn(batch: Sequence[LabelledData]) -> LabelledData:
         tensor_name: (
             torch.stack(tensors)
             if tensor_stackability[tensor_name]
-            else pad_sequence(tensors, batch_first=True, padding_value=-1)
+            else pad_sequence(
+                tensors,
+                batch_first=True,
+                padding_value=(
+                    padding_value_data if tensor_name == "data" else padding_value_no_data
+                ),
+            )
         )
         for tensor_name, tensors in batch_tensors.items()
     }
@@ -123,7 +136,7 @@ def custom_collate_fn(batch: Sequence[LabelledData]) -> LabelledData:
     ):
         batched_tensors["label"] = torch.concat(batch_tensors["label"], 0)
 
-    if (pad_mask := batched_tensors["data"].eq(-1)).any():
+    if (pad_mask := batched_tensors["data"].eq(padding_value_data)).any():
         if (aug_mask := batched_tensors.get("mask")) is not None:
             # if pad_mask.dim (B, T, C) != aug_mask.dim (B, T, C) | (B, T)
             # => aug_mask.dim is (B, T), thus pad_mask need to be converted
@@ -139,11 +152,7 @@ def custom_collate_fn(batch: Sequence[LabelledData]) -> LabelledData:
             batched_tensors["mask"] = torch.logical_or(aug_mask.bool(), pad_mask)
             batched_tensors["pad_mask"] = pad_mask
         else:
-            mask = pad_mask.all(dim=-1)
-            assert mask.equal(
-                pad_mask.any(dim=-1)
-            ), "There are unknown values outside of padding, please investigate"
-            batched_tensors["mask"] = mask
+            batched_tensors["mask"] = pad_mask.all(dim=-1)
     return LabelledData.from_tensor_dict(batched_tensors)
 
 
