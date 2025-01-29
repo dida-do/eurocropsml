@@ -107,9 +107,7 @@ def get_class_ids_to_names(raw_data_dir: Path) -> dict[str, str]:
 
 
 def _find_padding(array: np.ndarray) -> bool:
-    if np.array_equal(array, np.array([-999] * len(array))):
-        return False
-    return True
+    return not np.array_equal(array, np.array([-999] * len(array)))
 
 
 def _filter_padding(data: np.ndarray, dates: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
@@ -199,10 +197,7 @@ def preprocess(
     preprocess_dir = preprocess_config.preprocess_dir / satellite
 
     if preprocess_config.bands is None:
-        if satellite == "S2":
-            bands = S2_BANDS
-        else:
-            bands = S1_BANDS
+        bands = S2_BANDS if satellite == "S2" else S1_BANDS
     else:
         bands = preprocess_config.bands
 
