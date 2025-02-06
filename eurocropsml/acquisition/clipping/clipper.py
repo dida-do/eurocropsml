@@ -189,7 +189,7 @@ def _process_raster_parallel(
     try:
         # all parcel ids that match product Identifier
         parcel_ids = list(filtered_images[parcel_id_name])
-        parcel_ids = [int(id) for id in parcel_ids]
+        parcel_ids = [int(pid) for pid in parcel_ids]
         # observation date
         product_date = str(filtered_images["completionDate"].unique()[0])
 

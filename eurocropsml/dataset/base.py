@@ -165,6 +165,7 @@ class TransformDataset(Dataset[LabelledData]):
         target_transforms: List of transforms to apply to targets
         collate_fn: Function to collate list of batches.
         polygons: (Optional) mapping associating a polygon to each entry.
+
     Raises:
         ValueError: If the wrapped dataset does not have a well-defined length.
     """
@@ -186,8 +187,8 @@ class TransformDataset(Dataset[LabelledData]):
         # We need datasets to have a well-defined length
         try:
             self._dataset_length = len(dataset)  # type: ignore[arg-type]
-        except TypeError:
-            raise ValueError("Wrapped dataset must have a well-defined size.")
+        except TypeError as err:
+            raise ValueError("Wrapped dataset must have a well-defined size.") from err
 
     def _apply_transformations(self, labelled_data: LabelledData) -> LabelledData:
         data, targets = labelled_data.to_tuple()
