@@ -90,12 +90,6 @@ Additional settings can also be added, e.g.
 ```console
 $ eurocropsml-cli acquisition eurocrops <COMMAND> cfg.country_config.satellite="S1" +cfg.country_config.operational_mode="EW"
 ``` 
-
-By default, thermal noise will not be removed for Sentinel-1. If wanting to do so, please use the following command:
-```console
-$ eurocropsml-cli acquisition eurocrops <COMMAND> cfg.country_config.satellite="S1" +cfg.country_config.denoise=True
-``` 
-
 Please see {any}`config<eurocropsml.acquisition.config>` for the Sentinel-1 defaults and possible other values.
 
 ## Customizing the dataset pipeline

@@ -51,6 +51,46 @@ The recommended installation method is [pip](https://pip.pypa.io/en/stable/)-ins
 $ python -Im pip install eurocropsml
 ```
 
+#### Installation of esa-snappy
+During Sentinel-1 pre-processing, we make use of the Python plugin `esa-snappy` which enables us to use the SNAP Java API from Python.
+In order to be able to import `esa-snappy` into Python, please follow the following steps:
+##### 1. Download your matching `Sentinel Toolboxes` [installation file](https://step.esa.int/main/download/snap-download/).
+##### 2. If you are using a VM via ssh connection, ssh into your VM using the `-X`-option to later be able to start the SNAP GUI. E.g.
+```console
+$ ssh -i ~/.ssh/key -X user@ip-address>
+```
+For MacOS users:
+TODO
+##### 3. Start the installation of your downloaded installation file, e.g. for Linux and SNAP version 11.0.0:
+```console
+$ bash esa-nap_sentinel_linux-11.0.0.sh
+```
+This should start the GUI. Follow the installation steps. Install all components except the "optical Toolbox" which isn't necessary.  
+##### 4. Install the `esa-snappy` plugin (cf. [official installation guide](https://senbox.atlassian.net/wiki/spaces/SNAP/pages/2499051521/Configure+Python+to+use+the+new+SNAP-Python+esa_snappy+interface+SNAP+version+10))
+1. Run SNAP Desktop by running `$ ./snap` inside the bin folder of your esa-snap directory, e.g. `../esa-snap/bin/`
+2. Open the Plugin Manager in SNAP Desktop (Tools → Plugins in the main menu bar)
+3. Select tab `Available Plugins`. Among others, the plugin `ESA SNAPPY` appears in the list
+4. Select `ESA SNAPPY`, click `Install`, and follow the installation steps as described in the dialogs.
+5. After restart of SNAP Desktop, ‘ESA SNAPPY’ will be visible in the list of installed plugins.
+
+##### 5. Configure the `esa-snappy` plugin (cf. [official installation guide](https://senbox.atlassian.net/wiki/spaces/SNAP/pages/2499051521/Configure+Python+to+use+the+new+SNAP-Python+esa_snappy+interface+SNAP+version+10))
+With the `esa-snappy` plugin being installed, open a command line window at the bin folder of the SNAP installation directory. We recommend to directly place the plugin in your environment's site packages. In order to do so, type
+Unix/MacOS:
+```console
+$ ./snappy-conf <python-exe> <esa_snappy-dir>
+```
+Windows:
+```console
+$ snappy-conf <python-exe> <esa_snappy-dir>
+```
+with `<esa_snappy-dir>` being for example the `..\lib\python3.10\site-packages` folder of your Python environment.
+##### 6. `esa-snappy` can now be imported via
+```python
+import esa-snappy
+```
+
+
+
 ### Usage Guide
 The quickest way to interact with the `eurocropsml` package and get started is to use the `EuroCropsML` dataset is via the provided command-line interface (CLI).
 

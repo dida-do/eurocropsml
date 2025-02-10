@@ -62,10 +62,9 @@ class CollectorConfig(BaseModel):
     year: int
     months: tuple[int, int] = (1, 12)
     satellite: Literal["S1", "S2"] = "S2"
-    denoise: bool = False
     product_type: Literal["L1C", "L2A", "GRD"] = "L1C"
     processing_level: Literal[None, "LEVEL1", "LEVEL2"] = None
-    operational_mode: Literal[None, "IW", "EW", "SM", "WF"] = None
+    operational_mode: Literal[None, "IW"] = None  # currently only IW supported
     max_cloud_cover: int = 100
     bands: list[str] = S2_BANDS
     max_requested_products: int = 1000
