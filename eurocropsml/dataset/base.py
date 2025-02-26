@@ -186,7 +186,7 @@ class TransformDataset(Dataset[LabelledData]):
 
         # We need datasets to have a well-defined length
         try:
-            self._dataset_length = len(dataset)
+            self._dataset_length = len(dataset)  # type: ignore[arg-type]
         except TypeError as err:
             raise ValueError("Wrapped dataset must have a well-defined size.") from err
 

@@ -180,7 +180,7 @@ class EuroCropsDataset(Dataset[LabelledData]):
             for satellite, value_array in np_data_dict.items():
                 np_data_dict[satellite] = pad_seq_to_366(
                     value_array,
-                    meta_data["dates"][satellite],
+                    meta_data["dates"][satellite],  # type: ignore[index]
                     self.padding_value,
                 )
             meta_data["dates"] = _unique_dates(

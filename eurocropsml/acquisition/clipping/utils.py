@@ -47,8 +47,8 @@ def mask_polygon_raster(
     for b, band_path in enumerate(tilepaths):
         with rasterio.open(band_path, "r") as raster_tile:
             if b == 0 and polygon_df.crs.srs != raster_tile.crs.data["init"]:
-                    # transforming shapefile into CRS of raster tile
-                    polygon_df = polygon_df.to_crs(raster_tile.crs.data["init"])
+                # transforming shapefile into CRS of raster tile
+                polygon_df = polygon_df.to_crs(raster_tile.crs.data["init"])
 
             # clippping geometry out of raster tile and saving in dictionary
             polygon_df.apply(
