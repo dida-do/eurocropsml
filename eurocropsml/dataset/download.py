@@ -117,7 +117,7 @@ def select_version(versions: list[dict]) -> tuple[dict, list[str]]:
     selected_id: int = int(input("Please select one of the above version numbers: "))
     if selected_id in version_ids:
         logger.info(f"Selected version {selected_id}.")
-        if selected_id >= 8:
+        if selected_id <= 9:
 
             logger.warning(
                 "Please be aware that Zenodo version 9 or older and this package version "
