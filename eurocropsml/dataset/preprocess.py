@@ -196,6 +196,13 @@ def preprocess(
     satellite = preprocess_config.satellite
     preprocess_dir = preprocess_config.preprocess_dir / satellite
 
+    if satellite == "S1":
+        logger.info(
+            "The current release does not support the collection of Sentinel-1 data. If "
+            "you wish to pre-process your own Sentinel-1 data, please be aware that missing"
+            " observations should show 'None' such that they will be padded correctly "
+            "during pre-processing."
+        )
     if preprocess_config.bands is None:
         bands = S2_BANDS if satellite == "S2" else S1_BANDS
     else:

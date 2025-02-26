@@ -48,7 +48,7 @@ $ eurocropsml-cli acquisition eurocrops get-data +cfg.eodata_dir="personal_eodat
 ### Obtaining data for different countries
 
 The ready-to-use $\texttt{EuroCropsML}$ dataset provides preprocessed data for Estonia, Latvia, and Portugal.
-The $\texttt{eurocropsml}$ package in conjunction with the `eurocropsml-cli` enables the reuse of the processing pipeline steps to obtain analogous preprocessed Sentinel-1 or Sentinel-2 data for other countries. 
+The $\texttt{eurocropsml}$ package in conjunction with the `eurocropsml-cli` enables the reuse of the processing pipeline steps to obtain analogous preprocessed Sentinel-2 data for other countries. 
 In order to do so, it is recommended to create a new configuration file for each country (for example `eurocropsml/configs/acquisition/cfg/eurocrops_country.yaml`) and select it from the command line:
 ```console
 $ eurocropsml-cli acquisition eurocrops get-data cfg=eurocrops_country
@@ -80,7 +80,7 @@ The following two parameters are exclusively used during the clipping process. I
 - `chunk_size`: Number of chunks that are processed in parallel.
 - `multiplier`: This is used to save intermediate results during the clipping process, thus, preventing the RAM from exceeding its operational limits. Upon the processing of "`multiplier`" data chunks,  have been processed, the current DataFrame is stored.
 
-### Obaining data for Sentinel-1
+### To be implemented with new release: Obaining data for Sentinel-1
 The default configuration of the acquisition pipeline is to obtain Sentinel-2 data. To obtain Sentinel-1 data, simply change the `satellite` variable to `S1` in the file `eurocropsml/configs/aquisition/cfg/country.yaml`, where "country" corresponds to the specific country of interest. This can be accomplished either by making the requisite changes directly within the `.yaml` file or by adding the command to the command line (for example, if the $\texttt{eurocropsml}$ package has been installed using pip):
 
 ```console
@@ -89,11 +89,6 @@ $ eurocropsml-cli acquisition eurocrops <COMMAND> cfg.country_config.satellite="
 Additional settings can also be added, e.g.
 ```console
 $ eurocropsml-cli acquisition eurocrops <COMMAND> cfg.country_config.satellite="S1" +cfg.country_config.operational_mode="EW"
-``` 
-
-By default, thermal noise will not be removed for Sentinel-1. If wanting to do so, please use the following command:
-```console
-$ eurocropsml-cli acquisition eurocrops <COMMAND> cfg.country_config.satellite="S1" +cfg.country_config.denoise=True
 ``` 
 
 Please see {any}`config<eurocropsml.acquisition.config>` for the Sentinel-1 defaults and possible other values.
@@ -115,7 +110,7 @@ If multiple customizations are required, it is advisable to create a new custom 
 $ eurocropsml-cli datasets eurocrops <COMMAND> preprocess=custom_config
 ``` 
 
-### Pre-process Sentinel-1 data
+### To be implemented with new release: Pre-process Sentinel-1 data
 To pre-process the obtained Sentinel-1 data, set the `satellite` variable to `S1` in the file `eurocropsml/configs/dataset/preprocess/default.yaml`. Again, the necessary changes can be made directly within the `.yaml` file or by adding the command to the command line:
 ```console
 $ eurocropsml-cli datasets eurocrops preprocess preprocess.satellite="S1"
