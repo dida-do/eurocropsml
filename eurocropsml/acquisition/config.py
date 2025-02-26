@@ -38,12 +38,13 @@ class CollectorConfig(BaseModel):
         year: Year of observation to collect the data from.
         months: Months of the year.
         satellite: Satellite mission (Sentinel 1 (S1) or Sentinel 2(S2)).
+            Only S2 is currently implemented.
         denoise: Whether to perform thermal noise removal for Sentinel-1.
         product_type: Satellite product type.
         processing_level: Sentinel-1 processing level.
         operational_mode: Sentinel-1 operational mode.
         max_cloud_cover: Maximum cloud cover (only used for Sentinel-2).
-        bands: Radar (Sentinel-1) or pectral (Sentinel-2) bands to consider.
+        bands: Radar (Sentinel-1) or spectral (Sentinel-2) bands to consider.
         max_requested_products: Maximum requested products during API call.
             It is only possible to process up to 2000 products at once.
             If there are more than max_requested_products available, the products
@@ -61,7 +62,7 @@ class CollectorConfig(BaseModel):
     country: str
     year: int
     months: tuple[int, int] = (1, 12)
-    satellite: Literal["S1", "S2"] = "S2"
+    satellite: Literal["S1", "S2"] = "S2"  # TODO: Finish implementation for S1
     denoise: bool = False
     product_type: Literal["L1C", "L2A", "GRD"] = "L1C"
     processing_level: Literal[None, "LEVEL1", "LEVEL2"] = None
@@ -116,6 +117,10 @@ class CollectorConfig(BaseModel):
             if self.product_type not in ["GRD"]:
                 logger.info("Setting S1 product type to GRD.")
                 self.product_type = "GRD"
+            raise NotImplementedError(
+                "Collecting Sentinel-1 data is not fully implemented, yet. "
+                "Please set `satellite='S2'`."
+            )
 
         else:
             raise ValueError(

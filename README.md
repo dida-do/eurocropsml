@@ -1,5 +1,5 @@
 # EuroCropsML
-*Ready-to-use benchmark dataset for few-shot crop type classification using Sentinel-1 and Sentinel-2 imagery.*
+*Ready-to-use benchmark dataset for few-shot crop type classification using Sentinel-2 imagery.*
 
 *Part of the [PreTrainAppEO](https://www.asg.ed.tum.de/en/lmf/pretrainappeo/) ("Pre-Training Applicability in Earth Observation") research project.*
 
@@ -16,17 +16,17 @@
 <!-- teaser-begin -->
 
 `EuroCropsML` is a pre-processed and ready-to-use machine learning dataset for crop type classification of agricultural parcels in Europe.
-It consists of a total of **706,683** Sentinel-2 and **176,055**  Sentinel-1 multi-class labeled data points with a total of **176** distinct classes.
-Each data point contains an annual time series of per parcel median pixel values of Sentinel-1 data and/or Sentinel-2 L1C (top-of-atmosphere) reflectance data for the year 2021. For Sentinel-1, we utilize the C-band Synthetic Aperture Radar (SAR) Ground Range Detected (GRD) data. Imagery is selected based on the orbit type available for the location, either ascending or descending. In terms of polarization, we use Interferometric Wide (IW) mode with VV (vertical polarization emission and reception) and VH (vertical polarization emission and horizontal reception) bands.
+It consists of a total of **706,683** Sentinel-2 multi-class labeled data points with a total of **176** distinct classes.
+Each data point contains an annual time series of per parcel median pixel values of Sentinel-2 L1C (top-of-atmosphere) reflectance data for the year 2021. 
 The dataset is based on [Version 9](https://zenodo.org/records/10118572) of [`EuroCrops`](https://github.com/maja601/EuroCrops), an open-source collection of remote sensing reference data.
 
 For `EuroCropsML`, we acquired and aggregated data for the following countries:
 
-| Country      | Number of distinct classes | Total number of datapoints for Sentinel-2 | Total number of datapoints for Sentinel-1 | 
-|--------------|----------------------------|-------------------------------------------|-------------------------------------------|
-| Estonia      | 127                        | 175,906                                   | 176,055                                   | 
-| Latvia       | 103                        | 431,143                                   | -                                         | 
-| Portugal     | 79                         | 99,634                                    | -                                         | 
+| Country      | Number of distinct classes | Total number of datapoints for Sentinel-2 | 
+|--------------|----------------------------|-------------------------------------------|
+| Estonia      | 127                        | 175,906                                   | 
+| Latvia       | 103                        | 431,143                                   | 
+| Portugal     | 79                         | 99,634                                    |            | 
 
 ![Spatial distribution of labels within Estland and Latvia.](docs/_static/labels_spatial_distribution_EE_LV_nuts3_340.png)
 ![Spatial distribution of labels within Portugal.](docs/_static/labels_spatial_distribution_PT_nuts3_340.png)

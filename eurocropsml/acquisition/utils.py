@@ -28,8 +28,13 @@ def _get_options_from_field(url: str, field_id: str) -> bs4.element.ResultSet:
     response.raise_for_status()
     soup = bs4.BeautifulSoup(response.content, "html.parser")
     select_element = soup.find("select", {"id": field_id})
-    options: bs4.element.ResultSet = select_element.find_all("option")
+    if not isinstance(select_element, bs4.element.Tag):
+        raise ValueError(
+            f"Could not access field options for field id {field_id} when downloading NUTS region "
+            "files. Please download them manually."
+        )
 
+    options: bs4.element.ResultSet = select_element.find_all("option")
     return options
 
 
