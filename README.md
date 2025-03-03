@@ -37,7 +37,7 @@ Therefore, this dataset is particularly suited to explore transfer-learning meth
 
 The data acquisition, aggregation, and pre-processing steps are schematically illustrated below. A more detailed description is given in the [dataset section](https://eurocropsml.readthedocs.io/en/latest/dataset.html) of our documentation.
 
-![Data Acquisition Pipeline.](docs/_static/acquisition-pipeline-s1s2.png)
+![Data Acquisition Pipeline.](docs/_static/acquisition-pipeline-s2.png)
 <!-- teaser-end -->
 
 ## Getting Started
