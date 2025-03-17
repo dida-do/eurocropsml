@@ -99,7 +99,7 @@ def acquire_sentinel_tiles(
         output_dir: Directory path where intermediate results will be stored.
         shape_dir: File path of EuroCrops shapefile.
         shape_dir_clean: Directory where the cleaned shapefile will be stored.
-        eodata_dir: Directory where Sentinel-2 data is stored.
+        eodata_dir: Directory where Sentinel-1 or Sentinel-2 data is stored.
             If None, `eodata` is used since this will be returned by the API call.
         workers: Maximum number of workers used for multiprocessing.
         batch_size: Batch size used for multiprocessed merging of .SAFE files and parcels.
