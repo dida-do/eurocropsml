@@ -15,7 +15,7 @@ Changes from previous releases are listed below.
 - Adjusting split generation _(see #45)_
 - Fixing padding mask _(see #50)_
 - Fasten up padding to 366 days _(see #54)_
-- Remove non-working S1 code for new release _(see #38, #47, #43, #64)
+- Add parts of Sentinel-1 acquisition (without clipping) _(see #38, #47, #43, #64)
 
 
 ## 0.3.1 (2024-07-29)
