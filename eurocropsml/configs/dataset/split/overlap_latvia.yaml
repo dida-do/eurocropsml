@@ -1,4 +1,4 @@
-base_name: "latvia_vs_estonia"
+base_name: "overlap_latvia_vs_estonia"
 data_dir: "preprocess"
 random_seed: 42
 num_samples:
