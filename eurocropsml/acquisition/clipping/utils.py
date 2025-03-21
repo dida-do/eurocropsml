@@ -115,6 +115,7 @@ def _merge_clipper(
 
     # reset index column
     full_df = full_df.reset_index()
+    full_df.columns = full_df.columns.astype(str)
 
     full_df.to_parquet(output_dir.joinpath("clipped.parquet"))
     logger.info("Saved final clipped file.")
