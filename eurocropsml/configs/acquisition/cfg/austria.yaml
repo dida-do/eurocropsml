@@ -1,0 +1,13 @@
+raw_data_dir: "raw_data"
+output_dir: "output_data"
+local_dir: "safe_files"
+country_config:
+  country: "Austria"
+  year: 2021
+  months: [1,12]
+  product_type: "L1C"
+  max_requested_products: 1000
+  satellite: "S2"
+workers: 10
+chunk_size: 10
+multiplier: 10
