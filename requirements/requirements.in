@@ -6,7 +6,7 @@ pyarrow
 pydantic
 pydantic-settings
 pyogrio
-rasterio
+rasterio>=1.4.3
 requests
 scikit-learn
 torch>=2.0

@@ -101,9 +101,9 @@ def mask_polygon_raster(
         try:
             with rasterio.open(band_path, "r") as raster_tile:
                 if b == 0:
-                    if satellite == "S2" and polygon_df.crs.srs != raster_tile.crs.data["init"]:
+                    if satellite == "S2" and polygon_df.crs.srs != raster_tile.crs:
                         # transforming shapefile into CRS of raster tile
-                        polygon_df = polygon_df.to_crs(raster_tile.crs.data["init"])
+                        polygon_df = polygon_df.to_crs(raster_tile.crs)
                     elif satellite == "S1":
                         gcps, gcps_crs = raster_tile.get_gcps()
 

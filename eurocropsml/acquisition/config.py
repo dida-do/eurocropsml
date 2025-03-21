@@ -93,6 +93,11 @@ class CollectorConfig(BaseModel):
                 self.product_type = "L1C"
 
             self.bands = [band for band in self.bands if band in S2_BANDS]
+            if not self.bands:
+                logger.info(
+                    "The selected bands did not correspond to S2 band."
+                    "Setting collection of bands to S2 bands."
+                )
 
         elif self.satellite == "S1":
             logger.info("Configuring settings for processing Sentinel-1 data...")
