@@ -8,7 +8,7 @@ import multiprocessing as mp_orig
 import pickle
 from functools import partial
 from pathlib import Path
-from typing import Literal, cast
+from typing import cast
 
 import geopandas as gpd
 import pandas as pd
@@ -173,24 +173,17 @@ def _filter_args(
 
 
 def _process_raster_parallel(
-    satellite: Literal["S1", "S2"],
-    denoise: bool,
     polygon_df: pd.DataFrame,
     parcel_id_name: str,
-    bands: list[str],
     filtered_images: gpd.GeoDataFrame,
     band_tiles: list[Path],
 ) -> pd.DataFrame:
     """Processing one raster file.
 
     Args:
-        satellite: S1 for Sentinel-1 and S2 for Sentinel-2.
-        denoise: Whether to perform thermal noise removal for Sentinel-1.
-            For Sentinel-2 this argument has no effect.
         polygon_df: Dataframe containing all parcel ids. Will be merged with the clipped values.
         parcel_id_name: The country's parcel ID name (varies from country to country).
         filtered_images: Dataframe containing all parcel ids that lie in this raster tile.
-        bands: (Sub-)set of Sentinel-1 (radar) or Sentinel-2 (spectral) bands.
         band_tiles: Paths to the raster's band tiles.
 
     Returns:
@@ -199,16 +192,14 @@ def _process_raster_parallel(
 
     # all parcel ids that match product Identifier
     parcel_ids = list(filtered_images[parcel_id_name])
-    parcel_ids = [int(id) for id in parcel_ids]
+    parcel_ids = [int(pid) for pid in parcel_ids]
     # observation date
     product_date = str(filtered_images["completionDate"].unique()[0])
 
     # geometry information of all parcels
     filtered_geom = polygon_df[polygon_df[parcel_id_name].isin(parcel_ids)]
 
-    result = mask_polygon_raster(
-        satellite, band_tiles, bands, filtered_geom, parcel_id_name, product_date, denoise
-    )
+    result = mask_polygon_raster(band_tiles, filtered_geom, parcel_id_name, product_date)
 
     if result is not None:
         result.set_index(parcel_id_name, inplace=True)
@@ -274,11 +265,8 @@ def clipping(
         )
         func = partial(
             _process_raster_parallel,
-            config.satellite,
-            config.denoise,
             polygon_df_month,
             cast(str, config.parcel_id_name),
-            config.bands,
         )
 
         polygon_df_month = polygon_df_month.drop(["geometry"], axis=1)

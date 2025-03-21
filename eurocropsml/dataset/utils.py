@@ -133,7 +133,7 @@ RegionClassFilesDictT = dict[str, ClassFilesDictT]
 
 def _create_nested_dict(data_dict: RegionFilesDictT) -> RegionClassFilesDictT:
     full_dict: RegionClassFilesDictT = defaultdict(dict)
-    for key in data_dict.keys():
+    for key in data_dict:
         class_dict: ClassFilesDictT = defaultdict(list)
         for file in data_dict[key]:
             c = int(Path(file).stem.split("_")[2])

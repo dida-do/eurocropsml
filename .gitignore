@@ -29,6 +29,9 @@ docs/_build/*
 !*.jpg
 !*.png
 
+# allow csv files in csvs directory
+!csvs/**.csv
+
 !Makefile
 !.gitignore
 !LICENSE

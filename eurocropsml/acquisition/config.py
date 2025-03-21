@@ -38,6 +38,7 @@ class CollectorConfig(BaseModel):
         year: Year of observation to collect the data from.
         months: Months of the year.
         satellite: Satellite mission (Sentinel 1 (S1) or Sentinel 2(S2)).
+            Only S2 is currently implemented.
         denoise: Whether to perform thermal noise removal for Sentinel-1.
         product_type: Satellite product type.
         processing_level: Sentinel-1 processing level.
@@ -61,7 +62,7 @@ class CollectorConfig(BaseModel):
     country: str
     year: int
     months: tuple[int, int] = (1, 12)
-    satellite: Literal["S1", "S2"] = "S2"
+    satellite: Literal["S1", "S2"] = "S2"  # TODO: Finish implementation for S1
     denoise: bool = False
     product_type: Literal["L1C", "L2A", "GRD"] = "L1C"
     processing_level: Literal[None, "LEVEL1", "LEVEL2"] = None
@@ -121,6 +122,10 @@ class CollectorConfig(BaseModel):
             if self.product_type not in ["GRD"]:
                 logger.info("Setting S1 product type to GRD.")
                 self.product_type = "GRD"
+            raise NotImplementedError(
+                "Collecting Sentinel-1 data is not fully implemented, yet. "
+                "Please set `satellite='S2'`."
+            )
 
         else:
             raise ValueError(
@@ -259,7 +264,7 @@ class EuroCropsCountryConfig(BaseModel):
         "Netherlands": {"country_code": "NL", "ec_zipfolder": "NL", "years": [2020]},
         "Portugal": {"country_code": "PT", "ec_zipfolder": "PT", "years": [2021]},
         "Slovakia": {"country_code": "SK", "ec_zipfolder": "SK", "years": [2021]},
-        "Slovenia": {"country_code": "SI", "ec_zipfolder": "SL", "years": [2021]},
+        "Slovenia": {"country_code": "SI", "ec_zipfolder": "SI", "years": [2021]},
         "Spain NA": {"country_code": "ES", "ec_zipfolder": "ES_NA", "years": [2021]},
         "Sweden": {"country_code": "SE", "ec_zipfolder": "SE", "years": [2021]},
     }

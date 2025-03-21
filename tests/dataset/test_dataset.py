@@ -47,7 +47,7 @@ def test_format_dates_day(
         preprocess_config=preprocess_config,
         s2_data_bands=S2_BANDS,
     )
-    for satellite in arrays_dict["data"].keys():
+    for satellite in arrays_dict["data"]:
         data = arrays_dict["data"][satellite]
         dates = arrays_dict["dates"][satellite]
         assert data.shape == test_arrays_dict["data"][satellite].shape
@@ -66,7 +66,7 @@ def test_format_dates_day_leapyear(
         preprocess_config=preprocess_config,
         s2_data_bands=S2_BANDS,
     )
-    for satellite in arrays_dict["data"].keys():
+    for satellite in arrays_dict["data"]:
         data = arrays_dict["data"][satellite]
         dates = arrays_dict["dates"][satellite]
         assert data.shape == leap_test_arrays_dict["data"][satellite].shape
@@ -85,7 +85,7 @@ def test_format_dates_month(
         preprocess_config=preprocess_config,
         s2_data_bands=S2_BANDS,
     )
-    for satellite in arrays_dict["data"].keys():
+    for satellite in arrays_dict["data"]:
         data = arrays_dict["data"][satellite]
         dates = arrays_dict["dates"][satellite]
         assert data.shape == (12, test_arrays_dict["data"][satellite].shape[1])

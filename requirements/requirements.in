@@ -1,7 +1,7 @@
 geopandas
 hydra-core
 mmap_ninja
-numpy<2.0
+numpy
 pyarrow
 pydantic
 pydantic-settings
@@ -14,6 +14,5 @@ typer[all]
 types-requests
 bs4
 selenium
-xarray
 webdriver_manager
 xmlschema

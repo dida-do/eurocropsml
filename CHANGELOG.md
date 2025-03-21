@@ -9,17 +9,14 @@ Changes from previous releases are listed below.
 ## Upcoming Release
 - Include hidden coverage report files in CI as Github action artifacts _(see #40)_
 - Exit script if automatic acquisition of NUTS files wasn't successful _(see #37)_
-- Add acquisition of Sentinel-1 data _(see #35)_
-- Add documentation of acquiring and processing Sentinel-1 data _(see #38)_
+- Add collection of Sentinel-1 data (no clipping yet) _(see #35)_
 - Add preprocessing of Sentinel-1 _(see #31)_
 - Renaming and moving of Sentinel-2 bands _(see #42)_
-- Process clipping of Sentinel tiles on monthly basis _(see #29)_
-- Adjust the shapefile CRS transformation for Sentinel-1 _(see #49)_
 - Adjusting split generation _(see #45)_
 - Fixing padding mask _(see #50)_
 - Fasten up padding to 366 days _(see #54)_
-- Radiometric calibration of Sentinel-1 _(see #47)_
-- Downloading Sentinel-1 data and make it usable together with Sentinel-2 _(see #43)_
+- Add parts of Sentinel-1 acquisition (without clipping) and processing (dataset module) _(see #38, #47, #43, #64)
+- Process clipping of Sentinel tiles on monthly basis _(see #29)_
 - Adjust retrieval of rasterio crs _(see #73)_
 
 ## 0.3.1 (2024-07-29)
