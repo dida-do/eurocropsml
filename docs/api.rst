@@ -16,7 +16,7 @@ The second is used for building ready-to-use machine learning datasets from the 
 
 The usage of individual sub-packages and modules within our data processing is illustrated below.
 
-.. image:: _static/acquisition-pipeline-s1s2.png
+.. image:: _static/acquisition-pipeline-s2.png
    :height: 300px
    :alt: Data Acquisition Pipeline.
    :align: center

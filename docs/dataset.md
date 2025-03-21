@@ -8,7 +8,7 @@
 
 ## Data Acquisition
 In order to obtain the observation data for a given country and year, the following steps were caried out:
-1. Collection of relevant Sentinel-1/Sentinel-2 tiles: Alignment of [$\texttt{EuroCrops}$](https://github.com/maja601/EuroCrops) [version 9](https://zenodo.org/records/8229128) reference data with Sentinel-1/Sentinel-2 raster data files.
+1. Collection of relevant Sentinel-2 tiles: Alignment of [$\texttt{EuroCrops}$](https://github.com/maja601/EuroCrops) [version 9](https://zenodo.org/records/8229128) reference data with Sentinel-2 raster data files.
 
     1.1 {any}`.SAFE files collection<eurocropsml.acquisition.collector>`: Request the necessary `.SAFE` files for the given year via an API request to the [EO-lab Data Explorer](https://explore.eo-lab.org/). All tiles that overlap the land surface of the country for a given year are collected.
 
@@ -18,15 +18,12 @@ In order to obtain the observation data for a given country and year, the follow
 
 2.  Clipping of satellite data and calculation of median pixel values.
 
-    {any}`Polygon clipping<eurocropsml.acquisition.clipping.clipper>`: Clip parcels from the `.SAFE` files to obtain time series of corresponding reflectance data. As the dataset is intended to be used for crop type classification, we aggregated the collected pixel values. For every parcel and each available time step observation, we calculated the median pixel value for each of the two polarization bands of the Sentinel-1 or 13 spectral bands of the Sentinel-2 raster tiles, as also done in the [tiny EuroCrops dataset](https://arxiv.org/abs/2106.08151).
+    {any}`Polygon clipping<eurocropsml.acquisition.clipping.clipper>`: Clip parcels from the `.SAFE` files to obtain time series of corresponding reflectance data. As the dataset is intended to be used for crop type classification, we aggregated the collected pixel values. For every parcel and each available time step observation, we calculated the median pixel value for each of the 13 spectral bands of the Sentinel-2 raster tiles, as also done in the [tiny EuroCrops dataset](https://arxiv.org/abs/2106.08151).
 
 3.  Regional mapping: To enhance the precision of geographical data and facilitate the effective partitioning of the dataset, we utilized the [Eurostat GISCO database](https://ec.europa.eu/eurostat/de/web/gisco/geodata/statistical-units/territorial-units-statistics) to link the $\texttt{EuroCrops}$ parcels with their corresponding NUTS region. 
 
     {any}`NUTS regions<eurocropsml.acquisition.region>`: Add NUTS1-NUTS3 regions. The shapefiles for the NUTS-regions have been obtained from [Eurostat](https://ec.europa.eu/eurostat/de/web/gisco/geodata/statistical-units/territorial-units-statistics).
 
-:::{note}
-By default, the Sentinel-1 data is acquired at processing level LEVEL1, utilizing the IW operational mode. Additionally, the observations are selected for the VH and VV polarization. The pipeline provides the median pixel value of radar backscatter in decibels (dB). For information on how to to remove thermal noise, please see {doc}`Examples<examples>`.
-:::
 
 :::{note}
 During step one, some parcels that lie at the intersection of two or multiple raster tiles, are first assigned to all of them.
@@ -36,13 +33,13 @@ However, since we are only relying on the median pixel value and not on individu
 Furthermore, the $\texttt{EuroCrops}$ sometimes contains duplicate parcel geometries. If this is the case, only one entry is kept.
 :::
 
-![Data Acquisition Pipeline.](_static/acquisition-pipeline-s1s2.png)
+![Data Acquisition Pipeline.](_static/acquisition-pipeline-s2.png)
 
 
 We provide all scripts that are necessary to perform the above steps. 
 
 :::{note}
-The scripts could be adapted accordingly in order to get similar data for other countries or years present in $\texttt{EuroCrops}$, either through EOLab or any other source that has Sentinel-1 or Sentinel-2 `.SAFE` files available. 
+The scripts could be adapted accordingly in order to get similar data for other countries or years present in $\texttt{EuroCrops}$, either through EOLab or any other source that has Sentinel-2 `.SAFE` files available. 
 as long as you have access to the necessary `.SAFE` files. Please create a separate configuration file in the directory `eurocropsml/configs/acquisition/cfg` for this.
 The {any}`config module<eurocropsml.acquisition.config>` already contains the necessary information for the other available $\texttt{EuroCrops}$ countries. Please refer to the [official EuroCrops reference dataset](https://zenodo.org/records/10118572) for more reference data. Examples on how to customize the pipeline for collection additional data can be found in {doc}`Examples<examples>`.
 :::
