@@ -258,7 +258,7 @@ class EuroCropsCountryConfig(BaseModel):
         "Netherlands": {"country_code": "NL", "ec_zipfolder": "NL", "years": [2020]},
         "Portugal": {"country_code": "PT", "ec_zipfolder": "PT", "years": [2021]},
         "Slovakia": {"country_code": "SK", "ec_zipfolder": "SK", "years": [2021]},
-        "Slovenia": {"country_code": "SI", "ec_zipfolder": "SL", "years": [2021]},
+        "Slovenia": {"country_code": "SI", "ec_zipfolder": "SI", "years": [2021]},
         "Spain NA": {"country_code": "ES", "ec_zipfolder": "ES_NA", "years": [2021]},
         "Sweden": {"country_code": "SE", "ec_zipfolder": "SE", "years": [2021]},
     }
