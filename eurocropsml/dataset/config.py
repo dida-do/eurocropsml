@@ -71,7 +71,7 @@ class EuroCropsSplit(BaseModel):
 
     satellite: list[Literal["S1", "S2"]] = ["S2"]
 
-    benchmark: bool = True
+    benchmark: bool = False
 
     pretrain_classes: dict[str, list[int]]
     finetune_classes: dict[str, list[int]] = {}

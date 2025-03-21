@@ -191,10 +191,11 @@ def preprocess(
 ) -> None:
     """Run preprocessing."""
 
-    raw_data_dir = preprocess_config.raw_data_dir
-    num_workers = preprocess_config.num_workers
-    satellite = preprocess_config.satellite
-    preprocess_dir = preprocess_config.preprocess_dir / satellite
+    num_workers: int | None = preprocess_config.num_workers
+    satellite: str = preprocess_config.satellite
+    raw_data_dir: Path = preprocess_config.raw_data_dir
+    raw_data_dir_satellite: Path = preprocess_config.raw_data_dir / satellite
+    preprocess_dir: Path = preprocess_config.preprocess_dir / satellite
 
     if satellite == "S1":
         logger.info(
@@ -208,19 +209,18 @@ def preprocess(
     else:
         bands = preprocess_config.bands
 
-    if preprocess_dir.exists() and len(list((preprocess_dir.iterdir()))) > 0:
+    if preprocess_dir.exists() and any(preprocess_dir.iterdir()):
         logger.info(
             f"Preprocessing directory {preprocess_dir} already exists and contains data. "
             "Nothing to do."
         )
         sys.exit(0)
 
-    if raw_data_dir.exists():
+    if raw_data_dir_satellite.exists():
         logger.info("Raw data directory exists. Skipping download.")
 
         logger.info("Starting preprocessing. Compiling labels and centerpoints of parcels")
         preprocess_dir.mkdir(exist_ok=True, parents=True)
-        raw_data_dir_satellite: Path = raw_data_dir / satellite
         for file_path in raw_data_dir_satellite.glob("*.parquet"):
             country_file: pd.DataFrame = pd.read_parquet(file_path).set_index("parcel_id")
             cols = country_file.columns.tolist()
@@ -253,6 +253,12 @@ def preprocess(
                         lambda y: np.array([-999] * b) if y is None else y
                     )
                 )
+                if satellite == "S2":
+                    region_data = region_data.apply(
+                        lambda x, b=len(bands): x.map(
+                            lambda y: np.array([-999] * b) if y == [0] * b else y
+                        )
+                    )
                 with Pool(processes=num_workers) as p:
                     func = partial(
                         _save_row,
