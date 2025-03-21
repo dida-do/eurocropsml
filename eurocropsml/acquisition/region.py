@@ -153,12 +153,12 @@ def add_nuts_regions(
                 full_df: pd.DataFrame = pd.read_parquet(
                     output_dir.joinpath("clipper", f"{month}", "clipped.parquet")
                 )
-            except FileNotFoundError:
+            except FileNotFoundError as e:
                 raise FileNotFoundError(
                     f"{output_dir.joinpath('clipper', f'{month}', 'clipped.parquet')} does not "
                     "exist. Run the clipping process again or change the acquisition month in "
                     "acquisiton.config.CollectorConfig.months"
-                )
+                ) from e
             full_df.columns = [full_df.columns[0]] + [
                 pd.to_datetime(col).strftime("%Y-%m-%d") for col in full_df.columns[1:]
             ]
