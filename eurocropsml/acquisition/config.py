@@ -39,7 +39,6 @@ class CollectorConfig(BaseModel):
         months: Months of the year.
         satellite: Satellite mission (Sentinel 1 (S1) or Sentinel 2(S2)).
             Only S2 is currently implemented.
-        denoise: Whether to perform thermal noise removal for Sentinel-1.
         product_type: Satellite product type.
         processing_level: Sentinel-1 processing level.
         operational_mode: Sentinel-1 operational mode.
@@ -63,7 +62,6 @@ class CollectorConfig(BaseModel):
     year: int
     months: tuple[int, int] = (1, 12)
     satellite: Literal["S1", "S2"] = "S2"  # TODO: Finish implementation for S1
-    denoise: bool = False
     product_type: Literal["L1C", "L2A", "GRD"] = "L1C"
     processing_level: Literal[None, "LEVEL1", "LEVEL2"] = None
     operational_mode: Literal[None, "IW", "EW", "SM", "WF"] = None
