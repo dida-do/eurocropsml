@@ -106,10 +106,12 @@ def _merge_clipper(
     month: str,
 ) -> None:
     logger.info(f"Starting merging of DataFrames for {month}...")
+
     df_list: list = [file for file in clipped_output_dir.iterdir() if "Final_" in file.name]
 
     # setting parcel_id column to index
-    full_df.set_index(parcel_id_name, inplace=True)
+    if parcel_id_name in full_df.columns:
+        full_df.set_index(parcel_id_name, inplace=True)
     for file in tqdm(df_list):
         full_df = full_df.fillna(pd.read_pickle(file))
 
