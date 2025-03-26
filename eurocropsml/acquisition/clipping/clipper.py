@@ -112,7 +112,8 @@ def _get_arguments(
         full_images_paths: Path = output_dir.joinpath("collector", "full_parcel_list.pkg")
         full_images = pd.read_pickle(full_images_paths)
 
-        full_images = full_images[pd.to_datetime(full_images["completionDate"]).dt.month == month]
+        full_images["completionDate"] = pd.to_datetime(full_images["completionDate"]).dt.date
+        full_images = full_images[full_images["completionDate"].apply(lambda x: x.month) == month]
 
         if local_dir is not None:
             full_images["productIdentifier"] = str(local_dir) + full_images[
@@ -201,10 +202,8 @@ def _process_raster_parallel(
 
     result = mask_polygon_raster(band_tiles, filtered_geom, parcel_id_name, product_date)
 
-    if result is not None:
-        result.set_index(parcel_id_name, inplace=True)
-    else:
-        result = pd.DataFrame()
+    result.set_index(parcel_id_name, inplace=True)
+    result = result.dropna(axis=1, how="all")
 
     return result
 
@@ -270,8 +269,11 @@ def clipping(
         )
 
         polygon_df_month = polygon_df_month.drop(["geometry"], axis=1)
+        polygon_df_month.set_index(config.parcel_id_name, inplace=True)
+        # convert to string for later filling dataframe
+        polygon_df_month.columns = polygon_df_month.columns.astype(str)
+        polygon_df_month.index = polygon_df_month.index.astype(int)
         df_final_month = polygon_df_month.copy()
-        df_final_month.set_index(config.parcel_id_name, inplace=True)
 
         new_data: bool = False
         if processed < len(args_month):
@@ -297,7 +299,7 @@ def clipping(
 
                 # Process and save results
                 for result in results:
-                    if result is not None and not result.empty:
+                    if not result.empty:
                         df_final_month = df_final_month.fillna(result)
                     te.update(n=1)
 
