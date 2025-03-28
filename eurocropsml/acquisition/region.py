@@ -159,9 +159,6 @@ def add_nuts_regions(
                     "exist. Run the clipping process again or change the acquisition month in "
                     "acquisiton.config.CollectorConfig.months"
                 ) from e
-            full_df.columns = [full_df.columns[0]] + [
-                pd.to_datetime(col).strftime("%Y-%m-%d") for col in full_df.columns[1:]
-            ]
 
             joined_final = pd.merge(full_df, shapefile, on=parcel_id_name, how="left")
 
