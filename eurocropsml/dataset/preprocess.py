@@ -246,20 +246,16 @@ def preprocess(
     else:
         bands = preprocess_config.bands
 
-    if preprocess_dir.exists() and any(item.is_file() for item in preprocess_dir.iterdir()):
-        logger.info(
-            f"Preprocessing directory {preprocess_dir} already exists and contains data. "
-            "Nothing to do."
-        )
-        sys.exit(0)
-
     if final_raw_data_dir.exists():
         logger.info("Raw data directory exists. Skipping download.")
 
-        logger.info(f"Starting preprocessing of {satellite} data for {preprocess_config.year}...")
+        logger.info(f"Starting pre-processing of {satellite} data for {preprocess_config.year}...")
         preprocess_dir.mkdir(exist_ok=True, parents=True)
 
-        for month_data_dir in final_raw_data_dir.iterdir():
+        month_dir_list = list(final_raw_data_dir.iterdir())
+        month_dir_list.sort()
+
+        for month_data_dir in tqdm(month_dir_list, total=len(month_dir_list)):
             if month_data_dir.stem != "allyear":
                 month_name: str = calendar.month_name[int(month_data_dir.stem)]
                 logger.info(f"Processing data for {month_name}:")
@@ -291,6 +287,16 @@ def preprocess(
                     desc=f"Processing {file_path.stem}",
                 )
                 for region in regions:
+                    if any(
+                        f.name.startswith(region)
+                        for f in month_preprocess_dir.iterdir()
+                        if f.is_file()
+                    ):
+                        logger.info(
+                            f"There is already existing data for NUTS region {region} for "
+                            f"{month_name}. Skipping pre-processing."
+                        )
+                        continue
                     region_data = country_file[country_file[f"nuts{nuts_level}"] == region]
 
                     # remove parcels that do not appear in the labels dictionary as keys
@@ -327,8 +333,9 @@ def preprocess(
 
         monthly_groups = defaultdict(list)
         for folder in tqdm(preprocess_dir.iterdir(), desc="Merging time series..."):
-            for npz_file in folder.glob("*.npz"):
-                monthly_groups[npz_file.name].append(npz_file)
+            if folder.is_dir():
+                for npz_file in folder.glob("*.npz"):
+                    monthly_groups[npz_file.name].append(npz_file)
 
         te = tqdm(total=len(monthly_groups), desc="Merging time series...")
         with ProcessPoolExecutor() as executor:
