@@ -206,7 +206,7 @@ class EuroCropsDataset(Dataset[LabelledData]):
                 cast(dict[str, torch.Tensor], meta_data["dates"]), f.keys()
             )
             np_data = np.array(list(np_data_dict.values()))
-            np_data = np.squeeze(np_data)
+            np_data = np.squeeze(np_data, axis=0)  # squeeze sensor dimension
 
         tensor_data = torch.tensor(np_data, dtype=torch.float)
 

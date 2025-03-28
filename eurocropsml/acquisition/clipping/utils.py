@@ -34,6 +34,9 @@ def mask_polygon_raster(
 
     Returns:
         Dataframe with clipped values.
+
+    Raises:
+        FileNotFoundError: If the raster file cannot be found.
     """
 
     parcels_dict: dict[int, list[float | None]] = {
@@ -46,9 +49,9 @@ def mask_polygon_raster(
 
     for b, band_path in enumerate(tilepaths):
         with rasterio.open(band_path, "r") as raster_tile:
-            if b == 0 and polygon_df.crs.srs != raster_tile.crs.data["init"]:
+            if b == 0 and polygon_df.crs.srs != raster_tile.crs:
                 # transforming shapefile into CRS of raster tile
-                polygon_df = polygon_df.to_crs(raster_tile.crs.data["init"])
+                polygon_df = polygon_df.to_crs(raster_tile.crs)
 
             # clippping geometry out of raster tile and saving in dictionary
             polygon_df.apply(
@@ -87,6 +90,7 @@ def _process_row(
             patch_median = max(0.0, cast(float, patch_median))
 
         parcels_dict[parcel_id].append(patch_median)
+
     except ValueError:
         # Since we are cropping to the extent of the geometry, if none of the raster pixels is
         # fully contained inside the geometry, rasterio.mask will throw an error that the shapes
@@ -99,17 +103,21 @@ def _merge_clipper(
     clipped_output_dir: Path,
     output_dir: Path,
     parcel_id_name: str,
+    month: str,
 ) -> None:
-    logger.info("Starting merging of DataFrames...")
+    logger.info(f"Starting merging of DataFrames for {month}...")
+
     df_list: list = [file for file in clipped_output_dir.iterdir() if "Final_" in file.name]
 
     # setting parcel_id column to index
-    full_df.set_index(parcel_id_name, inplace=True)
+    if parcel_id_name in full_df.columns:
+        full_df.set_index(parcel_id_name, inplace=True)
     for file in tqdm(df_list):
         full_df = full_df.fillna(pd.read_pickle(file))
 
     # reset index column
     full_df = full_df.reset_index()
+    full_df.columns = full_df.columns.astype(str)
 
     full_df.to_parquet(output_dir.joinpath("clipped.parquet"))
     logger.info("Saved final clipped file.")

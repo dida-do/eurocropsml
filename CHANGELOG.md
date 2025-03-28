@@ -15,8 +15,10 @@ Changes from previous releases are listed below.
 - Adjusting split generation _(see #45)_
 - Fixing padding mask _(see #50)_
 - Fasten up padding to 366 days _(see #54)_
-- Add parts of Sentinel-1 acquisition (without clipping) _(see #38, #47, #43, #64)
-
+- Add parts of Sentinel-1 acquisition (without clipping) and processing (dataset module) _(see #38, #47, #43, #64)
+- Process clipping of Sentinel tiles on monthly basis _(see #29)_
+- Adjust retrieval of rasterio crs _(see #73)_
+- Squeezing array for single sensor _(see #74)_
 
 ## 0.3.1 (2024-07-29)
 - Remove country_code variable in collector downloader _(see #33)_
