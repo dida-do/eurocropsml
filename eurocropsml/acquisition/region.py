@@ -22,6 +22,7 @@ def add_nuts_regions(
     shape_dir: Path,
     nuts_dir: Path,
     final_output_dir: Path,
+    rebuild: bool = False,
 ) -> None:
     """Get NUTS regions for parcels.
 
@@ -34,6 +35,8 @@ def add_nuts_regions(
         nuts_dir: Directory where NUTS-region shapefiles are stored.
         final_output_dir: Directory where the final DataFrame will be stored.
             This depends on the satellite.
+        rebuild: Whether to re-build the final clipped parquet file for each month.
+            This will overwrite the existing ones.
 
     Raises:
         FileNotFoundError: If NUTS-files are not available.
@@ -145,8 +148,9 @@ def add_nuts_regions(
     for month in tqdm(
         range(config.months[0], config.months[1] + 1), desc="Adding NUTS regions to data..."
     ):
+        month = f"{month:02d}"
         month_dir: Path = final_output_dir.joinpath(f"{month}")
-        if not month_dir.joinpath(f"{config.ec_filename}.parquet").exists():
+        if not month_dir.joinpath(f"{config.ec_filename}.parquet").exists() or rebuild is True:
             month_dir.mkdir(exist_ok=True, parents=True)
             # add nuts region to final reflectance dataframe
             try:
@@ -199,5 +203,5 @@ def add_nuts_regions(
         else:
             logger.info(
                 f"{month_dir.joinpath(f'{config.ec_filename}.parquet')} already exists. "
-                "Please delete it if you want to recreate it."
+                "Please delete it if you want to recreate it or set rebuild to False."
             )

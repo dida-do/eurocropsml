@@ -92,5 +92,6 @@ def build_dataset(
         shape_dir_clean,
         nuts_dir,
         final_output_dir,
+        config.rebuild,
     )
     logger.info("Finished step 4: Adding NUTS regions to final DataFrame.")
