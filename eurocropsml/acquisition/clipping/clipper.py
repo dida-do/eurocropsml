@@ -236,6 +236,7 @@ def clipping(
     ):
 
         month_name = calendar.month_name[month]
+        month = f"{month:02d}"
         logger.info(f"Starting clipping process for {month_name.upper()}...")
 
         args_month, polygon_df_month, clipping_path = _get_arguments(
