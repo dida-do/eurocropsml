@@ -15,8 +15,10 @@ Changes from previous releases are listed below.
 - Adjusting split generation _(see #45)_
 - Fixing padding mask _(see #50)_
 - Fasten up padding to 366 days _(see #54)_
-- Add parts of Sentinel-1 acquisition (without clipping) _(see #38, #47, #43, #64)
-
+- Add parts of Sentinel-1 acquisition (without clipping) _(see #38, #47, #43, #64)_
+- Make padding compatible with old S2 data _(see #56)_
+- Enhancing download process _(see #58)_
+- Load S2 split from Zenodo for benchmark _(see #59)_
 
 ## 0.3.1 (2024-07-29)
 - Remove country_code variable in collector downloader _(see #33)_

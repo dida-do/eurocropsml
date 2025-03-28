@@ -76,7 +76,9 @@ def build_dataset_app(dataset_name: str, config_class: Type[ConfigT]) -> typer.T
         overrides: OverridesT = typer.Argument(None, help="Overrides to split config"),
     ) -> None:
         config = build_config(overrides, config_path)
-        create_splits(config.split, config.preprocess.raw_data_dir.parent)
+        create_splits(
+            config.split, config.preprocess.raw_data_dir.parent, config.preprocess.download_url
+        )
 
     return app
 
