@@ -97,6 +97,7 @@ class CollectorConfig(BaseModel):
                     "The selected bands did not correspond to S2 band."
                     "Setting collection of bands to S2 bands."
                 )
+                self.bands = S2_BANDS
 
         elif self.satellite == "S1":
             logger.info("Configuring settings for processing Sentinel-1 data...")
