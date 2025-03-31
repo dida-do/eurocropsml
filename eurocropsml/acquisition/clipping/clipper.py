@@ -50,7 +50,7 @@ def _merge_dataframe(
             process = False
             logger.info(
                 f"{output_dir.joinpath('clipped.parquet')} already exists, no new data has "
-                "ben processed and rebuild set to False. Nothing to be done."
+                "been processed and rebuild set to False. Nothing to be done."
             )
         else:
             output_dir.joinpath("clipped.parquet").unlink()
