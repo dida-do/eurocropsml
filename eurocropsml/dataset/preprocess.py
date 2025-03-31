@@ -338,7 +338,7 @@ def preprocess(
                     monthly_groups[npz_file.name].append(npz_file)
 
         te = tqdm(total=len(monthly_groups), desc="Merging time series...")
-        with ProcessPoolExecutor() as executor:
+        with ProcessPoolExecutor(max_workers=num_workers) as executor:
             futures = [
                 executor.submit(_merge_npz_files, file_name, file_paths, preprocess_dir)
                 for file_name, file_paths in monthly_groups.items()
