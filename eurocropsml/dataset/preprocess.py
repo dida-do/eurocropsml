@@ -280,7 +280,6 @@ def preprocess(
                     preprocess_config,
                 )
 
-                # country_file.set_index("parcel_id", inplace=True)
                 regions = country_file[f"nuts{nuts_level}"].unique()
                 te = tqdm(
                     total=len(regions),

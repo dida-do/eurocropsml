@@ -19,6 +19,9 @@ Changes from previous releases are listed below.
 - Process clipping of Sentinel tiles on monthly basis _(see #29)_
 - Adjust retrieval of rasterio crs _(see #73)_
 - Squeezing array for single sensor _(see #74)_
+- Make padding compatible with old S2 data _(see #56)_
+- Enhancing download process _(see #58)_
+- Load S2 split from Zenodo for benchmark _(see #59)_
 
 ## 0.3.1 (2024-07-29)
 - Remove country_code variable in collector downloader _(see #33)_

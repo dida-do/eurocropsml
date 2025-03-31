@@ -74,7 +74,6 @@ class EuroCropsSplit(BaseModel):
     satellite: list[Literal["S1", "S2"]] = ["S2"]
 
     year: int = 2021
-
     benchmark: bool = False
 
     pretrain_classes: dict[str, list[int]]

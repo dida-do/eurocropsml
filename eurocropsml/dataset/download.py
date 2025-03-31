@@ -15,6 +15,37 @@ from eurocropsml.utils import _create_md5_hash, _move_files, _unzip_file
 logger = logging.getLogger(__name__)
 
 
+def _get_zenodo_record(
+    base_url: str, version_number: int | None = None
+) -> tuple[dict, list[str]] | dict:
+    response: requests.models.Response = requests.get(base_url)
+    response.raise_for_status()
+    data = response.json()
+    versions: list[dict] = data["hits"]["hits"]
+
+    if versions:
+        if version_number is not None:
+            selected_version = next(
+                (
+                    v
+                    for v in versions
+                    if v["metadata"]["relations"]["version"][0]["index"] + 1 == version_number
+                ),
+                None,
+            )
+            if selected_version is not None:
+                return selected_version
+            else:
+                logger.error(f"Version {version_number} could not be found on Zenodo.")
+                sys.exit(1)
+        else:
+            selected_version, files_to_download = select_version(versions)
+            return selected_version, files_to_download
+    else:
+        logger.error("No data found on Zenodo. Please download manually.")
+        sys.exit(1)
+
+
 def _download_file(
     file_name: str, file_url: str, local_path: Path, downloadfile_md5_hash: str
 ) -> None:
@@ -31,7 +62,7 @@ def _download_file(
                 " Do you want to delete it and redownload the file?"
             )
     if download:
-        logger.info(f"Downloading {local_path}...")
+        logger.info(f"Downloading to {local_path}...")
         try:
             response = requests.get(file_url)
             response.raise_for_status()
@@ -47,23 +78,16 @@ def _download_file(
         logger.info(f"{local_path} will not be downloaded again.")
 
 
-def get_user_choice() -> list[str]:
+def get_user_choice(files_to_download: list[str]) -> list[str]:
     """Get user choice for which files to download."""
-    choice = input(
-        "Would you like to download Sentinel-1 and/or Sentinel-2 data? Please enter "
-        " 'S1', 'S2', or 'both': "
-    )
-    if choice not in {"S1", "S2", "both"}:
-        logger.error("Invalid input. Please enter 'S1', 'S2', or 'both'.")
-        sys.exit(1)
-    elif choice == "both":
-        choice_list = ["S1", "S2"]
-        logger.info("Downloading both S1 and S2 data.")
-    else:
-        logger.info(f"Downloading only {choice} data.")
-        choice_list = [choice]
+    logger.info("Choose one or more of the following options by typing their numbers (e.g., 1 3):")
+    for i, file in enumerate(files_to_download, 1):
+        logger.info(f"{i}. {file}")
+    choice = typer.prompt("Enter your choices separated by spaces: ")
+    selected_indices = [int(choice) - 1 for choice in choice.split()]
+    selected_options = [files_to_download[i] for i in selected_indices]
 
-    return choice_list
+    return selected_options
 
 
 def select_version(versions: list[dict]) -> tuple[dict, list[str]]:
@@ -93,16 +117,16 @@ def select_version(versions: list[dict]) -> tuple[dict, list[str]]:
     selected_id: int = int(input("Please select one of the above version numbers: "))
     if selected_id in version_ids:
         logger.info(f"Selected version {selected_id}.")
-        if selected_id >= 8:
+        if selected_id <= 9:
 
             logger.warning(
-                "Please be aware that Zenodo version 9 or older and this package version "
+                "Please be aware that Zenodo version 10 or older and this package version "
                 "(eurocropsml>=0.4.0) are not compatible anymore in terms of "
                 "eurocropsml.preprocess.preprocess. The already preprocessed version of Sentinel-2 "
                 "can still be used, but re-running the preprocessing will not filter out all "
                 "outliers from the raw data."
                 "\n"
-                "Furthermore, the folder structure of Zenodo version 9 or older is not supported "
+                "Furthermore, the folder structure of Zenodo version 10 or older is not supported "
                 "in this package version (eurocropsml>=0.4.0) and you need to manually move the "
                 "files after downloading as follows\n"
                 "\n"
@@ -150,46 +174,29 @@ def download_dataset(preprocess_config: EuroCropsDatasetPreprocessConfig) -> Non
     data_dir: Path = Path(preprocess_config.raw_data_dir.parent)
     data_dir.mkdir(exist_ok=True, parents=True)
 
-    response: requests.models.Response = requests.get(base_url)
-
     try:
-        response.raise_for_status()
-        data = response.json()
-        versions: list[dict] = data["hits"]["hits"]
+        selected_version, files_to_download = _get_zenodo_record(base_url)
+        # let user decide what data to download
+        selected_files = get_user_choice(files_to_download)
 
-        if versions:
-            selected_version, files_to_download = select_version(versions)
+        for file_entry in selected_version["files"]:
+            file_url: str = file_entry["links"]["self"]
+            zip_file: str = file_entry["key"]
+            if zip_file in selected_files:
+                local_path: Path = data_dir.parent.joinpath(zip_file)
+                _download_file(zip_file, file_url, local_path, file_entry.get("checksum", ""))
+                logger.info(f"Unzipping {local_path}...")
+                _unzip_file(local_path, data_dir)
 
-            # older version do only have S2 data
-            # if S1 data is available, let user decide
-            if "S1.zip" in files_to_download:
-                user_choice = get_user_choice()
-                if "S1" not in user_choice:
-                    files_to_download.remove("S1.zip")
-                if "S2" not in user_choice:
-                    files_to_download.remove("S2.zip")
-
-            for file_entry in selected_version["files"]:
-                file_url: str = file_entry["links"]["self"]
-                zip_file: str = file_entry["key"]
-                if zip_file in files_to_download:
-                    local_path: Path = data_dir.joinpath(zip_file)
-                    _download_file(zip_file, file_url, local_path, file_entry.get("checksum", ""))
-                    logger.info(f"Unzipping {local_path}...")
-                    _unzip_file(local_path, data_dir)
-
-                    # move S1 and S2 data
-                    if zip_file in ["S1.zip", "S2.zip"]:
-                        unzipped_path: Path = local_path.with_suffix("")
-                        for folder in unzipped_path.iterdir():
-                            rel_target_folder: Path = folder.relative_to(unzipped_path)
-                            _move_files(
-                                folder, data_dir.joinpath(rel_target_folder, zip_file.split(".")[0])
-                            )
-                        shutil.rmtree(unzipped_path)
-        else:
-            logger.error("No data found on Zenodo. Please download manually.")
-            sys.exit(1)
+                # move S1 and S2 data
+                if zip_file in ["S1.zip", "S2.zip"]:
+                    unzipped_path: Path = local_path.with_suffix("")
+                    for folder in unzipped_path.iterdir():
+                        rel_target_folder: Path = folder.relative_to(unzipped_path)
+                        _move_files(
+                            folder, data_dir.joinpath(rel_target_folder, zip_file.split(".")[0])
+                        )
+                    shutil.rmtree(unzipped_path)
 
     except requests.exceptions.HTTPError as err:
         logger.warning(f"There was an error when trying to access the Zenodo record: {err}")
