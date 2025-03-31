@@ -150,7 +150,7 @@ def add_nuts_regions(
     ):
         month = f"{month:02d}"
         month_dir: Path = final_output_dir.joinpath(f"{month}")
-        if not month_dir.joinpath(f"{config.ec_filename}.parquet").exists() or rebuild is True:
+        if rebuild or not month_dir.joinpath(f"{config.ec_filename}.parquet").exists():
             month_dir.mkdir(exist_ok=True, parents=True)
             # add nuts region to final reflectance dataframe
             try:
