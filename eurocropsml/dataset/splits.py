@@ -346,7 +346,7 @@ def split_dataset_by_region(
         if finetune_classes is not None and split == "region"
         else pretrain_classes
     )
-    
+
     create_pretrain: bool = True
     if benchmark is True:
         create_pretrain = _get_benchmark_dataset(
@@ -359,7 +359,7 @@ def split_dataset_by_region(
             test_size=test_size,
             seed=seed,
         )
-        
+
         if create_pretrain is True:
             # only fine-tuning split was copied for benchmarking
             # create new pre-training split
@@ -372,6 +372,7 @@ def split_dataset_by_region(
         pretrain_dataset, finetune_dataset = _split_dataset(
             data_dir=data_dir,
             satellite=satellite,
+            year=year,
             pretrain_classes=classes,
             finetune_classes=finetune_classes if split == "regionclass" else None,
             regions=set(regions),
