@@ -39,7 +39,6 @@ class CollectorConfig(BaseModel):
         months: Months of the year.
         satellite: Satellite mission (Sentinel 1 (S1) or Sentinel 2(S2)).
             Only S2 is currently implemented.
-        denoise: Whether to perform thermal noise removal for Sentinel-1.
         product_type: Satellite product type.
         processing_level: Sentinel-1 processing level.
         operational_mode: Sentinel-1 operational mode.
@@ -63,7 +62,6 @@ class CollectorConfig(BaseModel):
     year: int
     months: tuple[int, int] = (1, 12)
     satellite: Literal["S1", "S2"] = "S2"  # TODO: Finish implementation for S1
-    denoise: bool = False
     product_type: Literal["L1C", "L2A", "GRD"] = "L1C"
     processing_level: Literal[None, "LEVEL1", "LEVEL2"] = None
     operational_mode: Literal[None, "IW", "EW", "SM", "WF"] = None
@@ -94,6 +92,12 @@ class CollectorConfig(BaseModel):
                 self.product_type = "L1C"
 
             self.bands = [band for band in self.bands if band in S2_BANDS]
+            if not self.bands:
+                logger.info(
+                    "The selected bands did not correspond to S2 band."
+                    "Setting collection of bands to S2 bands."
+                )
+                self.bands = S2_BANDS
 
         elif self.satellite == "S1":
             logger.info("Configuring settings for processing Sentinel-1 data...")
@@ -222,6 +226,7 @@ class AcquisitionConfig(BaseModel):
     workers: int
     chunk_size: int
     multiplier: int
+    rebuild: bool = False
 
     @field_validator("raw_data_dir", "output_dir", "local_dir")
     @classmethod

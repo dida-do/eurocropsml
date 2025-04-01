@@ -38,9 +38,19 @@ def _get_options_from_field(url: str, field_id: str) -> bs4.element.ResultSet:
     return options
 
 
-def _get_closest_year(url: str, year: int) -> str:
-    """Get available years and select the one closest to the acquisition year."""
+def _get_closest_year(year_options: list[int], year: int) -> str:
     selected_year: int
+    for number in year_options:
+        if number == year:
+            return str(year)
+        elif number < year:
+            selected_year = number
+
+    return str(selected_year)
+
+
+def _select_year_from_url(url: str, year: int) -> str:
+    """Get available years and select the one closest to the acquisition year."""
 
     try:
         options: bs4.element.ResultSet = _get_options_from_field(url, "year")
@@ -49,13 +59,7 @@ def _get_closest_year(url: str, year: int) -> str:
             [int(option.get("value")) for option in options if len(option.get("value")) > 0]
         )
 
-        for number in year_options:
-            if number == year:
-                return str(year)
-            elif number < year:
-                selected_year = number
-
-        return str(selected_year)
+        return _get_closest_year(year_options, year)
 
     except ValueError:
         logger.warning(
@@ -111,14 +115,14 @@ def _nuts_region_downloader(
     # Setup ChromeDriver service using webdriver_manager
     service = Service(ChromeDriverManager().install())
 
-    selected_year: str = _get_closest_year(url, year)
+    selected_year: str = _select_year_from_url(url, year)
     projections: list[str] = _get_proj_options(url)
 
     try:
         driver = webdriver.Chrome(service=service, options=options)
         driver.get(url)
     except WebDriverException:
-        _manual_download(url, files)
+        _manual_download(url, [])
 
     field_format: webdriver.remote.webelement.WebElement = driver.find_element(By.ID, "format")
     driver.execute_script("arguments[0].value = 'geojson';", field_format)
@@ -205,7 +209,7 @@ def _manual_download(url: str, files: list[str]) -> None:
     else:
         manual_download = typer.confirm(
             f"Only {', '.join(files)} could be downloaded. Do you want to download the missing "
-            f" ones manually from {url}? This will exit the script. If manually downloaded, "
+            f"ones manually from {url}? This will exit the script. If manually downloaded, "
             "the folder sturcture should look like this:\n"
             "path/to/data/directory\n"
             "└── meta_data/\n"
@@ -217,6 +221,8 @@ def _manual_download(url: str, files: list[str]) -> None:
         )
         if manual_download:
             sys.exit()
+        else:
+            return
 
 
 def _get_dict_value_by_name(

@@ -29,7 +29,7 @@ def build_dataset(
     config.country_config.post_init(vector_data_dir)
     ct_config = config.country_config
 
-    final_output_dir = config.raw_data_dir.joinpath(ct_config.satellite)
+    final_output_dir = config.raw_data_dir.joinpath(ct_config.satellite, str(ct_config.year))
     output_dir = config.output_dir
     local_dir = config.local_dir
 
@@ -81,6 +81,7 @@ def build_dataset(
         config.chunk_size,
         config.multiplier,
         local_dir,
+        config.rebuild,
     )
 
     logger.info("Finished step 3: Clipping parcels from raster tiles.")
@@ -91,5 +92,6 @@ def build_dataset(
         shape_dir_clean,
         nuts_dir,
         final_output_dir,
+        config.rebuild,
     )
     logger.info("Finished step 4: Adding NUTS regions to final DataFrame.")
