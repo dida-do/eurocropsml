@@ -10,7 +10,7 @@ import requests
 import typer
 
 from eurocropsml.dataset.config import EuroCropsDatasetPreprocessConfig
-from eurocropsml.utils import _create_md5_hash, _move_files, _unzip_file
+from eurocropsml.utils import _create_md5_hash, _move_, _unzip_file
 
 logger = logging.getLogger(__name__)
 
@@ -127,7 +127,7 @@ def select_version(versions: list[dict]) -> tuple[dict, list[str]]:
             logger.warning(
                 "Please be aware that the folder structure of Zenodo version 11 or older is not "
                 "supported in this package version (eurocropsml>=0.4.0) and you need to manually "
-                "move the files after downloading as follows:\n"
+                "rename and move the files after downloading as follows:\n"
                 "\n"
                 "path/to/data_dir\n"
                 "    ├── preprocess/\n"
@@ -148,9 +148,10 @@ def select_version(versions: list[dict]) -> tuple[dict, list[str]]:
                 "        │      └── PT_labels.parquet\n"
                 "        └── S2/\n"
                 "            └── 2021/\n"
-                "               ├── EE.parquet\n"
-                "               ├── LV.parquet\n"
-                "               └── PT.parquet\n"
+                "                   ├──all_year"
+                "                   ├── EE.parquet\n"
+                "                   ├── LV.parquet\n"
+                "                   └── PT.parquet\n"
                 "    ...\n"
                 "\n"
             )
@@ -181,7 +182,6 @@ def download_dataset(preprocess_config: EuroCropsDatasetPreprocessConfig) -> Non
         selected_version, files_to_download = _get_zenodo_record(base_url)
         # let user decide what data to download
         selected_files = get_user_choice(files_to_download)
-
         for file_entry in selected_version["files"]:
             file_url: str = file_entry["links"]["self"]
             zip_file: str = file_entry["key"]
@@ -195,10 +195,17 @@ def download_dataset(preprocess_config: EuroCropsDatasetPreprocessConfig) -> Non
                 if zip_file in ["S1.zip", "S2.zip"]:
                     unzipped_path: Path = local_path.with_suffix("")
                     for folder in unzipped_path.iterdir():
-                        rel_target_folder: Path = folder.relative_to(unzipped_path)
-                        _move_files(
-                            folder, data_dir.joinpath(rel_target_folder, zip_file.split(".")[0])
-                        )
+                        rel_parent_target_folder: Path = folder.relative_to(unzipped_path)
+                        for sub_folder in folder.iterdir():
+                            rel_target_folder: Path = sub_folder.relative_to(folder)
+                            _move_(
+                                sub_folder,
+                                data_dir.joinpath(
+                                    rel_parent_target_folder,
+                                    zip_file.split(".")[0],
+                                    rel_target_folder,
+                                ),
+                            )
                     shutil.rmtree(unzipped_path)
 
     except requests.exceptions.HTTPError as err:
