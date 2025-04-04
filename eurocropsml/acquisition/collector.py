@@ -58,9 +58,9 @@ def _eolab_finder(
     request_url = """https://datahub.creodias.eu/odata/v1/Products?$filter=({0}(ContentDate/Start \
 ge {1}-{2}-01T00:00:00.000Z and ContentDate/Start le {1}-{3}-{4}T23:59:59.999Z) and (Online eq \
 true) and (OData.CSC.Intersects(Footprint=geography'SRID=4326;{5}')) and (((((Collection/Name eq \
-'{6}'){7}{8} and (((Attributes/Odata.CSC.StringAttribute/any(i0:i0/Name eq 'productType' and \
-i0/Value eq {10}{12})){9})))))))&$expand=Attributes&$expand=Assets&$orderby=ContentDate/Start asc&\
-$top={11}""".format(
+'{6}'){8} and (((Attributes/Odata.CSC.StringAttribute/any(i0:i0/Name eq 'productType' and \
+i0/Value eq {10}{7}{12})){9})))))))&$expand=Attributes&$expand=Assets&$orderby=ContentDate/Start \
+asc&$top={11}""".format(
         cloud_cover_str,
         year,
         months_list[0],
@@ -169,7 +169,11 @@ def _downloader(
                 + f"'cloudCover' and i0/Value le {max_cloud_cover}) and "
             )
             collection_name = "SENTINEL-2"
-            filter_collection = " and not contains(Name, '_N0500')"
+            filter_collection = (
+                " and (((Attributes/OData.CSC.StringAttribute/any(i0:i0/Name eq "
+                + "'processorVersion' and i0/Value eq '05.00')) or (Attributes/OData.CSC.String"
+                + "Attribute/any(i0:i0/Name eq 'processorVersion' and i0/Value eq '05.09'))))"
+            )
             polarisation = ""
             product_type_str = f"'S2MSI{product_type[1:]}'"
             processing_level_str = ""
