@@ -61,6 +61,7 @@ def _download_file(
                 f"{local_path} already exists but with different data."
                 " Do you want to delete it and redownload the file?"
             )
+
     if download:
         logger.info(f"Downloading to {local_path}...")
         try:
@@ -83,7 +84,7 @@ def get_user_choice(files_to_download: list[str]) -> list[str]:
     logger.info("Choose one or more of the following options by typing their numbers (e.g., 1 3):")
     for i, file in enumerate(files_to_download, 1):
         logger.info(f"{i}. {file}")
-    choice = typer.prompt("Enter your choices separated by spaces: ")
+    choice = typer.prompt("Enter your choices separated by spaces")
     selected_indices = [int(choice) - 1 for choice in choice.split()]
     selected_options = [files_to_download[i] for i in selected_indices]
 
@@ -93,9 +94,13 @@ def get_user_choice(files_to_download: list[str]) -> list[str]:
 def select_version(versions: list[dict]) -> tuple[dict, list[str]]:
     """Select one of the available dataset versions on Zenodo."""
     # we only keep version 4 (published Mar 14, 2024) and newer
-    # since older versions contain incorrect data
+    # since older versions contain incorrect data. We also remove version 9 and 10
+    # since they are either missing data (v9) or have corrupted files (v10).
     filtered_versions: list[dict] = [
-        version for version in versions if version["metadata"]["publication_date"] >= "2024-03-14"
+        version
+        for version in versions
+        if version["metadata"]["publication_date"] >= "2024-03-14"
+        and version["metadata"]["publication_date"] not in ("2025-02-06", "2025-03-18")
     ]
     filtered_versions = sorted(
         filtered_versions, key=lambda version: version["metadata"]["publication_date"]
@@ -187,7 +192,7 @@ def download_dataset(preprocess_config: EuroCropsDatasetPreprocessConfig) -> Non
             file_url: str = file_entry["links"]["self"]
             zip_file: str = file_entry["key"]
             if zip_file in selected_files:
-                local_path: Path = data_dir.parent.joinpath(zip_file)
+                local_path: Path = data_dir.joinpath(zip_file)
                 _download_file(zip_file, file_url, local_path, file_entry.get("checksum", ""))
                 logger.info(f"Unzipping {local_path}...")
                 _unzip_file(local_path, data_dir)
