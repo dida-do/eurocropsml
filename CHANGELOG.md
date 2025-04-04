@@ -22,7 +22,6 @@ Changes from previous releases are listed below.
 - Make padding compatible with old S2 data _(see #56)_
 - Enhancing download process _(see #58)_
 - Load S2 split from Zenodo for benchmark _(see #59)_
-- Remove rasterio version restriction _(see #76)_
 
 ## 0.3.1 (2024-07-29)
 - Remove country_code variable in collector downloader _(see #33)_
