@@ -113,7 +113,9 @@ def _get_arguments(
         full_images = pd.read_pickle(full_images_paths)
 
         full_images["completionDate"] = pd.to_datetime(full_images["completionDate"]).dt.date
-        full_images = full_images[full_images["completionDate"].apply(lambda x: x.month) == month]
+        full_images = full_images[
+            full_images["completionDate"].apply(lambda x: x.month) == int(month)
+        ]
 
         if local_dir is not None:
             full_images["productIdentifier"] = str(local_dir) + full_images[
@@ -165,6 +167,7 @@ def _get_arguments(
 def _filter_args(
     bands: list[str], full_images: pd.DataFrame, band_image: tuple[int, pd.Series]
 ) -> tuple[pd.DataFrame, list]:
+
     band_image_row = band_image[1]
     filtered_images = full_images[
         full_images["productIdentifier"] == band_image_row["productIdentifier"]
