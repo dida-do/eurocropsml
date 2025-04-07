@@ -166,7 +166,6 @@ class EuroCropsDataset(Dataset[LabelledData]):
         meta_data["center"] = next(iter(meta_data["center"].values()))
         # swap to lat, lon
         center_tensor = cast(torch.Tensor, meta_data["center"])
-        # Use the properly cast variable for the flip operation
         meta_data["center"] = torch.flip(center_tensor, [0])
 
         # normalization and scaling to (0,1]
