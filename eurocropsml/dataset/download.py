@@ -148,7 +148,7 @@ def select_version(versions: list[dict]) -> tuple[dict, list[str]]:
                 "        │      └── PT_labels.parquet\n"
                 "        └── S2/\n"
                 "            └── 2021/\n"
-                "                   ├──all_year"
+                "                   ├──allyear"
                 "                   ├── EE.parquet\n"
                 "                   ├── LV.parquet\n"
                 "                   └── PT.parquet\n"
