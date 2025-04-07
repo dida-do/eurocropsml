@@ -206,6 +206,7 @@ def _process_raster_parallel(
     result = mask_polygon_raster(band_tiles, filtered_geom, parcel_id_name, product_date)
 
     result.set_index(parcel_id_name, inplace=True)
+    result.index = result.index.astype(int)  # make sure index is integer
     result = result.dropna(axis=1, how="all")
 
     return result
@@ -312,7 +313,6 @@ def clipping(
                     df_final_month.to_pickle(clipped_dir.joinpath(f"Final_{file_counts}.pkg"))
                     del df_final_month
                     df_final_month = polygon_df_month.copy()
-                    df_final_month.set_index(config.parcel_id_name, inplace=True)
                     file_counts += 1
                 # Clear variables to release memory
                 del chunk_args, futures
