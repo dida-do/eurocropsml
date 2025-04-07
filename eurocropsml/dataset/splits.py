@@ -435,8 +435,9 @@ def _get_benchmark_dataset(
     test_size: float = 0.2,
     seed: int = 42,
 ) -> bool:
-    logger.info("Benchmark set to True. Downloading benchmark split from Zenodo version 9...")
-    selected_version = cast(dict, _get_zenodo_record(zenodo_base_url, version_number=8))
+
+    logger.info("Benchmark set to True. Downloading benchmark split from Zenodo version 11...")
+    selected_version = cast(dict, _get_zenodo_record(zenodo_base_url, version_number=11))
     for file_entry in selected_version["files"]:
         if file_entry["key"] == "split.zip":
             file_url: str = file_entry["links"]["self"]
@@ -448,7 +449,12 @@ def _get_benchmark_dataset(
 
     # if split equals one of the splits from Zenodo, we simply add S1 data (if requested) to
     # the existing pre-training split from Zenodo
-    if split_dir.name in ["latvia_vs_estonia", "latvia_portugal_vs_estonia"]:
+    if split_dir.name in [
+        "latvia_vs_estonia",
+        "latvia_portugal_vs_estonia",
+        "overlap_latvia_vs_estona",
+        "overlap_latvia_portugal_vs_estonia",
+    ]:
         if "S1" in satellite:
             filtered_s1: list[str] = []
             s1_files: set = read_files(data_dir.joinpath("S1"))
@@ -503,9 +509,7 @@ def _get_benchmark_dataset(
                 _save_to_json(split_dir.joinpath("meta", f"{split}_split.json"), meta_dict)
 
         else:
-            logger.info(
-                f"Split {split_dir.name} was downloaded from Zenodo. Nothing else to be done."
-            )
+            logger.info(f"Split {split_dir.name} was downloaded from Zenodo. Nothing else to do.")
         return False
 
     # if split is different, meaning the pre-training data is different, we only copy the

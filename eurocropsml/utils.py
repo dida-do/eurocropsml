@@ -8,8 +8,9 @@ from pathlib import Path
 import typer
 
 
-def _move_files(src_dir: Path, dest_dir: Path) -> None:
-    """Move files from src_dir to dest_dir."""
+def _move_(src_dir: Path, dest_dir: Path) -> None:
+    """Move files or folders from src_dir to dest_dir."""
+
     move_files: bool = True
     if dest_dir.exists() and _compare_folders(src_dir, dest_dir):
         move_files = typer.confirm(
@@ -22,8 +23,7 @@ def _move_files(src_dir: Path, dest_dir: Path) -> None:
         for item in src_dir.iterdir():
             dest_item = dest_dir.joinpath(item.name)
 
-            if item.is_file():
-                shutil.move(item, dest_item)
+            shutil.move(item, dest_item)
 
 
 def _create_md5_hash(filepath: Path) -> str:

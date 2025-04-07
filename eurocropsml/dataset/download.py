@@ -10,7 +10,7 @@ import requests
 import typer
 
 from eurocropsml.dataset.config import EuroCropsDatasetPreprocessConfig
-from eurocropsml.utils import _create_md5_hash, _move_files, _unzip_file
+from eurocropsml.utils import _create_md5_hash, _move_, _unzip_file
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +61,7 @@ def _download_file(
                 f"{local_path} already exists but with different data."
                 " Do you want to delete it and redownload the file?"
             )
+
     if download:
         logger.info(f"Downloading to {local_path}...")
         try:
@@ -83,7 +84,7 @@ def get_user_choice(files_to_download: list[str]) -> list[str]:
     logger.info("Choose one or more of the following options by typing their numbers (e.g., 1 3):")
     for i, file in enumerate(files_to_download, 1):
         logger.info(f"{i}. {file}")
-    choice = typer.prompt("Enter your choices separated by spaces: ")
+    choice = typer.prompt("Enter your choices separated by spaces")
     selected_indices = [int(choice) - 1 for choice in choice.split()]
     selected_options = [files_to_download[i] for i in selected_indices]
 
@@ -93,9 +94,13 @@ def get_user_choice(files_to_download: list[str]) -> list[str]:
 def select_version(versions: list[dict]) -> tuple[dict, list[str]]:
     """Select one of the available dataset versions on Zenodo."""
     # we only keep version 4 (published Mar 14, 2024) and newer
-    # since older versions contain incorrect data
+    # since older versions contain incorrect data. We also remove version 9 and 10
+    # since they are either missing data (v9) or have corrupted files (v10).
     filtered_versions: list[dict] = [
-        version for version in versions if version["metadata"]["publication_date"] >= "2024-03-14"
+        version
+        for version in versions
+        if version["metadata"]["publication_date"] >= "2024-03-14"
+        and version["metadata"]["publication_date"] not in ("2025-02-06", "2025-03-18")
     ]
     filtered_versions = sorted(
         filtered_versions, key=lambda version: version["metadata"]["publication_date"]
@@ -120,15 +125,9 @@ def select_version(versions: list[dict]) -> tuple[dict, list[str]]:
         if selected_id <= 9:
 
             logger.warning(
-                "Please be aware that Zenodo version 11 or older and this package version "
-                "(eurocropsml>=0.4.0) are not compatible anymore in terms of "
-                "eurocropsml.preprocess.preprocess. The already preprocessed version of Sentinel-2 "
-                "can still be used, but re-running the preprocessing will not filter out all "
-                "outliers from the raw data."
-                "\n"
-                "Furthermore, the folder structure of Zenodo version 11 or older is not supported "
-                "in this package version (eurocropsml>=0.4.0) and you need to manually move the "
-                "files after downloading as follows\n"
+                "Please be aware that the folder structure of Zenodo version 11 or older is not "
+                "supported in this package version (eurocropsml>=0.4.0) and you need to manually "
+                "rename and move the files after downloading as follows:\n"
                 "\n"
                 "path/to/data_dir\n"
                 "    ├── preprocess/\n"
@@ -149,9 +148,10 @@ def select_version(versions: list[dict]) -> tuple[dict, list[str]]:
                 "        │      └── PT_labels.parquet\n"
                 "        └── S2/\n"
                 "            └── 2021/\n"
-                "               ├── EE.parquet\n"
-                "               ├── LV.parquet\n"
-                "               └── PT.parquet\n"
+                "                   ├──allyear"
+                "                   ├── EE.parquet\n"
+                "                   ├── LV.parquet\n"
+                "                   └── PT.parquet\n"
                 "    ...\n"
                 "\n"
             )
@@ -182,12 +182,11 @@ def download_dataset(preprocess_config: EuroCropsDatasetPreprocessConfig) -> Non
         selected_version, files_to_download = _get_zenodo_record(base_url)
         # let user decide what data to download
         selected_files = get_user_choice(files_to_download)
-
         for file_entry in selected_version["files"]:
             file_url: str = file_entry["links"]["self"]
             zip_file: str = file_entry["key"]
             if zip_file in selected_files:
-                local_path: Path = data_dir.parent.joinpath(zip_file)
+                local_path: Path = data_dir.joinpath(zip_file)
                 _download_file(zip_file, file_url, local_path, file_entry.get("checksum", ""))
                 logger.info(f"Unzipping {local_path}...")
                 _unzip_file(local_path, data_dir)
@@ -196,10 +195,17 @@ def download_dataset(preprocess_config: EuroCropsDatasetPreprocessConfig) -> Non
                 if zip_file in ["S1.zip", "S2.zip"]:
                     unzipped_path: Path = local_path.with_suffix("")
                     for folder in unzipped_path.iterdir():
-                        rel_target_folder: Path = folder.relative_to(unzipped_path)
-                        _move_files(
-                            folder, data_dir.joinpath(rel_target_folder, zip_file.split(".")[0])
-                        )
+                        rel_parent_target_folder: Path = folder.relative_to(unzipped_path)
+                        for sub_folder in folder.iterdir():
+                            rel_target_folder: Path = sub_folder.relative_to(folder)
+                            _move_(
+                                sub_folder,
+                                data_dir.joinpath(
+                                    rel_parent_target_folder,
+                                    zip_file.split(".")[0],
+                                    rel_target_folder,
+                                ),
+                            )
                     shutil.rmtree(unzipped_path)
 
     except requests.exceptions.HTTPError as err:
