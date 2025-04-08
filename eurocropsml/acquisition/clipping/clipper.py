@@ -113,7 +113,9 @@ def _get_arguments(
         full_images = pd.read_pickle(full_images_paths)
 
         full_images["completionDate"] = pd.to_datetime(full_images["completionDate"]).dt.date
-        full_images = full_images[full_images["completionDate"].apply(lambda x: x.month) == month]
+        full_images = full_images[
+            full_images["completionDate"].apply(lambda x: x.month) == int(month)
+        ]
 
         if local_dir is not None:
             full_images["productIdentifier"] = str(local_dir) + full_images[
@@ -165,6 +167,7 @@ def _get_arguments(
 def _filter_args(
     bands: list[str], full_images: pd.DataFrame, band_image: tuple[int, pd.Series]
 ) -> tuple[pd.DataFrame, list]:
+
     band_image_row = band_image[1]
     filtered_images = full_images[
         full_images["productIdentifier"] == band_image_row["productIdentifier"]
@@ -203,6 +206,7 @@ def _process_raster_parallel(
     result = mask_polygon_raster(band_tiles, filtered_geom, parcel_id_name, product_date)
 
     result.set_index(parcel_id_name, inplace=True)
+    result.index = result.index.astype(int)  # make sure index is integer
     result = result.dropna(axis=1, how="all")
 
     return result
@@ -309,7 +313,6 @@ def clipping(
                     df_final_month.to_pickle(clipped_dir.joinpath(f"Final_{file_counts}.pkg"))
                     del df_final_month
                     df_final_month = polygon_df_month.copy()
-                    df_final_month.set_index(config.parcel_id_name, inplace=True)
                     file_counts += 1
                 # Clear variables to release memory
                 del chunk_args, futures

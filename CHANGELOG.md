@@ -22,6 +22,8 @@ Changes from previous releases are listed below.
 - Make padding compatible with old S2 data _(see #56)_
 - Enhancing download process _(see #58)_
 - Load S2 split from Zenodo for benchmark _(see #59)_
+- Update collection of Sentinel-2 data to Collection 1 _(see #75)_
+- Replace FileNotFoundError by pyogrio DataSourceError _(see #79)_
 - Swap lat and lon coordinates for Eurocrops _(see #82)_
 - Move normaliztion logger warning to EuroCropsDatasetConfig _(see #84)_
 
