@@ -144,3 +144,10 @@ class EuroCropsDatasetConfig(BaseModel):
                     num_channels -= len(self.remove_s2_bands)
 
         self.total_num_channels = num_channels
+
+        if self.normalize is False:
+            logger.warning(
+                "You have deactivated the default normalization. "
+                "This requires custom normalization and modification of"
+                " sequence padding with a correct padding value (default 0.0)."
+            )
