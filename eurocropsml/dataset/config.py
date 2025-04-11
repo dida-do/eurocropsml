@@ -106,8 +106,8 @@ class EuroCropsDatasetConfig(BaseModel):
     filter_clouds: bool = True
     normalize: bool = True
     data_sources: list[Literal["S1", "S2"]] = ["S2"]
-    s1_bands: list[str] | None = S1_BANDS
-    s2_bands: list[str] | None = S2_BANDS
+    s1_bands: list[str] | None = None
+    s2_bands: list[str] | None = None
     year: int = 2021
     # max_samples corresponds to maximum number of samples per class for finetune training data.
     # If ["all"], all samples are used, if e.g. [1, 2, "all"], three use-cases are created where
@@ -129,7 +129,7 @@ class EuroCropsDatasetConfig(BaseModel):
         if "S1" in self.data_sources:
             if self.s1_bands is None:
                 self.s1_bands = cast(list, S1_BANDS)
-                logger.info(f"No S2 bands defined. Setting to default {''.join(S2_BANDS)}.")
+                logger.info(f"No S1 bands defined. Setting to default {''.join(S1_BANDS)}.")
             num_channels += len(self.s1_bands)
         if "S2" in self.data_sources:
             if self.s2_bands is None:
