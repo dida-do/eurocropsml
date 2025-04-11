@@ -106,8 +106,8 @@ class EuroCropsDatasetConfig(BaseModel):
     filter_clouds: bool = True
     normalize: bool = True
     data_sources: list[Literal["S1", "S2"]] = ["S2"]
-    s1_bands: list[str] | None = None
-    s2_bands: list[str] | None = None
+    s1_bands: list[Literal[S1_BANDS]] | None = None
+    s2_bands: list[Literal[S2_BANDS]] | None = None
     year: int = 2021
     # max_samples corresponds to maximum number of samples per class for finetune training data.
     # If ["all"], all samples are used, if e.g. [1, 2, "all"], three use-cases are created where
@@ -129,12 +129,12 @@ class EuroCropsDatasetConfig(BaseModel):
         if "S1" in self.data_sources:
             if self.s1_bands is None:
                 self.s1_bands = cast(list, S1_BANDS)
-                logger.info(f"No S1 bands defined. Setting to default {''.join(S1_BANDS)}.")
+                logger.info(f"No S1 bands defined. Setting to default {S1_BANDS}.")
             num_channels += len(self.s1_bands)
         if "S2" in self.data_sources:
             if self.s2_bands is None:
                 self.s2_bands = cast(list, S2_BANDS)
-                logger.info(f"No S2 bands defined. Setting to default {''.join(S2_BANDS)}.")
+                logger.info(f"No S2 bands defined. Setting to default {S2_BANDS}.")
             self.s2_bands = cast(list, self.s2_bands)
             num_channels += len(self.s2_bands)
             if self.remove_s2_bands is not None:
