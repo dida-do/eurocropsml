@@ -65,7 +65,7 @@ class EuroCropsDataset(Dataset[LabelledData]):
         self.pad_seq_to_366 = pad_seq_to_366
         self.padding_value = padding_value
 
-        if "S2" in self.config.satellite:
+        if "S2" in self.config.data_sources:
             band_names = cast(list[str], self.config.s2_bands)
 
             if self.config.remove_s2_bands is not None:
@@ -81,7 +81,7 @@ class EuroCropsDataset(Dataset[LabelledData]):
         else:
             self.keep_band_idxs = None
             self.s2_data_bands = None
-        if "S1" in self.config.satellite:
+        if "S1" in self.config.data_sources:
             self.s1_data_bands: list[str] | None = self.config.s1_bands
         else:
             self.s1_data_bands = None
