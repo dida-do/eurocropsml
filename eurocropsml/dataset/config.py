@@ -106,8 +106,8 @@ class EuroCropsDatasetConfig(BaseModel):
     filter_clouds: bool = True
     normalize: bool = True
     data_sources: list[Literal["S1", "S2"]] = ["S2"]
-    s1_bands: list[Literal[S1_BANDS]] | None = None
-    s2_bands: list[Literal[S2_BANDS]] | None = None
+    s1_bands: list[str] | None = None
+    s2_bands: list[str] | None = None
     year: int = 2021
     # max_samples corresponds to maximum number of samples per class for finetune training data.
     # If ["all"], all samples are used, if e.g. [1, 2, "all"], three use-cases are created where
