@@ -39,8 +39,8 @@ class EuroCropsDataset(Dataset[LabelledData]):
         encode: Encoding used to encode the classes into integers.
         mmap_store: Instance of memory map store.
         config: EuroCropsDatasetConfig instance.
-        pad_seq_to_366: If sequence should be padded to 366 days
-            This is only used for TIML with an encoder.
+        preprocess_config: EuroCropsDatasetPreprocessConfig instance.
+        pad_seq_to_366: If sequence should be padded to 366 days.
         padding_value: Padding value used for padding data sequences.
     """
 
