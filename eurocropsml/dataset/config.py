@@ -129,12 +129,12 @@ class EuroCropsDatasetConfig(BaseModel):
         if "S1" in self.data_sources:
             if self.s1_bands is None:
                 self.s1_bands = cast(list, S1_BANDS)
-                logger.info(f"No S1 bands defined. Setting to default {S1_BANDS}.")
+                logger.info(f"No S1 bands defined. Setting to default {', '.join(S1_BANDS)}.")
             num_channels += len(self.s1_bands)
         if "S2" in self.data_sources:
             if self.s2_bands is None:
                 self.s2_bands = cast(list, S2_BANDS)
-                logger.info(f"No S2 bands defined. Setting to default {S2_BANDS}.")
+                logger.info(f"No S2 bands defined. Setting to default {', '.join(S2_BANDS)}.")
             self.s2_bands = cast(list, self.s2_bands)
             num_channels += len(self.s2_bands)
             if self.remove_s2_bands is not None:
