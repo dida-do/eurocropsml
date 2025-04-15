@@ -7,6 +7,9 @@ Changes for the upcoming release can be found (and will be added on merging feat
 Changes from previous releases are listed below.
 
 ## Upcoming Release
+_No changes yet._
+
+## 0.4.0 (2025-04-15)
 - Include hidden coverage report files in CI as Github action artifacts _(see #40)_
 - Exit script if automatic acquisition of NUTS files wasn't successful _(see #37)_
 - Add collection of Sentinel-1 data (no clipping yet) _(see #35)_
