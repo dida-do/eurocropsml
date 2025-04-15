@@ -105,9 +105,9 @@ class EuroCropsDatasetConfig(BaseModel):
     date_type: Literal["day", "month"] = "day"
     filter_clouds: bool = True
     normalize: bool = True
-    satellite: list[Literal["S1", "S2"]] = ["S2"]
-    s1_bands: list[str] | None = S1_BANDS
-    s2_bands: list[str] | None = S2_BANDS
+    data_sources: list[Literal["S1", "S2"]] = ["S2"]
+    s1_bands: list[str] | None = None
+    s2_bands: list[str] | None = None
     year: int = 2021
     # max_samples corresponds to maximum number of samples per class for finetune training data.
     # If ["all"], all samples are used, if e.g. [1, 2, "all"], three use-cases are created where
@@ -126,10 +126,15 @@ class EuroCropsDatasetConfig(BaseModel):
     def post_init(self) -> None:
         """Make dynamic config based on initialized params."""
         num_channels: int = 0
-        if "S1" in self.satellite:
-            self.s1_bands = cast(list, self.s1_bands)
+        if "S1" in self.data_sources:
+            if self.s1_bands is None:
+                self.s1_bands = cast(list, S1_BANDS)
+                logger.info(f"No S1 bands defined. Setting to default {', '.join(S1_BANDS)}.")
             num_channels += len(self.s1_bands)
-        if "S2" in self.satellite:
+        if "S2" in self.data_sources:
+            if self.s2_bands is None:
+                self.s2_bands = cast(list, S2_BANDS)
+                logger.info(f"No S2 bands defined. Setting to default {', '.join(S2_BANDS)}.")
             self.s2_bands = cast(list, self.s2_bands)
             num_channels += len(self.s2_bands)
             if self.remove_s2_bands is not None:
@@ -144,3 +149,10 @@ class EuroCropsDatasetConfig(BaseModel):
                     num_channels -= len(self.remove_s2_bands)
 
         self.total_num_channels = num_channels
+
+        if self.normalize is False:
+            logger.warning(
+                "You have deactivated the default normalization. "
+                "This requires custom normalization and modification of"
+                " sequence padding with a correct padding value (default 0.0)."
+            )

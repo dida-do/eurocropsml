@@ -24,6 +24,9 @@ Changes from previous releases are listed below.
 - Load S2 split from Zenodo for benchmark _(see #59)_
 - Update collection of Sentinel-2 data to Collection 1 _(see #75)_
 - Replace FileNotFoundError by pyogrio DataSourceError _(see #79)_
+- Swap lat and lon coordinates for Eurocrops _(see #82)_
+- Move normalization logger warning to EuroCropsDatasetConfig _(see #84)_
+- Use more generic name for dataset config satellite _(see #85)_
 
 ## 0.3.1 (2024-07-29)
 - Remove country_code variable in collector downloader _(see #33)_

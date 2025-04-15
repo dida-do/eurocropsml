@@ -93,12 +93,12 @@ def read_metadata(
     return df_classes
 
 
-def _get_latlons(metadata_dir: Path, country: str) -> dict[int, np.ndarray]:
+def _get_lonlats(metadata_dir: Path, country: str) -> dict[int, np.ndarray]:
     geometries = _read_geojson_file(metadata_dir, country)
-    parcel_latlons: dict[int, np.ndarray] = {
+    parcel_lonlats: dict[int, np.ndarray] = {
         k: np.concatenate(v.xy) for k, v in geometries["geometry"].to_dict().items()
     }
-    return parcel_latlons
+    return parcel_lonlats
 
 
 @cache
@@ -271,7 +271,7 @@ def preprocess(
                 cols = cols[5:]
                 # filter nan-values
                 country_file = country_file[~country_file[f"nuts{nuts_level}"].isna()]
-                points = _get_latlons(
+                points = _get_lonlats(
                     raw_data_dir.joinpath("geometries", str(preprocess_config.year)), file_path.stem
                 )
                 labels = _get_labels(

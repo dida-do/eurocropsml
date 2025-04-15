@@ -39,8 +39,8 @@ class EuroCropsDataset(Dataset[LabelledData]):
         encode: Encoding used to encode the classes into integers.
         mmap_store: Instance of memory map store.
         config: EuroCropsDatasetConfig instance.
-        pad_seq_to_366: If sequence should be padded to 366 days
-            This is only used for TIML with an encoder.
+        preprocess_config: EuroCropsDatasetPreprocessConfig instance.
+        pad_seq_to_366: If sequence should be padded to 366 days.
         padding_value: Padding value used for padding data sequences.
     """
 
@@ -65,13 +65,7 @@ class EuroCropsDataset(Dataset[LabelledData]):
         self.pad_seq_to_366 = pad_seq_to_366
         self.padding_value = padding_value
 
-        if self.config.normalize is False:
-            logger.warning(
-                "You have removed deactivate the default normalization. "
-                "This requires custom modification of sequence padding."
-            )
-
-        if "S2" in self.config.satellite:
+        if "S2" in self.config.data_sources:
             band_names = cast(list[str], self.config.s2_bands)
 
             if self.config.remove_s2_bands is not None:
@@ -87,7 +81,7 @@ class EuroCropsDataset(Dataset[LabelledData]):
         else:
             self.keep_band_idxs = None
             self.s2_data_bands = None
-        if "S1" in self.config.satellite:
+        if "S1" in self.config.data_sources:
             self.s1_data_bands: list[str] | None = self.config.s1_bands
         else:
             self.s1_data_bands = None
@@ -163,7 +157,10 @@ class EuroCropsDataset(Dataset[LabelledData]):
             for array_name, meta_array in arrays_dict.items()
         }
         # center is always the same, replace by first value
-        meta_data["center"] = cast(torch.Tensor, next(iter(meta_data["center"].values())))
+        meta_data["center"] = next(iter(meta_data["center"].values()))
+        # swap to lat, lon
+        center_tensor = cast(torch.Tensor, meta_data["center"])
+        meta_data["center"] = torch.flip(center_tensor, [0])
 
         # normalization and scaling to (0,1]
         if self.config.normalize:
