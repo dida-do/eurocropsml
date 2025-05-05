@@ -7,7 +7,7 @@ Changes for the upcoming release can be found (and will be added on merging feat
 Changes from previous releases are listed below.
 
 ## Upcoming Release
-_No changes yet._
+- Update citation section _(see #88)_
 
 ## 0.4.1 (2025-04-24)
 - Update condition for info about folder structure _(see #86)_

@@ -102,17 +102,35 @@ If you use the `EuroCropsML` dataset or `eurocropsml` code repository in your re
 
 **Plain text**
 ```text
-Reuss, J., & Macdonald, J. (2024). EuroCropsML [dataset]. Zenodo. https://doi.org/10.5281/zenodo.10629610
+Reuss, J., Macdonald, J., Becker, S. et al. The EuroCropsML time series benchmark dataset for few-shot crop type classification in Europe. Sci Data 12, 664 (2025). https://doi.org/10.1038/s41597-025-04952-7
+```
+
+```text
+Reuss, J., & Macdonald, J. (2024). EuroCropsML [dataset]. Zenodo. https://doi.org/10.5281/zenodo.10629609
 ```
 **Bibtex**
 ```text
-@misc{reuss_macdonald_eurocropsml_2024,
-  author       = {Reuss, Joana and Macdonald, Jan},
-  title        = {EuroCropsML},
-  year         = 2024,
-  publisher    = {Zenodo},
-  doi          = {10.5281/zenodo.10629610},
-  url          = {https://doi.org/10.5281/zenodo.10629610}
+@article{reuss_macdonald_eurocropsml_nsd_2025,
+  author = {Reuss, Joana and Macdonald, Jan and Becker, Simon and Richter, Lorenz and K{\"o}rner, Marco},
+  title = {The EuroCropsML time series benchmark dataset for few-shot crop type classification in Europe},
+  journal = {Scientific Data},
+  year = {2025},
+  volume = {12},
+  note = {664},
+  issn = {2052-4463},
+  doi = {10.1038/s41597-025-04952-7},
+  url = {https://doi.org/10.1038/s41597-025-04952-7}
+}
+```
+
+```text
+@misc{reuss_macdonald_eurocropsml_zenodo_2024,
+  author = {Reuss, Joana and Macdonald, Jan},
+  title = {EuroCropsML},
+  year = {2024},
+  publisher = {Zenodo},
+  doi = {10.5281/zenodo.10629609},
+  url = {https://doi.org/10.5281/zenodo.10629609}
 }
 ```
 
