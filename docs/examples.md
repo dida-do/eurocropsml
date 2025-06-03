@@ -124,7 +124,7 @@ The $\texttt{EuroCropsML}$ dataset allows users to customize options for various
 | `base_name` | Base name of the split configuration, used when creating and saving the splits. |
 | `data_dir` | Folder inside the data directory where pre-processed data is stored. | 
 | `random_seed` | Random seed used for generating training-testing-splits and further random numbers. |
-| `num_samples` | Number of samples per class used for the fine-tuning subsets. The default will create the shots currently present on [Zenodo](https://zenodo.org/records/15095445) for the training set. It will samples 1000 samples for validation and keep all available data from the test set. |
+| `num_samples` | Number of samples per class used for the fine-tuning subsets. The default will create the shots currently present on [Zenodo](https://doi.org/10.5281/zenodo.15095445) for the training set. It will sample 1000 samples for validation and keep all available data from the test set. |
 | `satellites` | List of satellites whose data is to be used.|
 | `benchmark` | Whether to download the pre-existing benchmark split from Zenodo. For more information see {any}`split_dataset_by_region<eurocropsml.dataset.splits.split_dataset_by_region>` |
 | `meadow_class` | Class that represents the ${\texttt{pasture_meadow_grassland_grass}}$ class. If provided, then this class will be downsampled to the median frequency of all other classes for the pre-training dataset since it represents an imbalanced majority class. |
