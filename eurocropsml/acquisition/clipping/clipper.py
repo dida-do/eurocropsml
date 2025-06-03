@@ -74,7 +74,7 @@ def _get_arguments(
     workers: int,
     shape_dir: Path,
     output_dir: Path,
-    month: int,
+    month: str,
     local_dir: Path | None = None,
 ) -> tuple[list[tuple[pd.DataFrame, list]], gpd.GeoDataFrame, Path]:
     """Get arguments for clipping polygons from raster files.
