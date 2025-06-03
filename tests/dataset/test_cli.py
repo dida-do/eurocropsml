@@ -18,7 +18,7 @@ class MockConfig(BaseModel):
 
 @pytest.fixture
 def runner() -> CliRunner:
-    return CliRunner(mix_stderr=False)
+    return CliRunner()
 
 
 @pytest.fixture
