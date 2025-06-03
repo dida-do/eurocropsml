@@ -119,19 +119,19 @@ $ eurocropsml-cli datasets eurocrops preprocess preprocess.satellite="S1"
 ### Customizing the dataset utilization
 The $\texttt{EuroCropsML}$ dataset allows users to customize options for various crop type classification scenarios, making it suitable for a range of benchmarking applications. Adjustments can be made by creating a custom split configuration within the `eurocropsml.configs.dataset.split` module or by modifying the parameters of existing configurations. Detailed split configuration parameters are listed in the table below.
 
-| __Parameter__ | __Definition__ |
-| ------------- | ------------- |
-| `base_name` | Base name of the split configuration, used when creating and saving the splits. |
-| `data_dir` | Folder inside the data directory where pre-processed data is stored. | 
-| `random_seed` | Random seed used for generating training-testing-splits and further random numbers. |
-| `num_samples` | Number of samples per class used for the fine-tuning subsets. The default will create the shots currently present on [Zenodo](https://doi.org/10.5281/zenodo.15095445) for the training set. It will sample 1000 samples for validation and keep all available data from the test set. |
-| `satellites` | List of satellites whose data is to be used.|
-| `benchmark` | Whether to download the pre-existing benchmark split from Zenodo. For more information see {any}`split_dataset_by_region<eurocropsml.dataset.splits.split_dataset_by_region>` |
-| `meadow_class` | Class that represents the ${\texttt{pasture_meadow_grassland_grass}}$ class. If provided, then this class will be downsampled to the median frequency of all other classes for the pre-training dataset since it represents an imbalanced majority class. |
-| `pretrain_classes` | Classes that make up the pre-train dataset. |
-| `finetune_classes` | Classes that make up the fine-tune dataset. |
-| `pretrain_regions` | Regions that make up the pre-train dataset. |
-| `finetune_regions` | Regions that make up the fine-tune dataset. |
+| __Parameter__ | __Definition__                                                                                                                                                                                                                                                                                |
+| ------------- |-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `base_name` | Base name of the split configuration, used when creating and saving the splits.                                                                                                                                                                                                               |
+| `data_dir` | Folder inside the data directory where pre-processed data is stored.                                                                                                                                                                                                                          | 
+| `random_seed` | Random seed used for generating training-testing-splits and further random numbers.                                                                                                                                                                                                           |
+| `num_samples` | Number of samples per class used for the fine-tuning subsets. The default will create the shots currently present on [Zenodo](https://zenodo.org/doi/10.5281/zenodo.15095445) for the training set. It will sample 1000 samples for validation and keep all available data from the test set. |
+| `satellites` | List of satellites whose data is to be used.                                                                                                                                                                                                                                                  |
+| `benchmark` | Whether to download the pre-existing benchmark split from Zenodo. For more information see {any}`split_dataset_by_region<eurocropsml.dataset.splits.split_dataset_by_region>`                                                                                                                 |
+| `meadow_class` | Class that represents the ${\texttt{pasture_meadow_grassland_grass}}$ class. If provided, then this class will be downsampled to the median frequency of all other classes for the pre-training dataset since it represents an imbalanced majority class.                                     |
+| `pretrain_classes` | Classes that make up the pre-train dataset.                                                                                                                                                                                                                                                   |
+| `finetune_classes` | Classes that make up the fine-tune dataset.                                                                                                                                                                                                                                                   |
+| `pretrain_regions` | Regions that make up the pre-train dataset.                                                                                                                                                                                                                                                   |
+| `finetune_regions` | Regions that make up the fine-tune dataset.                                                                                                                                                                                                                                                   |
 
 
 The class configuration parameters `pretrain_classes` and `finetune_classes` as well as the region parameters `pretrain_regions`and `finetune_regions` can be specified by providing collections of key-value pairs (dictionaries), respectively. 
