@@ -60,7 +60,11 @@ def _compare_folders(folder1: Path, folder2: Path) -> bool:
 
 def _unzip_file(zip_filepath: Path, extract_to_path: Path, delete_zip: bool = True) -> None:
     with zipfile.ZipFile(zip_filepath, "r") as zip_ref:
-        zip_ref.extractall(extract_to_path)
+        names = zip_ref.namelist()
+        has_root_dir = any("/" in n for n in names)
+        target_dir = extract_to_path if has_root_dir else extract_to_path / zip_filepath.stem
+        target_dir.mkdir(parents=True, exist_ok=True)
+        zip_ref.extractall(target_dir)
     # delete zip-file
     if delete_zip:
         zip_filepath.unlink()
