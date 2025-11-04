@@ -8,6 +8,10 @@ Changes from previous releases are listed below.
 
 ## Upcoming Release
 - Fix country polygons _(see #99)_
+- Update to EuroCrops V11 _(see #63)_
+- Update country polygons _(see #89)_
+- Adjust CliRunner to the new typer package update _(see #93)_
+- Update API URL _(see #94)_
 - Update citation section _(see #88)_
 
 ## 0.4.1 (2025-04-24)
