@@ -7,6 +7,7 @@ Changes for the upcoming release can be found (and will be added on merging feat
 Changes from previous releases are listed below.
 
 ## Upcoming Release
+- Fix country polygons _(see #99)_
 - Update citation section _(see #88)_
 
 ## 0.4.1 (2025-04-24)
