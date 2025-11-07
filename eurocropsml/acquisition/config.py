@@ -27,7 +27,23 @@ S2_BANDS = [
     "12",
 ]  # order is important
 
-S1_BANDS = ["VV", "VH"]  # order is important
+S1_BANDS = ["VV", "VH"]  # order is important{
+
+S2_RESOLUTION = {
+    "01": 60,
+    "02": 10,
+    "03": 10,
+    "04": 10,
+    "05": 20,
+    "06": 20,
+    "07": 20,
+    "08": 10,
+    "8A": 20,
+    "09": 60,
+    "10": 60,
+    "11": 20,
+    "12": 20,
+}
 
 
 class CollectorConfig(BaseModel):
@@ -216,7 +232,11 @@ class CollectorConfig(BaseModel):
 
 
 class AcquisitionConfig(BaseModel):
-    """Configuration for acquiring EuroCrops reflectance data."""
+    """Configuration for acquiring EuroCrops reflectance data.
+
+    If eodata_dir is None, Sentinel tiles will be accessed via S3 bucket.
+
+    """
 
     raw_data_dir: Path
     output_dir: Path

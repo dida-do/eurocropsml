@@ -7,6 +7,10 @@ from pydantic_settings import BaseSettings
 
 ROOT_DIR = Path(__file__).parents[1]
 
+REGION_NAME = "eu-central-1"  # Default fallback region
+ENDPOINT_URL = "https://eodata.cloudferro.com"
+CONTAINER = "EODATA"
+
 
 class Settings(BaseSettings):
     """Global settings."""

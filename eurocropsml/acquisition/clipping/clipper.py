@@ -6,16 +6,21 @@ import gc
 import logging
 import multiprocessing as mp_orig
 import pickle
+import sys
 from functools import partial
 from pathlib import Path
-from typing import cast
+from typing import Callable, Literal, cast
 
 import geopandas as gpd
 import pandas as pd
 import pyogrio
 from tqdm import tqdm
 
-from eurocropsml.acquisition.clipping.utils import _merge_clipper, mask_polygon_raster
+from eurocropsml.acquisition.clipping.utils import (
+    _merge_clipper,
+    mask_polygon_raster,
+    mask_polygon_raster_s3,
+)
 from eurocropsml.acquisition.config import CollectorConfig
 
 logger = logging.getLogger(__name__)
@@ -74,7 +79,7 @@ def _get_arguments(
     workers: int,
     shape_dir: Path,
     output_dir: Path,
-    month: int,
+    month: str,
     local_dir: Path | None = None,
 ) -> tuple[list[tuple[pd.DataFrame, list]], gpd.GeoDataFrame, Path]:
     """Get arguments for clipping polygons from raster files.
@@ -101,15 +106,15 @@ def _get_arguments(
     clipping_path = output_dir.joinpath("clipper", f"{month}")
     clipping_path.mkdir(exist_ok=True, parents=True)
 
-    if clipping_path.joinpath("args.pkg").exists():
+    if clipping_path.joinpath("args.pkl").exists():
         logger.info("Loading argument list for parallel raster clipping.")
-        with open(clipping_path.joinpath("args.pkg"), "rb") as file:
+        with open(clipping_path.joinpath("args.pkl"), "rb") as file:
             args: list[tuple[pd.DataFrame, list]] = pickle.load(file)
-        shapefile: gpd.GeoDataFrame = pd.read_pickle(clipping_path.joinpath("empty_polygon_df.pkg"))
+        shapefile: gpd.GeoDataFrame = pd.read_pickle(clipping_path.joinpath("empty_polygon_df.pkl"))
     else:
         logger.info("No argument list found. Will create it.")
         # DataFrame of raster file/parcel matches
-        full_images_paths: Path = output_dir.joinpath("collector", "full_parcel_list.pkg")
+        full_images_paths: Path = output_dir.joinpath("collector", "full_parcel_list.pkl")
         full_images = pd.read_pickle(full_images_paths)
 
         full_images["completionDate"] = pd.to_datetime(full_images["completionDate"]).dt.date
@@ -118,11 +123,13 @@ def _get_arguments(
         ]
 
         if local_dir is not None:
-            full_images["productIdentifier"] = str(local_dir) + full_images[
-                "productIdentifier"
-            ].astype(str)
+            full_images["productIdentifier"] = (
+                full_images["productIdentifier"]
+                .astype(str)
+                .apply(lambda x: str(local_dir.joinpath(x)))
+            )
 
-        band_image_path: Path = output_dir.joinpath("copier", "band_images.pkg")
+        band_image_path: Path = output_dir.joinpath("copier", "band_images.pkl")
         band_images: pd.DataFrame = pd.read_pickle(band_image_path)
 
         # filter out month
@@ -144,10 +151,12 @@ def _get_arguments(
                 ti.update(n=1)
             ti.close()
 
-        with open(clipping_path.joinpath("args.pkg"), "wb") as fp:
+        with open(clipping_path.joinpath("args.pkl"), "wb") as fp:
             pickle.dump(args, fp)
         logger.info("Saved argument list.")
 
+        if sys.stdout is not None:
+            sys.stdout.flush()
         date_list = list(full_images["completionDate"].unique())
         cols = [parcel_id_name, "geometry"] + date_list
 
@@ -157,7 +166,7 @@ def _get_arguments(
 
         shapefile = shapefile.reindex(columns=cols)
 
-        shapefile.to_pickle(clipping_path.joinpath("empty_polygon_df.pkg"))
+        shapefile.to_pickle(clipping_path.joinpath("empty_polygon_df.pkl"))
 
     shapefile[parcel_id_name] = shapefile[parcel_id_name].astype(int)
 
@@ -177,6 +186,7 @@ def _filter_args(
 
 
 def _process_raster_parallel(
+    masking_fct: Callable,
     polygon_df: pd.DataFrame,
     parcel_id_name: str,
     filtered_images: gpd.GeoDataFrame,
@@ -203,7 +213,7 @@ def _process_raster_parallel(
     # geometry information of all parcels
     filtered_geom = polygon_df[polygon_df[parcel_id_name].isin(parcel_ids)]
 
-    result = mask_polygon_raster(band_tiles, filtered_geom, parcel_id_name, product_date)
+    result = masking_fct(band_tiles, filtered_geom, parcel_id_name, product_date)
 
     result.set_index(parcel_id_name, inplace=True)
     result.index = result.index.astype(int)  # make sure index is integer
@@ -219,6 +229,7 @@ def clipping(
     workers: int,
     chunk_size: int,
     multiplier: int,
+    source: Literal["eodata", "s3"] = "s3",
     local_dir: Path | None = None,
     rebuild: bool = False,
 ) -> None:
@@ -235,6 +246,10 @@ def clipping(
         rebuild: Whether to re-build the clipped parquet files for each month.
             This will overwrite the existing ones.
     """
+    if source == "s3":
+        masking_fct = mask_polygon_raster_s3
+    else:
+        masking_fct = mask_polygon_raster
     for month in tqdm(
         range(config.months[0], config.months[1] + 1), desc="Clipping rasters on monthly basis"
     ):
@@ -258,7 +273,7 @@ def clipping(
         clipped_dir.mkdir(exist_ok=True, parents=True)
 
         # Process data in smaller chunks
-        file_counts = len(list(clipped_dir.rglob("Final_*.pkg")))
+        file_counts = len(list(clipped_dir.rglob("Final_*.pkl")))
 
         processed = file_counts * multiplier * chunk_size
         save_files = multiplier * chunk_size
@@ -269,6 +284,7 @@ def clipping(
         )
         func = partial(
             _process_raster_parallel,
+            masking_fct,
             polygon_df_month,
             cast(str, config.parcel_id_name),
         )
@@ -292,7 +308,10 @@ def clipping(
                 ]
                 results: list[pd.DataFrame] = []
 
-                with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
+                with concurrent.futures.ProcessPoolExecutor(
+                    max_workers=max_workers, mp_context=mp_orig.get_context("spawn")
+                ) as executor:
+                    # with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
                     futures = [executor.submit(func, *arg) for arg in chunk_args]
 
                     for future in concurrent.futures.as_completed(futures):
@@ -310,7 +329,7 @@ def clipping(
 
                 processed += len(chunk_args)
                 if processed % save_files == 0:
-                    df_final_month.to_pickle(clipped_dir.joinpath(f"Final_{file_counts}.pkg"))
+                    df_final_month.to_pickle(clipped_dir.joinpath(f"Final_{file_counts}.pkl"))
                     del df_final_month
                     df_final_month = polygon_df_month.copy()
                     file_counts += 1
@@ -318,7 +337,7 @@ def clipping(
                 del chunk_args, futures
                 gc.collect()
 
-            df_final_month.to_pickle(clipped_dir.joinpath(f"Final_{file_counts}.pkg"))
+            df_final_month.to_pickle(clipped_dir.joinpath(f"Final_{file_counts}.pkl"))
             te.close()
 
         _merge_dataframe(
