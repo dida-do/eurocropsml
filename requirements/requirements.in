@@ -16,3 +16,4 @@ bs4
 selenium
 webdriver_manager
 xmlschema
+boto3
