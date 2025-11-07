@@ -237,5 +237,5 @@ def _get_dict_value_by_name(
     return None
 
 
-def _load_pkg(file: Path) -> pd.DataFrame:
+def _load_pkl(file: Path) -> pd.DataFrame:
     return pd.read_pickle(file)
