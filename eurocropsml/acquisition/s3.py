@@ -1,3 +1,5 @@
+"""Acquiring data from S3 bucket."""
+
 import io
 import logging
 import os
