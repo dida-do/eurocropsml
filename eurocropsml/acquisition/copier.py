@@ -28,7 +28,6 @@ def _copy_to_local_dir(
     """Copying files to local directory.
 
     Args:
-
         source: Source of the Sentinel tiles. Either directory ('eodata') or S3 bucket ('s3').
         safe_file: File to copy to local directory.
 
@@ -73,7 +72,6 @@ def _get_image_files(
     """Getting paths for each spectral band.
 
     Args:
-    
         full_safe_files: DataFrame with .SAFE file paths for which to get the band paths.
         satellite: S1 for Sentinel-1 and S2 for Sentinel-2.
         bands: (Sub-)set of Sentinel-1 (radar) or Sentinel-2 (spectral) bands.
