@@ -195,6 +195,7 @@ def _process_raster_parallel(
     """Processing one raster file.
 
     Args:
+        masking_fct: Function to use for clipping. Either via S3 or local access.
         polygon_df: Dataframe containing all parcel ids. Will be merged with the clipped values.
         parcel_id_name: The country's parcel ID name (varies from country to country).
         filtered_images: Dataframe containing all parcel ids that lie in this raster tile.

@@ -29,6 +29,7 @@ def _copy_to_local_dir(
 
     Args:
         source: Source of the Sentinel tiles. Either directory ('eodata') or S3 bucket ('s3').
+        local_dir: Local directory where the .SAFE files are copied to.
         safe_file: File to copy to local directory.
 
     """
