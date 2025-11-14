@@ -481,10 +481,8 @@ def _get_tiles(
             cloudcover = 0.0
 
         if eodata_dir is not None:
-            if "eodata" in safe_file:
-                safe_file = safe_file.replace("eodata", eodata_dir)
-            elif "codede" in safe_file:
-                safe_file = safe_file.replace("codede", eodata_dir)
+            safe_file = safe_file.replace("eodata", eodata_dir)
+            safe_file = safe_file.replace("codede", eodata_dir)
             try:
                 granule_path = Path(safe_file).joinpath("GRANULE")
                 folder: list = list(granule_path.iterdir())
@@ -500,6 +498,7 @@ def _get_tiles(
         else:
             s3_client: BaseClient | None = _establish_s3_client()
             safe_file = safe_file.replace("/eodata/", "")
+            safe_file = safe_file.replace("/codede/", "")
 
             try:
                 granule_path = Path(safe_file).joinpath("GRANULE")
