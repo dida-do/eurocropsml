@@ -284,8 +284,6 @@ def _downloader(
         results: list[list] = []
 
         with mp_orig.Pool(processes=max_workers) as p:
-            # for prod in products:
-            #    t = _get_tiles(satellite, eodata_dir, prod)
             func = partial(_get_tiles, satellite, eodata_dir)
             process_iter = p.imap(func, products, chunksize=1000)
             ti = tqdm(total=len(products), desc="Processing requested .SAFE files.")
@@ -295,7 +293,8 @@ def _downloader(
                     results.append(result)
                 ti.update(n=1)
             ti.close()
-
+        if not results:
+            raise AssertionError("None of the tiles could be processed. Exiting process.")
         request_df: pd.DataFrame
         if satellite == "S2":
             request_df = pd.DataFrame(
@@ -339,7 +338,8 @@ def _downloader(
         )
         for crs in unique_crs
     ]
-
+    if not request_df_list:
+        raise AssertionError("None of the tiles could be processed. Exiting process.")
     if not (
         output_dir.joinpath("full_safe_file_list.pkl").exists()
         and output_dir.joinpath("full_parcel_list.pkl").exists()
@@ -481,7 +481,10 @@ def _get_tiles(
             cloudcover = 0.0
 
         if eodata_dir is not None:
-            safe_file = safe_file.replace("eodata", eodata_dir)
+            if "eodata" in safe_file:
+                safe_file = safe_file.replace("eodata", eodata_dir)
+            elif "codede" in safe_file:
+                safe_file = safe_file.replace("codede", eodata_dir)
             try:
                 granule_path = Path(safe_file).joinpath("GRANULE")
                 folder: list = list(granule_path.iterdir())
