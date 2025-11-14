@@ -160,7 +160,7 @@ def _downloader(
 ) -> None:
     request_path = output_dir.joinpath("requests")
     request_path.mkdir(exist_ok=True, parents=True)
-    eofinder_request: Path = request_path.joinpath(f"{country}_{year}.json")
+    eofinder_request: Path = request_path.joinpath(f"{country.replace(' ', '_')}_{year}.json")
 
     if not eofinder_request.exists():
         # if not eofinder_request_new.exists():
@@ -490,7 +490,7 @@ def _get_tiles(
                 root = tree.getroot()
             except Exception:
                 logger.warning(
-                    f"Could not access metadata via eodata directory. \
+                    "Could not access metadata via eodata directory. \
                     This .SAFE file is being skipped."
                 )
                 return None
@@ -512,7 +512,7 @@ def _get_tiles(
                     return None
             except Exception:
                 logger.warning(
-                    f"Could not access metadata via S3 bucket. This .SAFE file is being skipped."
+                    "Could not access metadata via S3 bucket. This .SAFE file is being skipped."
                 )
                 return None
 

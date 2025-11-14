@@ -3,7 +3,6 @@
 import logging
 import multiprocessing as mp_orig
 import os
-import re
 import shutil
 from functools import partial
 from pathlib import Path
@@ -29,7 +28,8 @@ def _copy_to_local_dir(
     """Copying files to local directory.
 
     Args:
-        source:
+
+        source: Source of the Sentinel tiles. Either directory ('eodata') or S3 bucket ('s3').
         safe_file: File to copy to local directory.
 
     """
@@ -40,7 +40,7 @@ def _copy_to_local_dir(
         # TODO: check for correctne
         local_product: Path = local_dir.joinpath(safe_file_name.lstrip("/"))
         granule_folder = Path(safe_file_name) / "GRANULE"
-        granule_sub_folder = [folder for folder in granule_folder.iterdir()][0]
+        granule_sub_folder = list(granule_folder.iterdir())[0]
         img_data_path = granule_sub_folder / "IMG_DATA"
         local_parent_dir: Path = local_product / "GRANULE" / granule_sub_folder.name / "IMG_DATA"
         if not local_parent_dir.exists():
@@ -73,12 +73,14 @@ def _get_image_files(
     """Getting paths for each spectral band.
 
     Args:
+
         full_safe_files: DataFrame with .SAFE file paths for which to get the band paths.
         satellite: S1 for Sentinel-1 and S2 for Sentinel-2.
         bands: (Sub-)set of Sentinel-1 (radar) or Sentinel-2 (spectral) bands.
         source: Source of the Sentinel tiles. Either directory ('eodata') or S3 bucket ('s3')
         local_dir: Local directory where the .SAFE files are copied to.
             If None, .SAFE files will not be stored on local disk.
+
     Returns:
         DataFrame with band paths as columns.
 

@@ -14,8 +14,6 @@ from rasterio.mask import mask
 from rasterio.plot import reshape_as_image
 from tqdm import tqdm
 
-from eurocropsml.acquisition.s3 import CONTAINER
-
 logger = logging.getLogger(__name__)
 logging.getLogger("botocore.credentials").setLevel(logging.WARNING)
 

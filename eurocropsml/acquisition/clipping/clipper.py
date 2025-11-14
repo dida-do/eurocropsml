@@ -242,14 +242,14 @@ def clipping(
         workers: Maximum number of workers used for multiprocessing.
         chunk_size: Chunk size used for multiprocessed raster clipping.
         multiplier: Intermediate results will be saved every multiplier steps.
+        source: Source of the Sentinel tiles. Either directory ('eodata') or S3 bucket ('s3').
+            If files have been copied to a local directory, this was set to 'eodata'.
         local_dir: Local directory where the .SAFE files were copied to.
         rebuild: Whether to re-build the clipped parquet files for each month.
             This will overwrite the existing ones.
     """
-    if source == "s3":
-        masking_fct = mask_polygon_raster_s3
-    else:
-        masking_fct = mask_polygon_raster
+
+    masking_fct = mask_polygon_raster_s3 if source == "s3" else mask_polygon_raster
     for month in tqdm(
         range(config.months[0], config.months[1] + 1), desc="Clipping rasters on monthly basis"
     ):
@@ -311,7 +311,7 @@ def clipping(
                 with concurrent.futures.ProcessPoolExecutor(
                     max_workers=max_workers, mp_context=mp_orig.get_context("spawn")
                 ) as executor:
-                    # with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
+
                     futures = [executor.submit(func, *arg) for arg in chunk_args]
 
                     for future in concurrent.futures.as_completed(futures):

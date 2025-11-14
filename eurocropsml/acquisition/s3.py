@@ -96,9 +96,9 @@ def _download_s3_prefix(
     local_base_dir: Path,
     file_extension: Literal[".jp2"] = ".jp2",
 ) -> None:
-    """
-    Recursively downloads all files under a given S3 prefix
-    to a local directory, maintaining the relative path structure.
+    """Recursively downloads all files under a given S3 prefix.
+
+    Files are downloaded to a local directory, maintaining the relative path structure.
     """
 
     # Iterate over all pages of results
@@ -112,7 +112,8 @@ def _download_s3_prefix(
                 # Construct the local file path by appending the relative key
                 # to the local base directory.
                 # Example: If local_base_dir is /cache/S2B... and s3_prefix is S2B.../IMG_DATA/
-                # and s3_key is S2B.../IMG_DATA/B01.jp2, local_file will be /cache/S2B.../IMG_DATA/B01.jp2
+                # and s3_key is S2B.../IMG_DATA/B01.jp2, local_file will be
+                # /cache/S2B.../IMG_DATA/B01.jp2
                 file_name = Path(s3_key).relative_to(Path(s3_prefix))
                 local_file = local_base_dir.joinpath(file_name)
 
