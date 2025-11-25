@@ -190,7 +190,7 @@ def add_nuts_regions(
                         if (
                             x is None
                             or (isinstance(x, float) and pd.isna(x))
-                            or (isinstance(x, list) and all(pd.isna(val) for val in x))
+                            or (isinstance(x, list) and any(pd.isna(val) for val in x))
                         )
                         else x
                     )
