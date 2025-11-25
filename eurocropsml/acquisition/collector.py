@@ -61,7 +61,7 @@ def _eolab_finder(
     _, num_days = calendar.monthrange(year, months[1])
     months_list: list[str] = ["0{0}".format(m) if m < 10 else "{0}".format(m) for m in months]
 
-    request_url = """https://datahub.eo-lab.org/odata/v1/Products?$filter=({0}(ContentDate/Start \
+    request_url = """https://datahub.creodias.eu/odata/v1/Products?$filter=({0}(ContentDate/Start \
 ge {1}-{2}-01T00:00:00.000Z and ContentDate/Start le {1}-{3}-{4}T23:59:59.999Z) and (Online eq \
 true) and (OData.CSC.Intersects(Footprint=geography'SRID=4326;{5}')) and (((((Collection/Name eq \
 '{6}'){8} and (((Attributes/Odata.CSC.StringAttribute/any(i0:i0/Name eq 'productType' and \
@@ -217,13 +217,16 @@ def _downloader(
                     operational_mode_str,
                     max_requested_products,
                 )
-                if "value" not in requests and collection_name == "SENTINEL-2":
-                    logger.info(
-                        "No products for Collection-1 found. Rerunning request for \
-                                non-Collection-1 products."
-                    )
-                    filter_collection = ""
-                    run_loop = True
+                if requests.get("value") in (None, []):
+                    if collection_name == "SENTINEL-2":
+                        logger.info(
+                            "No products for Collection-1 found. Rerunning request for \
+                                    non-Collection-1 products."
+                        )
+                        filter_collection = ""
+                        run_loop = True
+                    else:
+                        raise ValueError("API-request was not successful!")
                 else:
                     run_loop = False
                     logger.info("API-request was successful!")
@@ -294,7 +297,16 @@ def _downloader(
                 ti.update(n=1)
             ti.close()
         if not results:
-            raise AssertionError("None of the tiles could be processed. Exiting process.")
+            if eodata_dir is None:
+                raise AssertionError(
+                    "None of the tiles could be processed. Access to S3 bucket \
+                                     might have failed. Exiting process."
+                )
+            else:
+                raise AssertionError(
+                    "None of the tiles could be processed. Access to eodata \
+                                     repository might have failed. Exiting process."
+                )
         request_df: pd.DataFrame
         if satellite == "S2":
             request_df = pd.DataFrame(
@@ -496,6 +508,7 @@ def _get_tiles(
                 )
                 return None
         else:
+
             s3_client: BaseClient | None = _establish_s3_client()
             safe_file = safe_file.replace("/eodata/", "")
             safe_file = safe_file.replace("/codede/", "")
