@@ -9,7 +9,7 @@ pyogrio
 rasterio
 requests
 scikit-learn
-torch>=2.0
+torch>=2.3
 typer[all]
 types-requests
 bs4
