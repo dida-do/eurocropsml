@@ -92,6 +92,9 @@ def add_nuts_regions(
 
     nuts_df = nuts[nuts["CNTR_CODE"] == config.country_code]
 
+    if config.nuts_identifier is not None:
+        nuts_df = nuts[nuts["NUTS_ID"].str.startswith(config.nuts_identifier)]
+
     parcel_id_name: str = cast(str, config.parcel_id_name)
 
     cols_shapefile = [parcel_id_name, "geometry", "EC_hcat_n", "EC_hcat_c", "nuts1"]
