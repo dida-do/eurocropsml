@@ -272,7 +272,6 @@ class EuroCropsCountryConfig(BaseModel):
 
     countries: dict[str, dict[str, str | list[str] | list[int]]] = {
         "Austria": {"country_code": "AT", "ec_zipfolder": "AT", "years": [2021]},
-        "Czechia": {"country_code": "CZ", "ec_zipfolder": "CZ", "years": [2023]},
         "Belgium VLG": {
             "country_code": "BE",
             "ec_zipfolder": "BE_VLG",
@@ -286,8 +285,10 @@ class EuroCropsCountryConfig(BaseModel):
             "nuts": "BE3",
         },
         "Croatia": {"country_code": "HR", "ec_zipfolder": "HR", "years": [2020]},
+        "Czechia": {"country_code": "CZ", "ec_zipfolder": "CZ", "years": [2023]},
         "Denmark": {"country_code": "DK", "ec_zipfolder": "DK", "years": [2019]},
         "Estonia": {"country_code": "EE", "ec_zipfolder": "EE", "years": [2021]},
+        "Finland": {"country_code": "FI", "ec_zipfolder": "FI", "years": [2020]},
         "France": {"country_code": "FR", "ec_zipfolder": "FR", "years": [2018]},
         "Germany LS": {
             "country_code": "DE",
@@ -307,6 +308,7 @@ class EuroCropsCountryConfig(BaseModel):
             "years": [2023],
             "nuts": "DE4",
         },
+        "Ireland": {"country_code": "IE", "ec_zipfolder": "IE", "years": [2023]},
         "Latvia": {"country_code": "LV", "ec_zipfolder": "LV", "years": [2021]},
         "Lithuania": {"country_code": "LT", "ec_zipfolder": "LT", "years": [2021]},
         "Netherlands": {"country_code": "NL", "ec_zipfolder": "NL", "years": [2020]},
@@ -332,6 +334,8 @@ class EuroCropsCountryConfig(BaseModel):
         "Germany LS": "",  # no unique identifier
         "Germany NRW": "ID",
         "Germany BB": "",  # no unique identifier
+        "Germany BB": "",
+        "Ireland": "",  # no unique identifier
         "Latvia": "PARCEL_ID",
         "Lithuania": "parcel_id",
         "Netherlands": "objectid",
