@@ -179,7 +179,7 @@ class CollectorConfig(BaseModel):
             self.country_code = cast(str, eurocrops_countries[self.country]["country_code"])
             self.ec_filename = cast(str, eurocrops_countries[self.country]["ec_zipfolder"])
             if "nuts" in eurocrops_countries[self.country]:
-                self.nuts_identifier = eurocrops_countries[self.country]["nuts"]
+                self.nuts_identifier = cast(str, eurocrops_countries[self.country]["nuts"])
 
             if self.country_code == "ES" and self.year == 2021:
                 filename = f"{self.ec_filename}_2020"
