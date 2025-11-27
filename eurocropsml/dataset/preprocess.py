@@ -5,7 +5,7 @@ import logging
 import shutil
 import sys
 from collections import defaultdict
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from functools import cache, partial
 from multiprocessing import Pool
 from pathlib import Path
@@ -266,85 +266,113 @@ def preprocess(
             month_preprocess_dir.mkdir(exist_ok=True, parents=True)
 
             for file_path in month_data_dir.glob("*.parquet"):
-                country_file: pd.DataFrame = pd.read_parquet(file_path).set_index("parcel_id")
-                cols = country_file.columns.tolist()
-                cols = cols[5:]
-                # filter nan-values
-                country_file = country_file[~country_file[f"nuts{nuts_level}"].isna()]
-                points = _get_lonlats(
-                    raw_data_dir.joinpath("geometries", str(preprocess_config.year)), file_path.stem
-                )
-                labels = _get_labels(
-                    raw_data_dir.joinpath("labels", str(preprocess_config.year)),
-                    file_path.stem,
-                    preprocess_config,
-                )
+                if (
+                    preprocess_config.country_list
+                    and file_path.stem not in preprocess_config.country_list
+                ):
+                    logger.info(f"Skipping {file_path.stem}. Not in country list.")
+                    continue
+                else:
+                    country_file: pd.DataFrame = pd.read_parquet(file_path)
 
-                regions = country_file[f"nuts{nuts_level}"].unique()
-                te = tqdm(
-                    total=len(regions),
-                    desc=f"Processing {file_path.stem}",
-                )
-                for region in regions:
-                    if any(
-                        f.name.startswith(region)
-                        for f in month_preprocess_dir.iterdir()
-                        if f.is_file()
-                    ):
-                        logger.info(
-                            f"There is already existing data for NUTS region {region} for "
-                            f"{month_name}. Skipping pre-processing."
-                        )
-                        continue
-                    region_data = country_file[country_file[f"nuts{nuts_level}"] == region]
+                    cols = country_file.columns.tolist()
+                    cols = cols[5:]
+                    if f"nuts{nuts_level}" in cols:
+                        cols.remove(f"nuts{nuts_level}")
+                    # filter nan-values
+                    country_file = country_file[~country_file[f"nuts{nuts_level}"].isna()]
+                    if "parcel_id" in country_file.columns:
+                        country_file.set_index("parcel_id", inplace=True)
 
-                    # remove parcels that do not appear in the labels dictionary as keys
-                    region_data = region_data[region_data.index.isin(labels.keys())]
-                    region_data = region_data[cols]
-                    # removing empty columns
-                    region_data = region_data.dropna(axis=1, how="all")
-                    # removing empty parcels
-                    region_data = region_data.dropna(how="all")
-                    # replacing single empty timesteps
-
-                    region_data = region_data.apply(
-                        lambda x, b=len(bands): x.map(
-                            lambda y: np.array([-999] * b) if y is None else y
-                        )
+                    points = _get_lonlats(
+                        raw_data_dir.joinpath("geometries", str(preprocess_config.year)),
+                        file_path.stem,
                     )
-                    with Pool(processes=num_workers) as p:
-                        func = partial(
-                            _save_row,
-                            preprocess_config,
-                            month_preprocess_dir,
-                            labels,
-                            points,
-                            region,
-                            len(bands),
-                        )
-                        process_iter = p.imap(func, region_data.iterrows(), chunksize=1000)
-                        ti = tqdm(total=len(region_data), desc=f"Processing {region}")
-                        _ = [ti.update(n=1) for _ in process_iter]
-                        ti.close()
+                    labels = _get_labels(
+                        raw_data_dir.joinpath("labels", str(preprocess_config.year)),
+                        file_path.stem,
+                        preprocess_config,
+                    )
 
-                        te.update(n=1)
+                    regions = country_file[f"nuts{nuts_level}"].unique()
+                    te = tqdm(
+                        total=len(regions),
+                        desc=f"Processing {file_path.stem}",
+                    )
+                    for region in regions:
+                        if any(
+                            f.name.startswith(f"{region}_")
+                            for f in month_preprocess_dir.iterdir()
+                            if f.is_file()
+                        ):
+                            logger.info(
+                                f"There is already existing data for NUTS region {region} for "
+                                f"{month_name}. Skipping pre-processing."
+                            )
+                            continue
+
+                        region_data = country_file[country_file[f"nuts{nuts_level}"] == region]
+                        # remove parcels that do not appear in the labels dictionary as keys
+                        region_data = region_data[region_data.index.isin(labels.keys())]
+                        region_data = region_data[cols]
+                        # removing empty columns
+                        region_data = region_data.dropna(axis=1, how="all")
+                        # removing empty parcels
+                        region_data = region_data.dropna(how="all")
+                        # replacing single empty timesteps
+                        region_data = region_data.apply(
+                            lambda x, b=len(bands): x.map(
+                                lambda y: np.array([-999] * b) if y is None else y
+                            )
+                        )
+
+                        for row in region_data.iterrows():
+                            _save_row(
+                                preprocess_config,
+                                month_preprocess_dir,
+                                labels,
+                                points,
+                                region,
+                                len(bands),
+                                row,
+                            )
+                        with Pool(processes=num_workers) as p:
+                            func = partial(
+                                _save_row,
+                                preprocess_config,
+                                month_preprocess_dir,
+                                labels,
+                                points,
+                                region,
+                                len(bands),
+                            )
+                            process_iter = p.imap(func, region_data.iterrows(), chunksize=1000)
+                            ti = tqdm(total=len(region_data), desc=f"Processing {region}")
+                            _ = [ti.update(n=1) for _ in process_iter]
+                            ti.close()
+
+                            te.update(n=1)
                 te.close()
 
         monthly_groups = defaultdict(list)
-        for folder in tqdm(preprocess_dir.iterdir(), desc="Merging time series..."):
+        # No tqdm needed for fast file listing
+        for folder in preprocess_dir.iterdir():
             if folder.is_dir():
                 for npz_file in folder.glob("*.npz"):
-                    monthly_groups[npz_file.name].append(npz_file)
+                    monthly_groups[npz_file.name].append(str(npz_file))
 
-        te = tqdm(total=len(monthly_groups), desc="Merging time series...")
+        # Use as_completed for simpler, robust progress bar updates
         with ProcessPoolExecutor(max_workers=num_workers) as executor:
-            futures = [
+            futures = {
                 executor.submit(_merge_npz_files, file_name, file_paths, preprocess_dir)
                 for file_name, file_paths in monthly_groups.items()
-            ]
+            }
 
-            for _ in futures:
-                te.update(n=1)
+            # as_completed yields futures as they complete, simplifying the update loop
+            for _ in tqdm(as_completed(futures), total=len(futures), desc="Merging time series..."):
+                # You can access the result or check for exceptions here if needed
+                # result = future.result()
+                pass
 
         for folder in preprocess_dir.iterdir():
             if folder.is_dir():

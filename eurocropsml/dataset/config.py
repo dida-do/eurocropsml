@@ -30,6 +30,8 @@ class EuroCropsDatasetPreprocessConfig(BaseModel):
             a couple of classes are relevant. In that case, it massively speeds up the pre-
             processing.
         satellite: Preprocess Sentinel-1 or Sentinel-2.
+        country_list: List of country identifiers to preprocess.
+            If empty, all countries will be attempted to be preprocessed.
         bands: If this is None, the default bands stated in the global variables will be used.
             These are also the ones available in the ready-to-use EuroCropsML dataset.
             If during your own data acquisition not all bands or different bands were acquired,
@@ -49,6 +51,7 @@ class EuroCropsDatasetPreprocessConfig(BaseModel):
     excl_classes: list[int] = []
     keep_classes: list[int] = []
     satellite: Literal["S1", "S2"] = "S2"
+    country_list: list[str] | None = None
     bands: list[str] | None = None
     year: int = 2021
 
