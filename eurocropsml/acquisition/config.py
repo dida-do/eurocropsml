@@ -286,8 +286,10 @@ class EuroCropsCountryConfig(BaseModel):
             "nuts": "BE3",
         },
         "Croatia": {"country_code": "HR", "ec_zipfolder": "HR", "years": [2020]},
+        "Czechia": {"country_code": "CZ", "ec_zipfolder": "CZ", "years": [2023]},
         "Denmark": {"country_code": "DK", "ec_zipfolder": "DK", "years": [2019]},
         "Estonia": {"country_code": "EE", "ec_zipfolder": "EE", "years": [2021]},
+        "Finland": {"country_code": "FI", "ec_zipfolder": "FI", "years": [2020]},
         "France": {"country_code": "FR", "ec_zipfolder": "FR", "years": [2018]},
         "Germany LS": {
             "country_code": "DE",
@@ -332,6 +334,7 @@ class EuroCropsCountryConfig(BaseModel):
         "Germany LS": "",  # no unique identifier
         "Germany NRW": "ID",
         "Germany BB": "",  # no unique identifier
+        "Ireland": "",  # no unique identifier
         "Latvia": "PARCEL_ID",
         "Lithuania": "parcel_id",
         "Netherlands": "objectid",

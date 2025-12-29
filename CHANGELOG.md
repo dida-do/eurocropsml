@@ -17,6 +17,17 @@ Changes from previous releases are listed below.
 - Fix API URL _(see #94)_
 - Change extension of pickle files _(see #105)_
 - Add data access via S3 bucket _(see #103)_
+- Fix country polygons _(see #99)_
+- Update to EuroCrops V11 _(see #63)_
+- Update country polygons _(see #89)_
+- Adjust CliRunner to the new typer package update _(see #93)_
+- Update API URL _(see #94)_
+- Update citation section _(see #88)_
+
+## 0.4.1 (2025-04-24)
+- Update condition for info about folder structure _(see #86)_
+
+## 0.4.0 (2025-04-15)
 - Include hidden coverage report files in CI as Github action artifacts _(see #40)_
 - Exit script if automatic acquisition of NUTS files wasn't successful _(see #37)_
 - Add collection of Sentinel-1 data (no clipping yet) _(see #35)_
