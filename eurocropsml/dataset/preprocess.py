@@ -104,7 +104,7 @@ def _get_lonlats(metadata_dir: Path, country: str) -> dict[int, np.ndarray]:
 @cache
 def get_class_ids_to_names(raw_data_dir: Path) -> dict[str, str]:
     """Get a dictionary mapping between class identifiers and readable names."""
-    labels_df: pd.DataFrame = read_metadata(raw_data_dir)
+    labels_df: pd.DataFrame = read_metadata(raw_data_dir.joinpath("labels"))
     unique_labels_df = labels_df.drop_duplicates()
     ids_to_names_dict = unique_labels_df.set_index("EC_hcat_c").to_dict()["EC_hcat_n"]
     return {str(k): v for k, v in ids_to_names_dict.items()}
