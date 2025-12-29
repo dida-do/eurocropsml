@@ -272,9 +272,6 @@ class EuroCropsCountryConfig(BaseModel):
 
     countries: dict[str, dict[str, str | list[str] | list[int]]] = {
         "Austria": {"country_code": "AT", "ec_zipfolder": "AT", "years": [2021]},
-        "Belgium VLG": {"country_code": "BE", "ec_zipfolder": "BE_VLG", "years": [2021]},
-        "Belgium WAL": {"country_code": "BE", "ec_zipfolder": "BE_WAL", "years": [2021]},
-        "Czechia": {"country_code": "CZ", "ec_zipfolder": "CZ", "years": [2023]},
         "Belgium VLG": {
             "country_code": "BE",
             "ec_zipfolder": "BE_VLG",
