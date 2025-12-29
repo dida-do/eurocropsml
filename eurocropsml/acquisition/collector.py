@@ -300,12 +300,12 @@ def _downloader(
             if eodata_dir is None:
                 raise AssertionError(
                     "None of the tiles could be processed. Access to S3 bucket \
-                                     might have failed. Exiting process."
+                    might have failed. Exiting process."
                 )
             else:
                 raise AssertionError(
                     "None of the tiles could be processed. Access to eodata \
-                                     repository might have failed. Exiting process."
+                    repository might have failed. Exiting process."
                 )
         request_df: pd.DataFrame
         if satellite == "S2":
@@ -360,6 +360,7 @@ def _downloader(
             # Cleaning up country's shapefile
             # Load in SHP-File
             shapefile: gpd.GeoDataFrame = pyogrio.read_dataframe(shape_dir)
+            shapefile = shapefile[~shapefile["EC_hcat_c"].isna()]
             if "EC_NUTS3" in shapefile.columns.tolist():
                 shapefile.drop(["EC_NUTS3"], axis=1)
             # sort shapefile s.t. NULL classes are at the end
@@ -508,7 +509,6 @@ def _get_tiles(
                 )
                 return None
         else:
-
             s3_client: BaseClient | None = _establish_s3_client()
             safe_file = safe_file.replace("/eodata/", "")
             safe_file = safe_file.replace("/codede/", "")
