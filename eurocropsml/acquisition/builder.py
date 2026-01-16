@@ -2,11 +2,12 @@
 
 import logging
 from pathlib import Path
-from typing import cast
+from typing import Literal, cast
 
 from eurocropsml.acquisition import collector, copier, region
 from eurocropsml.acquisition.clipping import clipper
 from eurocropsml.acquisition.config import AcquisitionConfig
+from eurocropsml.acquisition.s3 import _set_s3_env_variables
 from eurocropsml.settings import Settings
 
 logger = logging.getLogger(__name__)
@@ -49,6 +50,13 @@ def build_dataset(
 
     logger.info(f"Processing year {ct_config.year} for {country}.")
 
+    if config.eodata_dir is None:
+        # local_dir = None
+        _set_s3_env_variables()
+        source: Literal["eodata", "s3"] = "s3"
+    else:
+        source = "eodata"
+
     collector.acquire_sentinel_tiles(
         ct_config,
         satellite_output_dir.joinpath("collector"),
@@ -58,11 +66,13 @@ def build_dataset(
         config.workers,
     )
     logger.info("Finished step 1: Acquiring list of necessary .SAFE files.")
+
     copier.merge_safe_files(
         ct_config.satellite,
         cast(list[str], ct_config.bands),
         satellite_output_dir,
         config.workers,
+        source,
         local_dir,
     )
     if local_dir is not None:
@@ -70,6 +80,8 @@ def build_dataset(
             "Finished step 2: Copying .SAFE files to local disk and "
             "acquiring list of individual band image paths."
         )
+        source = "eodata"
+        logger.info("Tiles will now be accessed via local storage. Setting `source` to 'eodata'.")
     else:
         logger.info("Finished step 2: Acquiring list of individual band image paths.")
 
@@ -80,6 +92,7 @@ def build_dataset(
         config.workers,
         config.chunk_size,
         config.multiplier,
+        source,
         local_dir,
         config.rebuild,
     )

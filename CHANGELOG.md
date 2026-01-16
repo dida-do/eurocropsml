@@ -7,6 +7,16 @@ Changes for the upcoming release can be found (and will be added on merging feat
 Changes from previous releases are listed below.
 
 ## Upcoming Release
+- Set all band values to None if any of them is None _(see #104)_
+- Remove entries from shapefile without label before preprocessing _(see #109)_
+- Read only label files for class namt to id dict _(see #110)_
+- Fix numpy/torch version conflict _(see #95)_
+- Add option to filter countries for preprocessing _(see #108)_
+- Add NUTS region identifier _(see #107)_
+- Update collection of Sentinel-2 data to Collection 1 _(see #75)_
+- Fix API URL _(see #94)_
+- Change extension of pickle files _(see #105)_
+- Add data access via S3 bucket _(see #103)_
 - Fix country polygons _(see #99)_
 - Update to EuroCrops V11 _(see #63)_
 - Update country polygons _(see #89)_

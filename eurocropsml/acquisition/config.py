@@ -27,7 +27,23 @@ S2_BANDS = [
     "12",
 ]  # order is important
 
-S1_BANDS = ["VV", "VH"]  # order is important
+S1_BANDS = ["VV", "VH"]  # order is important{
+
+S2_RESOLUTION = {
+    "01": 60,
+    "02": 10,
+    "03": 10,
+    "04": 10,
+    "05": 20,
+    "06": 20,
+    "07": 20,
+    "08": 10,
+    "8A": 20,
+    "09": 60,
+    "10": 60,
+    "11": 20,
+    "12": 20,
+}
 
 
 class CollectorConfig(BaseModel):
@@ -74,6 +90,7 @@ class CollectorConfig(BaseModel):
     shapefile: Path | None = None
     polygon: str | None = None
     parcel_id_name: str | None = None
+    nuts_identifier: str | None = None
 
     def post_init(self, vector_data_dir: Path) -> None:
         """Make dynamic config based on initialized params."""
@@ -161,6 +178,8 @@ class CollectorConfig(BaseModel):
                 )
             self.country_code = cast(str, eurocrops_countries[self.country]["country_code"])
             self.ec_filename = cast(str, eurocrops_countries[self.country]["ec_zipfolder"])
+            if "nuts" in eurocrops_countries[self.country]:
+                self.nuts_identifier = cast(str, eurocrops_countries[self.country]["nuts"])
 
             if self.country_code == "ES" and self.year == 2021:
                 filename = f"{self.ec_filename}_2020"
@@ -216,7 +235,11 @@ class CollectorConfig(BaseModel):
 
 
 class AcquisitionConfig(BaseModel):
-    """Configuration for acquiring EuroCrops reflectance data."""
+    """Configuration for acquiring EuroCrops reflectance data.
+
+    If eodata_dir is None, Sentinel tiles will be accessed via S3 bucket.
+
+    """
 
     raw_data_dir: Path
     output_dir: Path
@@ -249,18 +272,42 @@ class EuroCropsCountryConfig(BaseModel):
 
     countries: dict[str, dict[str, str | list[str] | list[int]]] = {
         "Austria": {"country_code": "AT", "ec_zipfolder": "AT", "years": [2021]},
-        "Belgium VLG": {"country_code": "BE", "ec_zipfolder": "BE_VLG", "years": [2021]},
-        "Belgium WAL": {"country_code": "BE", "ec_zipfolder": "BE_WAL", "years": [2021]},
+        "Belgium VLG": {
+            "country_code": "BE",
+            "ec_zipfolder": "BE_VLG",
+            "years": [2021],
+            "nuts": "BE2",
+        },
+        "Belgium WAL": {
+            "country_code": "BE",
+            "ec_zipfolder": "BE_WAL",
+            "years": [2021],
+            "nuts": "BE3",
+        },
         "Croatia": {"country_code": "HR", "ec_zipfolder": "HR", "years": [2020]},
         "Czechia": {"country_code": "CZ", "ec_zipfolder": "CZ", "years": [2023]},
         "Denmark": {"country_code": "DK", "ec_zipfolder": "DK", "years": [2019]},
         "Estonia": {"country_code": "EE", "ec_zipfolder": "EE", "years": [2021]},
         "Finland": {"country_code": "FI", "ec_zipfolder": "FI", "years": [2020]},
         "France": {"country_code": "FR", "ec_zipfolder": "FR", "years": [2018]},
-        "Germany LS": {"country_code": "DE", "ec_zipfolder": "DE_LS", "years": [2021]},
-        "Germany NRW": {"country_code": "DE", "ec_zipfolder": "DE_NRW", "years": [2021]},
-        "Germany BB": {"country_code": "DE", "ec_zipfolder": "DE_BB", "years": [2023]},
-        "Ireland": {"country_code": "IE", "ec_zipfolder": "IE", "years": [2023]},
+        "Germany LS": {
+            "country_code": "DE",
+            "ec_zipfolder": "DE_LS",
+            "years": [2021],
+            "nuts": "DE9",
+        },
+        "Germany NRW": {
+            "country_code": "DE",
+            "ec_zipfolder": "DE_NRW",
+            "years": [2021],
+            "nuts": "DEA",
+        },
+        "Germany BB": {
+            "country_code": "DE",
+            "ec_zipfolder": "DE_BB",
+            "years": [2023],
+            "nuts": "DE4",
+        },
         "Latvia": {"country_code": "LV", "ec_zipfolder": "LV", "years": [2021]},
         "Lithuania": {"country_code": "LT", "ec_zipfolder": "LT", "years": [2021]},
         "Netherlands": {"country_code": "NL", "ec_zipfolder": "NL", "years": [2020]},
@@ -285,7 +332,7 @@ class EuroCropsCountryConfig(BaseModel):
         "France": "ID_PARCEL",
         "Germany LS": "",  # no unique identifier
         "Germany NRW": "ID",
-        "Germany BB": "",
+        "Germany BB": "",  # no unique identifier
         "Ireland": "",  # no unique identifier
         "Latvia": "PARCEL_ID",
         "Lithuania": "parcel_id",

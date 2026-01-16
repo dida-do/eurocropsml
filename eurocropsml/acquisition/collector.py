@@ -6,7 +6,7 @@
 # Email: david.gackstetter@tum.de
 #####################################################################
 # Script majorly revised for EuroCrops by Joana Reuss
-# Copyright: Copyright 2024, Technical University of Munich
+# Copyright: Copyright 2025, Technical University of Munich
 # Email: joana.reuss@tum.de
 #####################################################################
 
@@ -27,12 +27,18 @@ import numpy as np
 import pandas as pd
 import pyogrio
 import requests
+from botocore.client import BaseClient
 from pyproj import CRS
 from shapely.geometry.polygon import Polygon
 from tqdm import tqdm
 
 from eurocropsml.acquisition.config import CollectorConfig
-from eurocropsml.acquisition.utils import _get_dict_value_by_name, _load_pkg
+from eurocropsml.acquisition.s3 import (
+    _establish_s3_client,
+    _get_s3_subfolders,
+    _parse_s3_xml,
+)
+from eurocropsml.acquisition.utils import _get_dict_value_by_name, _load_pkl
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -55,7 +61,7 @@ def _eolab_finder(
     _, num_days = calendar.monthrange(year, months[1])
     months_list: list[str] = ["0{0}".format(m) if m < 10 else "{0}".format(m) for m in months]
 
-    request_url = """https://datahub.eo-lab.org/odata/v1/Products?$filter=({0}(ContentDate/Start \
+    request_url = """https://datahub.creodias.eu/odata/v1/Products?$filter=({0}(ContentDate/Start \
 ge {1}-{2}-01T00:00:00.000Z and ContentDate/Start le {1}-{3}-{4}T23:59:59.999Z) and (Online eq \
 true) and (OData.CSC.Intersects(Footprint=geography'SRID=4326;{5}')) and (((((Collection/Name eq \
 '{6}'){8} and (((Attributes/Odata.CSC.StringAttribute/any(i0:i0/Name eq 'productType' and \
@@ -100,7 +106,7 @@ def acquire_sentinel_tiles(
         shape_dir: File path of EuroCrops shapefile.
         shape_dir_clean: Directory where the cleaned shapefile will be stored.
         eodata_dir: Directory where Sentinel-1 or Sentinel-2 data is stored.
-            If None, `eodata` is used since this will be returned by the API call.
+            If None, Sentinel tiles will be accessed via S3 bucket.
         workers: Maximum number of workers used for multiprocessing.
         batch_size: Batch size used for multiprocessed merging of .SAFE files and parcels.
 
@@ -154,7 +160,7 @@ def _downloader(
 ) -> None:
     request_path = output_dir.joinpath("requests")
     request_path.mkdir(exist_ok=True, parents=True)
-    eofinder_request: Path = request_path.joinpath(f"{country}_{year}.json")
+    eofinder_request: Path = request_path.joinpath(f"{country.replace(' ', '_')}_{year}.json")
 
     if not eofinder_request.exists():
         # if not eofinder_request_new.exists():
@@ -211,15 +217,26 @@ def _downloader(
                     operational_mode_str,
                     max_requested_products,
                 )
-                run_loop = False
-                logger.info("API-request was successful!")
+                if requests.get("value") in (None, []):
+                    if collection_name == "SENTINEL-2":
+                        logger.info(
+                            "No products for Collection-1 found. Rerunning request for \
+                                    non-Collection-1 products."
+                        )
+                        filter_collection = ""
+                        run_loop = True
+                    else:
+                        raise ValueError("API-request was not successful!")
+                else:
+                    run_loop = False
+                    logger.info("API-request was successful!")
             except ConnectionError:
                 time.sleep(2000)
 
         # Extra loop in case that available products exceed number of maximum requests
         # These requestes are executed on a monthly basis.
         if len(requests["value"]) == max_requested_products:
-            logger.info("Too many requested product. Executing monthly requests.")
+            logger.info("Too many requested products. Executing monthly requests.")
             all_months: list = list(range(months[0], months[1] + 1))
             for idx, month in enumerate(all_months):
                 run_loop = True
@@ -262,12 +279,13 @@ def _downloader(
 
     products = requests["value"]
 
-    request_files = output_dir.joinpath("requests", "request_safe_files.pkg")
+    request_files = output_dir.joinpath("requests", "request_safe_files.pkl")
     max_workers = min(mp_orig.cpu_count(), max(1, min(len(products), workers)))
 
     if not request_files.exists():
         # creating GeoDataFrame from .SAFE files
         results: list[list] = []
+
         with mp_orig.Pool(processes=max_workers) as p:
             func = partial(_get_tiles, satellite, eodata_dir)
             process_iter = p.imap(func, products, chunksize=1000)
@@ -278,7 +296,17 @@ def _downloader(
                     results.append(result)
                 ti.update(n=1)
             ti.close()
-
+        if not results:
+            if eodata_dir is None:
+                raise AssertionError(
+                    "None of the tiles could be processed. Access to S3 bucket \
+                    might have failed. Exiting process."
+                )
+            else:
+                raise AssertionError(
+                    "None of the tiles could be processed. Access to eodata \
+                    repository might have failed. Exiting process."
+                )
         request_df: pd.DataFrame
         if satellite == "S2":
             request_df = pd.DataFrame(
@@ -322,15 +350,17 @@ def _downloader(
         )
         for crs in unique_crs
     ]
-
+    if not request_df_list:
+        raise AssertionError("None of the tiles could be processed. Exiting process.")
     if not (
-        output_dir.joinpath("full_safe_file_list.pkg").exists()
-        and output_dir.joinpath("full_parcel_list.pkg").exists()
+        output_dir.joinpath("full_safe_file_list.pkl").exists()
+        and output_dir.joinpath("full_parcel_list.pkl").exists()
     ):
         if not shape_dir_clean.exists():
             # Cleaning up country's shapefile
             # Load in SHP-File
             shapefile: gpd.GeoDataFrame = pyogrio.read_dataframe(shape_dir)
+            shapefile = shapefile[~shapefile["EC_hcat_c"].isna()]
             if "EC_NUTS3" in shapefile.columns.tolist():
                 shapefile.drop(["EC_NUTS3"], axis=1)
             # sort shapefile s.t. NULL classes are at the end
@@ -378,13 +408,16 @@ def _downloader(
                         ti.update(n=1)
                     ti.close()
 
-        del parcel_df
-        del shapefile
-        del request_df_list
+        if "parcel_df" in locals():
+            del parcel_df
+        if "shapefile" in locals():
+            del shapefile
+        if "request_df_list" in locals():
+            del request_df_list
 
         with multiprocessing.Pool(processes=max_workers) as p:
             result_list = list(parcel_path.iterdir())
-            process_iter = p.imap(_load_pkg, result_list)
+            process_iter = p.imap(_load_pkl, result_list)
             ti = tqdm(total=len(args_list), desc="Loading DataFrames.")
             for result in process_iter:
                 results.append(result)  # type: ignore[arg-type]
@@ -413,13 +446,13 @@ def _downloader(
             combined_result = combined_result.drop_duplicates(subset=subset_cols, keep="first")
 
         # saving DataFrame that matches .SAFE files with parcels
-        combined_result.to_pickle(output_dir.joinpath("full_parcel_list.pkg"))
+        combined_result.to_pickle(output_dir.joinpath("full_parcel_list.pkl"))
 
         unique_safe_files = combined_result["productIdentifier"].unique()
 
         # DataFrame of unique .SAFE files
         safefiles_df = pd.DataFrame({"productIdentifier": unique_safe_files})
-        safefiles_df.to_pickle(output_dir.joinpath("full_safe_file_list.pkg"))
+        safefiles_df.to_pickle(output_dir.joinpath("full_safe_file_list.pkl"))
 
         logger.info(f"Finished merging .SAFE files and parcels for {country} for {year}.")
 
@@ -427,12 +460,12 @@ def _downloader(
 def _process_batch(args: tuple[int, int, gpd.GeoDataFrame, gpd.GeoDataFrame, Path]) -> None:
     """Checking for intersections between raster tiles and parcel polygons."""
     i, batch_size, parcel_df, request_df, parcel_path = args
-    if not parcel_path.joinpath(f"parcel_list_{i}.pkg").exists():
+    if not parcel_path.joinpath(f"parcel_list_{i}.pkl").exists():
         batch_parcel_df = parcel_df[i : i + batch_size]
         result = gpd.sjoin(batch_parcel_df, request_df, how="left", predicate="intersects")
         result = result[result["index_right"].notna()]
         result = result.drop(["index_right", "crs", "geometry"], axis=1)
-        result.to_pickle(parcel_path.joinpath(f"parcel_list_{i}.pkg"))
+        result.to_pickle(parcel_path.joinpath(f"parcel_list_{i}.pkl"))
 
 
 def _get_tiles(
@@ -441,6 +474,7 @@ def _get_tiles(
     tile: dict,
 ) -> list | None:
     """Getting information from raster .SAFE files."""
+
     safe_file: str = tile["S3Path"]  # product Identifier
     request: list | None
 
@@ -461,11 +495,43 @@ def _get_tiles(
 
         if eodata_dir is not None:
             safe_file = safe_file.replace("eodata", eodata_dir)
+            safe_file = safe_file.replace("codede", eodata_dir)
+            try:
+                granule_path = Path(safe_file).joinpath("GRANULE")
+                folder: list = list(granule_path.iterdir())
+
+                tree = ElementTree.parse(folder[0].joinpath("MTD_TL.xml"))
+                root = tree.getroot()
+            except Exception:
+                logger.warning(
+                    "Could not access metadata via eodata directory. \
+                    This .SAFE file is being skipped."
+                )
+                return None
+        else:
+            s3_client: BaseClient | None = _establish_s3_client()
+            safe_file = safe_file.replace("/eodata/", "")
+            safe_file = safe_file.replace("/codede/", "")
+
+            try:
+                granule_path = Path(safe_file).joinpath("GRANULE")
+                granule_sub_folder: str | None = cast(
+                    list,
+                    _get_s3_subfolders(
+                        s3_client, str(granule_path) + "/", selectionkey="CommonPrefixes"
+                    ),
+                )[0]["Prefix"]
+                if granule_sub_folder is not None:
+                    root = _parse_s3_xml(s3_client, granule_sub_folder + "MTD_TL.xml")
+                else:
+                    return None
+            except Exception:
+                logger.warning(
+                    "Could not access metadata via S3 bucket. This .SAFE file is being skipped."
+                )
+                return None
+
         try:
-            granule_path = Path(safe_file).joinpath("GRANULE")
-            folder: list = list(granule_path.iterdir())
-            tree = ElementTree.parse(folder[0].joinpath("MTD_TL.xml"))
-            root = tree.getroot()
             spatial_ref_element: ElementTree.Element = cast(
                 ElementTree.Element, root.find(".//HORIZONTAL_CS_NAME")
             )
@@ -484,9 +550,10 @@ def _get_tiles(
                 f"The geometry of {safe_file} could not be transformed into a"
                 " shapely Polygon correctly. This .SAFE file is being skipped."
             )
-            request = None
+            return None
 
     else:
+        # TODO: Sentinel-1 access via S3 bucket
         try:
             folder = list(Path(safe_file).iterdir())
 
@@ -523,6 +590,6 @@ def _get_tiles(
                 f"The geometry of {safe_file} could not be transformed into a"
                 " shapely Polygon correctly. This .SAFE file is being skipped."
             )
-            request = None
+            return None
 
     return request
